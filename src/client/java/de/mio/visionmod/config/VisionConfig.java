@@ -11,7 +11,9 @@ import java.util.*;
 
 public class VisionConfig {
 
-    private static VisionConfig INSTANCE = new VisionConfig();
+    // INSTANCE is initialized at the end of the static block, AFTER DEFAULT_ENTITY_BOX
+    // and DEFAULT_ORE_BOX are filled — declaring it here would cause a NPE on putAll().
+    private static VisionConfig INSTANCE;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     // --- Global toggles ---
@@ -147,6 +149,9 @@ public class VisionConfig {
         DEFAULT_ORE_BOX.put("minecraft:ancient_debris",        "#FF8B0000");
         DEFAULT_ORE_BOX.put("minecraft:nether_gold_ore",       "#FFCD853F");
         DEFAULT_ORE_BOX.put("minecraft:nether_quartz_ore",     "#FFFFE4E1");
+
+        // Initialize INSTANCE here so the maps above are populated first
+        INSTANCE = new VisionConfig();
     }
 
     private VisionConfig() {
