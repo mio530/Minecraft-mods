@@ -78,10 +78,9 @@ public final class OverlayWindow {
 
         // Model-view: camera rotation from Fabric's PoseStack
         Matrix4f mv   = new Matrix4f(ctx.matrices().last().pose());
-        // Projection: built from the player's FOV option (near/far match MC defaults)
-        int fovDeg    = mc.options.fov.get();
+        // Projection: 70° = Minecraft default; Options.fov is private in 1.21.11
         Matrix4f proj = new Matrix4f().perspective(
-                (float) Math.toRadians(fovDeg), (float) sw / sh, 0.05f, 256f);
+                (float) Math.toRadians(70.0), (float) sw / sh, 0.05f, 256f);
         Vec3 camPos   = mc.player.getEyePosition(1.0f);
 
         long mainCtx = glfwGetCurrentContext();
