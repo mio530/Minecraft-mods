@@ -1,6 +1,5 @@
 package de.mio.visionmod.overlay;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
@@ -24,7 +23,6 @@ public final class OverlayWindow {
 
     private OverlayWindow() {}
 
-    // Called on the render/main thread after Minecraft finishes initializing (CLIENT_STARTED event)
     public void init(Minecraft mc) {
         int w = mc.getWindow().getWidth();
         int h = mc.getWindow().getHeight();
@@ -33,16 +31,14 @@ public final class OverlayWindow {
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE,                  GLFW_FALSE);
         glfwWindowHint(GLFW_DECORATED,                GLFW_FALSE);
-        glfwWindowHint(GLFW_FLOATING,                 GLFW_TRUE);   // always-on-top
-        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER,  GLFW_TRUE);   // per-pixel alpha
+        glfwWindowHint(GLFW_FLOATING,                 GLFW_TRUE);
+        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER,  GLFW_TRUE);
         glfwWindowHint(GLFW_FOCUS_ON_SHOW,            GLFW_FALSE);
-        glfwWindowHint(GLFW_MOUSE_PASSTHROUGH,        GLFW_TRUE);   // GLFW 3.4+
+        glfwWindowHint(GLFW_MOUSE_PASSTHROUGH,        GLFW_TRUE);
         glfwWindowHint(GLFW_RESIZABLE,                GLFW_FALSE);
-        // Request OpenGL 2.1 compatibility profile so glBegin/glEnd are available
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 
-        // Create window without sharing context (we only draw simple 2D lines)
         overlayHandle = glfwCreateWindow(w, h, "VisionMod Overlay", 0L, 0L);
         if (overlayHandle == 0L) {
             System.err.println("[VisionMod] Could not create overlay window!");
@@ -71,19 +67,19 @@ public final class OverlayWindow {
         }
     }
 
-    // Called from WorldRenderEvents.END_MAIN (render/main thread)
     public void onRenderEnd(WorldRenderContext ctx) {
         if (overlayHandle == 0L || renderer == null) return;
 
         Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
         int sw = mc.getWindow().getWidth();
         int sh = mc.getWindow().getHeight();
         if (sw <= 0 || sh <= 0) return;
 
-        // Capture matrices and camera position while Minecraft's context is current
+        // Grab matrices from Fabric's context; camera position from the player entity
         Matrix4f mv   = new Matrix4f(ctx.matrices().last().pose());
-        Matrix4f proj = new Matrix4f(RenderSystem.getProjectionMatrix());
-        Vec3 camPos   = ctx.gameRenderer().getMainCamera().getPosition();
+        Matrix4f proj = new Matrix4f(ctx.projectionMatrix());
+        Vec3 camPos   = mc.player.getEyePosition(1.0f);
 
         long mainCtx = glfwGetCurrentContext();
         GLCapabilities mainCaps = GL.getCapabilities();
@@ -102,12 +98,7 @@ public final class OverlayWindow {
 
     private void positionOverlay(Minecraft mc) {
         if (overlayHandle == 0L) return;
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer xb = stack.mallocInt(1);
-            IntBuffer yb = stack.mallocInt(1);
-            glfwGetWindowPos(mc.getWindow().getWindow(), xb, yb);
-            glfwSetWindowPos(overlayHandle, xb.get(0), yb.get(0));
-        }
+        glfwSetWindowPos(overlayHandle, mc.getWindow().getX(), mc.getWindow().getY());
     }
 
     private void syncSizeAndPosition(Minecraft mc) {
@@ -121,10 +112,7 @@ public final class OverlayWindow {
             if (wb.get(0) != mw || hb.get(0) != mh) {
                 glfwSetWindowSize(overlayHandle, mw, mh);
             }
-            IntBuffer xb = stack.mallocInt(1);
-            IntBuffer yb = stack.mallocInt(1);
-            glfwGetWindowPos(mc.getWindow().getWindow(), xb, yb);
-            glfwSetWindowPos(overlayHandle, xb.get(0), yb.get(0));
+            glfwSetWindowPos(overlayHandle, mc.getWindow().getX(), mc.getWindow().getY());
         }
     }
 }
