@@ -76,9 +76,12 @@ public final class OverlayWindow {
         int sh = mc.getWindow().getHeight();
         if (sw <= 0 || sh <= 0) return;
 
-        // Grab matrices from Fabric's context; camera position from the player entity
+        // Model-view: camera rotation from Fabric's PoseStack
         Matrix4f mv   = new Matrix4f(ctx.matrices().last().pose());
-        Matrix4f proj = new Matrix4f(ctx.projectionMatrix());
+        // Projection: built from the player's FOV option (near/far match MC defaults)
+        int fovDeg    = mc.options.fov.get();
+        Matrix4f proj = new Matrix4f().perspective(
+                (float) Math.toRadians(fovDeg), (float) sw / sh, 0.05f, 256f);
         Vec3 camPos   = mc.player.getEyePosition(1.0f);
 
         long mainCtx = glfwGetCurrentContext();
