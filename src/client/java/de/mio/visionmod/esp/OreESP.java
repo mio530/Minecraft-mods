@@ -8,7 +8,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.chunk.LevelChunk;
 
 import java.util.*;
 
@@ -67,13 +66,12 @@ public final class OreESP {
         for (int cx = center.x - radius; cx <= center.x + radius; cx++) {
             for (int cz = center.z - radius; cz <= center.z + radius; cz++) {
                 if (!mc.level.hasChunk(cx, cz)) continue;
-                LevelChunk chunk = mc.level.getChunk(cx, cz);
 
                 for (String oreId : cfg.enabledOres) {
                     ResourceLocation blockKey = ResourceLocation.tryParse(oreId);
                     if (blockKey == null) continue;
-                    Block targetBlock = BuiltInRegistries.BLOCK.get(blockKey);
-                    if (targetBlock == Blocks.AIR) continue;
+                    Block targetBlock = BuiltInRegistries.BLOCK.getOptional(blockKey).orElse(null);
+                    if (targetBlock == null || targetBlock == Blocks.AIR) continue;
 
                     int[] yRange = Y_RANGES.getOrDefault(oreId, new int[]{-64, 320});
                     int minY = Math.max(yRange[0], mc.level.getMinBuildHeight());
@@ -87,7 +85,7 @@ public final class OreESP {
                         for (int z = cz * 16; z < cz * 16 + 16; z++) {
                             for (int y = minY; y <= maxY; y++) {
                                 BlockPos pos = new BlockPos(x, y, z);
-                                if (chunk.getBlockState(pos).is(targetBlock)) {
+                                if (mc.level.getBlockState(pos).is(targetBlock)) {
                                     next.add(new OreData(
                                             x + 0.5, y + 0.5, z + 0.5,
                                             boxColor, lineColor, showLine
