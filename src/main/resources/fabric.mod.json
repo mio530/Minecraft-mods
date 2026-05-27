@@ -7,6 +7,9 @@
   "authors": ["mio"],
   "license": "MIT",
   "environment": "client",
+  "mixins": [
+    "visionmod.mixins.json"
+  ],
   "entrypoints": {
     "client": [
       "de.mio.visionmod.VisionModClient"

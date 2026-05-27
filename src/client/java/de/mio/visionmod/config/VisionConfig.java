@@ -18,6 +18,7 @@ public class VisionConfig {
 
     // --- Global toggles ---
     public boolean entityEspEnabled = false;
+    public boolean entityGlowEnabled = false;
     public boolean oreEspEnabled    = false;
     public boolean globalLinesEnabled = true;
 

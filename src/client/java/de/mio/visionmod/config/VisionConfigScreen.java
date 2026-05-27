@@ -247,6 +247,13 @@ public class VisionConfigScreen extends Screen {
                 .bounds(237, y, 20, 20).build());
         y += ROW_H + 4;
 
+        // Entity Glow toggle
+        addRenderableWidget(Button.builder(
+                Component.literal("Entity Glow (statt Box): " + (cfg.entityGlowEnabled ? "§aAN" : "§cAUS")),
+                b -> { cfg.entityGlowEnabled = !cfg.entityGlowEnabled; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(COL_TOGGLE, y, 270, 20).build());
+        y += ROW_H + 4;
+
         // Global toggles side by side
         addRenderableWidget(Button.builder(
                 Component.literal("Alle Linien: " + (cfg.globalLinesEnabled ? "§aAN" : "§cAUS")),

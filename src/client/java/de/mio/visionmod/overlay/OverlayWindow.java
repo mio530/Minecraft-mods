@@ -1,6 +1,6 @@
 package de.mio.visionmod.overlay;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.systems.GlStateManager;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import de.mio.visionmod.config.VisionConfig;
@@ -9,9 +9,9 @@ import de.mio.visionmod.esp.OreESP;
 import de.mio.visionmod.esp.SusChunks;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.ShapeRenderer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -20,8 +20,6 @@ public final class OverlayWindow {
     public static final OverlayWindow INSTANCE = new OverlayWindow();
     private OverlayWindow() {}
 
-    // No secondary window needed – renders directly into MC's GL context,
-    // which works in windowed, borderless-fullscreen, and exclusive-fullscreen.
     public void init(Minecraft mc) {
         System.out.println("[VisionMod] Direct ESP renderer ready.");
     }
@@ -32,17 +30,17 @@ public final class OverlayWindow {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        Vec3 cam     = mc.player.getEyePosition(1.0f);
+        Vec3 cam = mc.player.getEyePosition(1.0f);
         PoseStack ps = ctx.matrices();
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
         VisionConfig cfg = VisionConfig.get();
 
-        // Disable depth test so boxes render through walls
-        RenderSystem.disableDepthTest();
+        GlStateManager._disableDepthTest();
 
-        VertexConsumer vc = buf.getBuffer(RenderType.lines());
+        VertexConsumer vc = buf.getBuffer(RenderTypes.lines());
 
-        if (cfg.entityEspEnabled) {
+        // Entity boxes only when glow mode is OFF
+        if (cfg.entityEspEnabled && !cfg.entityGlowEnabled) {
             for (EntityESP.EntityData e : EntityESP.snapshot) {
                 drawBox(ps, vc, cam,
                         e.minX(), e.minY(), e.minZ(),
@@ -70,8 +68,8 @@ public final class OverlayWindow {
             }
         }
 
-        buf.endBatch(RenderType.lines());
-        RenderSystem.enableDepthTest();
+        buf.endBatch(RenderTypes.lines());
+        GlStateManager._enableDepthTest();
     }
 
     private static void drawBox(PoseStack ps, VertexConsumer vc, Vec3 cam,
@@ -83,6 +81,6 @@ public final class OverlayWindow {
         float a = ((color >> 24) & 0xFF) / 255f;
         AABB bb = new AABB(minX - cam.x, minY - cam.y, minZ - cam.z,
                            maxX - cam.x, maxY - cam.y, maxZ - cam.z);
-        LevelRenderer.renderLineBox(ps, vc, bb, r, g, b, a);
+        ShapeRenderer.renderLineBox(ps.last(), vc, bb, r, g, b, a);
     }
 }
