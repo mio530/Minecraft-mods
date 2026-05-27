@@ -81,8 +81,8 @@ public final class SusChunks {
                 boolean suspicious = false;
 
                 if (cfg.susChunksEnabled) {
-                    int minY = mc.level.getMinBuildHeight();
-                    int maxY = mc.level.getMaxBuildHeight() - 1;
+                    int minY = mc.level.dimensionType().minY();
+                    int maxY = mc.level.dimensionType().minY() + mc.level.dimensionType().height() - 1;
 
                     outer:
                     for (int x = cx * 16; x < cx * 16 + 16; x++) {

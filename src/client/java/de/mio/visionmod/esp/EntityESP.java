@@ -3,7 +3,7 @@ package de.mio.visionmod.esp;
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
@@ -42,7 +42,7 @@ public final class EntityESP {
             ChunkPos ec = entity.chunkPosition();
             if (Math.abs(ec.x - playerChunk.x) > radius || Math.abs(ec.z - playerChunk.z) > radius) continue;
 
-            ResourceLocation typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+            Identifier typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
             if (typeKey == null) continue;
             String typeId = typeKey.toString();
 
@@ -50,7 +50,7 @@ public final class EntityESP {
 
             // Per-player name filter
             if (entity instanceof Player player) {
-                String name = player.getGameProfile().getName();
+                String name = player.getGameProfile().name();
                 if (!cfg.enabledPlayerNames.isEmpty() && !cfg.enabledPlayerNames.contains(name)) {
                     continue;
                 }
@@ -62,7 +62,7 @@ public final class EntityESP {
 
             AABB bb = entity.getBoundingBox();
             String label = entity instanceof Player p
-                    ? p.getGameProfile().getName()
+                    ? p.getGameProfile().name()
                     : VisionConfig.displayName(typeId);
 
             next.add(new EntityData(

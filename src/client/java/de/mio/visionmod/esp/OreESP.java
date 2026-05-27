@@ -4,7 +4,7 @@ import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -68,14 +68,15 @@ public final class OreESP {
                 if (!mc.level.hasChunk(cx, cz)) continue;
 
                 for (String oreId : cfg.enabledOres) {
-                    ResourceLocation blockKey = ResourceLocation.tryParse(oreId);
+                    Identifier blockKey = Identifier.tryParse(oreId);
                     if (blockKey == null) continue;
                     Block targetBlock = BuiltInRegistries.BLOCK.getOptional(blockKey).orElse(null);
                     if (targetBlock == null || targetBlock == Blocks.AIR) continue;
 
                     int[] yRange = Y_RANGES.getOrDefault(oreId, new int[]{-64, 320});
-                    int minY = Math.max(yRange[0], mc.level.getMinBuildHeight());
-                    int maxY = Math.min(yRange[1], mc.level.getMaxBuildHeight() - 1);
+                    int dimMinY = mc.level.dimensionType().minY();
+                    int minY = Math.max(yRange[0], dimMinY);
+                    int maxY = Math.min(yRange[1], dimMinY + mc.level.dimensionType().height() - 1);
 
                     int boxColor  = VisionConfig.parseColor(cfg.oreBoxColors.getOrDefault(oreId, "#FFFFFFFF"));
                     int lineColor = VisionConfig.parseColor(cfg.oreLineColors.getOrDefault(oreId, "#FFFFFFFF"));

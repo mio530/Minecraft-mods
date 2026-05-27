@@ -1,6 +1,7 @@
 package de.mio.visionmod.overlay;
 
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -70,7 +71,7 @@ public final class OverlayWindow {
         }
     }
 
-    // Called from WorldRenderEvents.END (render/main thread)
+    // Called from WorldRenderEvents.END_MAIN (render/main thread)
     public void onRenderEnd(WorldRenderContext ctx) {
         if (overlayHandle == 0L || renderer == null) return;
 
@@ -79,10 +80,10 @@ public final class OverlayWindow {
         int sh = mc.getWindow().getHeight();
         if (sw <= 0 || sh <= 0) return;
 
-        // Capture matrices while Minecraft's context is still current
-        Matrix4f mv   = new Matrix4f(ctx.positionMatrix());
-        Matrix4f proj = new Matrix4f(ctx.projectionMatrix());
-        Vec3 camPos   = ctx.camera().getPosition();
+        // Capture matrices and camera position while Minecraft's context is current
+        Matrix4f mv   = new Matrix4f(ctx.matrices().last().pose());
+        Matrix4f proj = new Matrix4f(RenderSystem.getProjectionMatrix());
+        Vec3 camPos   = ctx.gameRenderer().getMainCamera().getPosition();
 
         long mainCtx = glfwGetCurrentContext();
         GLCapabilities mainCaps = GL.getCapabilities();
@@ -104,7 +105,7 @@ public final class OverlayWindow {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer xb = stack.mallocInt(1);
             IntBuffer yb = stack.mallocInt(1);
-            glfwGetWindowPos(mc.getWindow().getHandle(), xb, yb);
+            glfwGetWindowPos(mc.getWindow().getWindow(), xb, yb);
             glfwSetWindowPos(overlayHandle, xb.get(0), yb.get(0));
         }
     }
@@ -122,7 +123,7 @@ public final class OverlayWindow {
             }
             IntBuffer xb = stack.mallocInt(1);
             IntBuffer yb = stack.mallocInt(1);
-            glfwGetWindowPos(mc.getWindow().getHandle(), xb, yb);
+            glfwGetWindowPos(mc.getWindow().getWindow(), xb, yb);
             glfwSetWindowPos(overlayHandle, xb.get(0), yb.get(0));
         }
     }

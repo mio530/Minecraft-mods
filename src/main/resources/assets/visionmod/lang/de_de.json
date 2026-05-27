@@ -1,5 +1,6 @@
 {
   "category.visionmod": "AppleskinV2",
+  "key.category.visionmod.general": "AppleskinV2",
   "key.visionmod.entity_esp": "Entity-ESP an/aus",
   "key.visionmod.ore_esp": "Erz-ESP an/aus",
   "key.visionmod.config": "VisionMod Konfiguration öffnen",
