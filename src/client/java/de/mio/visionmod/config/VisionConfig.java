@@ -44,6 +44,15 @@ public class VisionConfig {
     public int  oreScanRadius = 3;
     public boolean fillBoxes  = false;
 
+    // --- Sus Chunks (hidden base detector) ---
+    public boolean susChunksEnabled       = false;
+    public boolean susDetectChests        = true;   // chests, barrels, shulker boxes
+    public boolean susDetectSpawners      = true;   // monster spawners
+    public boolean susDetectRedstone      = true;   // pistons, hoppers, comparators, etc.
+    public boolean showAllChunkBorders    = false;  // outline every loaded chunk
+    public String  susChunkColor          = "#AAFF4400";
+    public String  chunkBorderColor       = "#22FFFFFF";
+
     // Ordered list of all known entity types (display order in config screen)
     public static final List<String> ALL_ENTITY_TYPES = Arrays.asList(
             "minecraft:player",

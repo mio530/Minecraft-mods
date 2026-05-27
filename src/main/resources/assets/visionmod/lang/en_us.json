@@ -3,6 +3,7 @@
   "key.visionmod.entity_esp": "Toggle Entity ESP",
   "key.visionmod.ore_esp": "Toggle Ore ESP",
   "key.visionmod.config": "Open VisionMod Config",
+  "key.visionmod.sus_chunks": "Toggle Sus Chunks",
   "screen.visionmod.config": "VisionMod Configuration",
   "tab.visionmod.entities": "Players/Entities",
   "tab.visionmod.ores": "Ores",

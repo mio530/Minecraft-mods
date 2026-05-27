@@ -3,6 +3,7 @@ package de.mio.visionmod.overlay;
 import de.mio.visionmod.config.VisionConfig;
 import de.mio.visionmod.esp.EntityESP;
 import de.mio.visionmod.esp.OreESP;
+import de.mio.visionmod.esp.SusChunks;
 import de.mio.visionmod.util.ProjectionUtil;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -49,6 +50,46 @@ public final class OverlayRenderer {
                         o.boxColor(), o.lineColor(), o.showLine(), cx, cy, cfg.fillBoxes);
             }
         }
+
+        // Sus Chunks – draw at player eye level
+        if (cfg.susChunksEnabled || cfg.showAllChunkBorders) {
+            for (SusChunks.ChunkData chunk : SusChunks.snapshot) {
+                int color = chunk.suspicious()
+                        ? VisionConfig.parseColor(cfg.susChunkColor)
+                        : VisionConfig.parseColor(cfg.chunkBorderColor);
+                renderChunkOutline(mv, proj, camPos, sw, sh, chunk.chunkX(), chunk.chunkZ(), color);
+            }
+        }
+    }
+
+    private void renderChunkOutline(Matrix4f mv, Matrix4f proj, Vec3 cam,
+                                     int sw, int sh, int chunkX, int chunkZ, int color) {
+        double minX = chunkX * 16.0;
+        double minZ = chunkZ * 16.0;
+        double maxX = minX + 16.0;
+        double maxZ = minZ + 16.0;
+
+        // Y offset = 0 means we project at the camera's own height plane
+        float[] c0 = ProjectionUtil.project((float)(minX - cam.x), 0f, (float)(minZ - cam.z), mv, proj, sw, sh);
+        float[] c1 = ProjectionUtil.project((float)(maxX - cam.x), 0f, (float)(minZ - cam.z), mv, proj, sw, sh);
+        float[] c2 = ProjectionUtil.project((float)(maxX - cam.x), 0f, (float)(maxZ - cam.z), mv, proj, sw, sh);
+        float[] c3 = ProjectionUtil.project((float)(minX - cam.x), 0f, (float)(maxZ - cam.z), mv, proj, sw, sh);
+
+        if (c0[2] <= 0f && c1[2] <= 0f && c2[2] <= 0f && c3[2] <= 0f) return;
+
+        float a = ((color >> 24) & 0xFF) / 255f;
+        float r = ((color >> 16) & 0xFF) / 255f;
+        float g = ((color >> 8)  & 0xFF) / 255f;
+        float b = ( color        & 0xFF) / 255f;
+
+        glLineWidth(2.0f);
+        glColor4f(r, g, b, a);
+        glBegin(GL_LINES);
+        if (c0[2] > 0f && c1[2] > 0f) { glVertex2f(c0[0], c0[1]); glVertex2f(c1[0], c1[1]); }
+        if (c1[2] > 0f && c2[2] > 0f) { glVertex2f(c1[0], c1[1]); glVertex2f(c2[0], c2[1]); }
+        if (c2[2] > 0f && c3[2] > 0f) { glVertex2f(c2[0], c2[1]); glVertex2f(c3[0], c3[1]); }
+        if (c3[2] > 0f && c0[2] > 0f) { glVertex2f(c3[0], c3[1]); glVertex2f(c0[0], c0[1]); }
+        glEnd();
     }
 
     private void renderBox(Matrix4f mv, Matrix4f proj, Vec3 cam,

@@ -241,6 +241,33 @@ public class VisionConfigScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("+"),
                 b -> { cfg.oreScanRadius = Math.min(8, cfg.oreScanRadius + 1); VisionConfig.save(); rebuildWidgets(); })
                 .bounds(COL_TOGGLE + 25, y, 20, 20).build());
+        y += ROW_H + 4;
+
+        // Sus Chunks
+        addRenderableWidget(Button.builder(
+                Component.literal("Sus Chunks (F9): " + (cfg.susChunksEnabled ? "§aAN" : "§cAUS")),
+                b -> { cfg.susChunksEnabled = !cfg.susChunksEnabled; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(COL_TOGGLE, y, 180, 20).build());
+        y += ROW_H + 4;
+
+        addRenderableWidget(Button.builder(
+                Component.literal("  Kisten: " + (cfg.susDetectChests ? "§aAN" : "§cAUS")),
+                b -> { cfg.susDetectChests = !cfg.susDetectChests; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(COL_TOGGLE, y, 130, 20).build());
+        addRenderableWidget(Button.builder(
+                Component.literal("  Spawner: " + (cfg.susDetectSpawners ? "§aAN" : "§cAUS")),
+                b -> { cfg.susDetectSpawners = !cfg.susDetectSpawners; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(COL_TOGGLE + 135, y, 130, 20).build());
+        y += ROW_H + 4;
+
+        addRenderableWidget(Button.builder(
+                Component.literal("  Redstone: " + (cfg.susDetectRedstone ? "§aAN" : "§cAUS")),
+                b -> { cfg.susDetectRedstone = !cfg.susDetectRedstone; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(COL_TOGGLE, y, 130, 20).build());
+        addRenderableWidget(Button.builder(
+                Component.literal("  Alle Grenzen: " + (cfg.showAllChunkBorders ? "§aAN" : "§cAUS")),
+                b -> { cfg.showAllChunkBorders = !cfg.showAllChunkBorders; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(COL_TOGGLE + 135, y, 145, 20).build());
     }
 
     // ---- Toggle helpers -------------------------------------------------
