@@ -60,7 +60,7 @@ public final class OreESP {
         if (tickCounter % 20 != 0) return;
 
         ChunkPos center = mc.player.chunkPosition();
-        int radius = Math.max(1, Math.min(cfg.oreScanRadius, 8));
+        int radius = Math.max(1, Math.min(cfg.oreEspRadius, 8));
         List<OreData> next = new ArrayList<>();
 
         for (int cx = center.x - radius; cx <= center.x + radius; cx++) {

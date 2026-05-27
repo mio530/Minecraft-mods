@@ -41,8 +41,10 @@ public class VisionConfig {
     public Set<String>         oreLinesEnabled = new LinkedHashSet<>();
 
     // --- General ---
-    public int  oreScanRadius = 3;
-    public boolean fillBoxes  = false;
+    public int  entityEspRadius = 4;   // chunk radius for entity ESP
+    public int  oreEspRadius    = 3;   // chunk radius for ore ESP
+    public int  susChunksRadius = 4;   // chunk radius for sus chunk scan
+    public boolean fillBoxes    = false;
 
     // --- Sus Chunks (hidden base detector) ---
     public boolean susChunksEnabled       = false;

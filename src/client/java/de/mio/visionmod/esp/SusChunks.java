@@ -66,7 +66,7 @@ public final class SusChunks {
         if (tickCounter % 40 != 0) return; // scan every 2 seconds
 
         ChunkPos center = mc.player.chunkPosition();
-        int radius = Math.max(1, Math.min(cfg.oreScanRadius, 8));
+        int radius = Math.max(1, Math.min(cfg.susChunksRadius, 8));
         List<ChunkData> next = new ArrayList<>();
 
         for (int cx = center.x - radius; cx <= center.x + radius; cx++) {

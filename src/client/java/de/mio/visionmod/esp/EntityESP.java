@@ -6,6 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
@@ -33,9 +34,13 @@ public final class EntityESP {
         }
 
         List<EntityData> next = new ArrayList<>();
+        ChunkPos playerChunk = mc.player.chunkPosition();
+        int radius = Math.max(1, Math.min(cfg.entityEspRadius, 16));
 
         for (Entity entity : mc.level.entitiesForRendering()) {
             if (entity == mc.player) continue;
+            ChunkPos ec = entity.chunkPosition();
+            if (Math.abs(ec.x - playerChunk.x) > radius || Math.abs(ec.z - playerChunk.z) > radius) continue;
 
             ResourceLocation typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
             if (typeKey == null) continue;

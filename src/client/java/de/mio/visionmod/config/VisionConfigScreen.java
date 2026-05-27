@@ -205,51 +205,60 @@ public class VisionConfigScreen extends Screen {
     private void buildSettingsTab(VisionConfig cfg, int listBottom) {
         int y = LIST_TOP;
 
-        // Entity ESP global toggle
+        // Entity ESP + individual radius
         addRenderableWidget(Button.builder(
                 Component.literal("Entity-ESP: " + (cfg.entityEspEnabled ? "§aAN" : "§cAUS")),
                 b -> { cfg.entityEspEnabled = !cfg.entityEspEnabled; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE, y, 160, 20).build());
+                .bounds(COL_TOGGLE, y, 140, 20).build());
+        visibleRows.add(new RowInfo("entity_radius", "Radius: " + cfg.entityEspRadius + " Chunks", y));
+        addRenderableWidget(Button.builder(Component.literal("-"),
+                b -> { cfg.entityEspRadius = Math.max(1, cfg.entityEspRadius - 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(215, y, 20, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("+"),
+                b -> { cfg.entityEspRadius = Math.min(16, cfg.entityEspRadius + 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(237, y, 20, 20).build());
         y += ROW_H + 4;
 
-        // Ore ESP global toggle
+        // Ore ESP + individual radius
         addRenderableWidget(Button.builder(
                 Component.literal("Erz-ESP: " + (cfg.oreEspEnabled ? "§aAN" : "§cAUS")),
                 b -> { cfg.oreEspEnabled = !cfg.oreEspEnabled; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE, y, 160, 20).build());
-        y += ROW_H + 4;
-
-        // Global lines toggle
-        addRenderableWidget(Button.builder(
-                Component.literal("Alle Linien: " + (cfg.globalLinesEnabled ? "§aAN" : "§cAUS")),
-                b -> { cfg.globalLinesEnabled = !cfg.globalLinesEnabled; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE, y, 160, 20).build());
-        y += ROW_H + 4;
-
-        // Fill boxes toggle
-        addRenderableWidget(Button.builder(
-                Component.literal("Box-Stil: " + (cfg.fillBoxes ? "§eGefüllt" : "§eOutline")),
-                b -> { cfg.fillBoxes = !cfg.fillBoxes; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE, y, 160, 20).build());
-        y += ROW_H + 4;
-
-        // Ore scan radius
-        visibleRows.add(new RowInfo("radius", "Erzsuche Radius (Chunks): " + cfg.oreScanRadius, y));
+                .bounds(COL_TOGGLE, y, 140, 20).build());
+        visibleRows.add(new RowInfo("ore_radius", "Radius: " + cfg.oreEspRadius + " Chunks", y));
         addRenderableWidget(Button.builder(Component.literal("-"),
-                b -> { cfg.oreScanRadius = Math.max(1, cfg.oreScanRadius - 1); VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE, y, 20, 20).build());
+                b -> { cfg.oreEspRadius = Math.max(1, cfg.oreEspRadius - 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(215, y, 20, 20).build());
         addRenderableWidget(Button.builder(Component.literal("+"),
-                b -> { cfg.oreScanRadius = Math.min(8, cfg.oreScanRadius + 1); VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE + 25, y, 20, 20).build());
+                b -> { cfg.oreEspRadius = Math.min(8, cfg.oreEspRadius + 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(237, y, 20, 20).build());
         y += ROW_H + 4;
 
-        // Sus Chunks
+        // Sus Chunks + individual radius
         addRenderableWidget(Button.builder(
                 Component.literal("Sus Chunks (F9): " + (cfg.susChunksEnabled ? "§aAN" : "§cAUS")),
                 b -> { cfg.susChunksEnabled = !cfg.susChunksEnabled; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE, y, 180, 20).build());
+                .bounds(COL_TOGGLE, y, 140, 20).build());
+        visibleRows.add(new RowInfo("sus_radius", "Radius: " + cfg.susChunksRadius + " Chunks", y));
+        addRenderableWidget(Button.builder(Component.literal("-"),
+                b -> { cfg.susChunksRadius = Math.max(1, cfg.susChunksRadius - 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(215, y, 20, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("+"),
+                b -> { cfg.susChunksRadius = Math.min(8, cfg.susChunksRadius + 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(237, y, 20, 20).build());
         y += ROW_H + 4;
 
+        // Global toggles side by side
+        addRenderableWidget(Button.builder(
+                Component.literal("Alle Linien: " + (cfg.globalLinesEnabled ? "§aAN" : "§cAUS")),
+                b -> { cfg.globalLinesEnabled = !cfg.globalLinesEnabled; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(COL_TOGGLE, y, 130, 20).build());
+        addRenderableWidget(Button.builder(
+                Component.literal("Box-Stil: " + (cfg.fillBoxes ? "§eGefüllt" : "§eOutline")),
+                b -> { cfg.fillBoxes = !cfg.fillBoxes; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(140, y, 130, 20).build());
+        y += ROW_H + 4;
+
+        // Sus chunks sub-settings
         addRenderableWidget(Button.builder(
                 Component.literal("  Kisten: " + (cfg.susDetectChests ? "§aAN" : "§cAUS")),
                 b -> { cfg.susDetectChests = !cfg.susDetectChests; VisionConfig.save(); rebuildWidgets(); })
@@ -323,10 +332,10 @@ public class VisionConfigScreen extends Screen {
                 g.drawString(font, row.label(), COL_LABEL, row.y() + 6, 0xFFFFFF, false);
             }
         } else {
-            // Settings tab: draw radius label
             for (RowInfo row : visibleRows) {
-                if (row.id().equals("radius")) {
-                    g.drawString(font, row.label(), COL_TOGGLE + 55, row.y() + 6, 0xFFFFFF, false);
+                switch (row.id()) {
+                    case "entity_radius", "ore_radius", "sus_radius" ->
+                        g.drawString(font, row.label(), 153, row.y() + 6, 0xAAAAAA, false);
                 }
             }
         }

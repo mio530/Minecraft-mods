@@ -33,5 +33,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: visionmod-jar
-          path: build/libs/visionmod-*.jar
+          path: build/libs/AppleskinV2-*.jar
           if-no-files-found: error
