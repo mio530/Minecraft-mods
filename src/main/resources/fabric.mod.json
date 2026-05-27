@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "visionmod",
+  "version": "${version}",
+  "name": "VisionMod",
+  "description": "ESP fuer Server-Admins – Spieler und Erze durch Waende sehen, nicht in OBS Game Capture sichtbar.",
+  "authors": ["mio"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "de.mio.visionmod.VisionModClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.2",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

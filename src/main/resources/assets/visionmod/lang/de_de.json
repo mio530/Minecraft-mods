@@ -1,0 +1,10 @@
+{
+  "category.visionmod": "VisionMod",
+  "key.visionmod.entity_esp": "Entity-ESP an/aus",
+  "key.visionmod.ore_esp": "Erz-ESP an/aus",
+  "key.visionmod.config": "VisionMod Konfiguration öffnen",
+  "screen.visionmod.config": "VisionMod Konfiguration",
+  "tab.visionmod.entities": "Spieler/Entities",
+  "tab.visionmod.ores": "Erze",
+  "tab.visionmod.settings": "Einstellungen"
+}
