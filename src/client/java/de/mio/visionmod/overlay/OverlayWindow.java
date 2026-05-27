@@ -1,120 +1,88 @@
 package de.mio.visionmod.overlay;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import de.mio.visionmod.config.VisionConfig;
+import de.mio.visionmod.esp.EntityESP;
+import de.mio.visionmod.esp.OreESP;
+import de.mio.visionmod.esp.SusChunks;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL;
-import org.lwjgl.opengl.GLCapabilities;
-import org.lwjgl.system.MemoryStack;
-
-import java.nio.IntBuffer;
-
-import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.opengl.GL11.*;
 
 public final class OverlayWindow {
 
     public static final OverlayWindow INSTANCE = new OverlayWindow();
-
-    private long overlayHandle = 0L;
-    private GLCapabilities overlayCaps;
-    private OverlayRenderer renderer;
-
     private OverlayWindow() {}
 
+    // No secondary window needed – renders directly into MC's GL context,
+    // which works in windowed, borderless-fullscreen, and exclusive-fullscreen.
     public void init(Minecraft mc) {
-        int w = mc.getWindow().getWidth();
-        int h = mc.getWindow().getHeight();
-        if (w <= 0 || h <= 0) { w = 854; h = 480; }
-
-        glfwDefaultWindowHints();
-        glfwWindowHint(GLFW_VISIBLE,                  GLFW_FALSE);
-        glfwWindowHint(GLFW_DECORATED,                GLFW_FALSE);
-        glfwWindowHint(GLFW_FLOATING,                 GLFW_TRUE);
-        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER,  GLFW_TRUE);
-        glfwWindowHint(GLFW_FOCUS_ON_SHOW,            GLFW_FALSE);
-        glfwWindowHint(GLFW_MOUSE_PASSTHROUGH,        GLFW_TRUE);
-        glfwWindowHint(GLFW_RESIZABLE,                GLFW_FALSE);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-
-        overlayHandle = glfwCreateWindow(w, h, "VisionMod Overlay", 0L, 0L);
-        if (overlayHandle == 0L) {
-            System.err.println("[VisionMod] Could not create overlay window!");
-            return;
-        }
-
-        positionOverlay(mc);
-
-        long mainCtx = glfwGetCurrentContext();
-        glfwMakeContextCurrent(overlayHandle);
-        overlayCaps = GL.createCapabilities();
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDisable(GL_DEPTH_TEST);
-        glfwMakeContextCurrent(mainCtx);
-
-        glfwShowWindow(overlayHandle);
-        renderer = new OverlayRenderer();
-        System.out.println("[VisionMod] Overlay window created.");
+        System.out.println("[VisionMod] Direct ESP renderer ready.");
     }
 
-    public void destroy() {
-        if (overlayHandle != 0L) {
-            glfwDestroyWindow(overlayHandle);
-            overlayHandle = 0L;
-        }
-    }
+    public void destroy() {}
 
     public void onRenderEnd(WorldRenderContext ctx) {
-        if (overlayHandle == 0L || renderer == null) return;
-
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        int sw = mc.getWindow().getWidth();
-        int sh = mc.getWindow().getHeight();
-        if (sw <= 0 || sh <= 0) return;
 
-        // Model-view: camera rotation from Fabric's PoseStack
-        Matrix4f mv   = new Matrix4f(ctx.matrices().last().pose());
-        // Projection: 70° = Minecraft default; Options.fov is private in 1.21.11
-        Matrix4f proj = new Matrix4f().perspective(
-                (float) Math.toRadians(70.0), (float) sw / sh, 0.05f, 256f);
-        Vec3 camPos   = mc.player.getEyePosition(1.0f);
+        Vec3 cam     = mc.player.getEyePosition(1.0f);
+        PoseStack ps = ctx.matrices();
+        MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
+        VisionConfig cfg = VisionConfig.get();
 
-        long mainCtx = glfwGetCurrentContext();
-        GLCapabilities mainCaps = GL.getCapabilities();
+        // Disable depth test so boxes render through walls
+        RenderSystem.disableDepthTest();
 
-        syncSizeAndPosition(mc);
+        VertexConsumer vc = buf.getBuffer(RenderType.lines());
 
-        glfwMakeContextCurrent(overlayHandle);
-        GL.setCapabilities(overlayCaps);
-
-        renderer.render(mv, proj, camPos, sw, sh);
-        glfwSwapBuffers(overlayHandle);
-
-        glfwMakeContextCurrent(mainCtx);
-        GL.setCapabilities(mainCaps);
-    }
-
-    private void positionOverlay(Minecraft mc) {
-        if (overlayHandle == 0L) return;
-        glfwSetWindowPos(overlayHandle, mc.getWindow().getX(), mc.getWindow().getY());
-    }
-
-    private void syncSizeAndPosition(Minecraft mc) {
-        if (overlayHandle == 0L) return;
-        int mw = mc.getWindow().getWidth();
-        int mh = mc.getWindow().getHeight();
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer wb = stack.mallocInt(1);
-            IntBuffer hb = stack.mallocInt(1);
-            glfwGetWindowSize(overlayHandle, wb, hb);
-            if (wb.get(0) != mw || hb.get(0) != mh) {
-                glfwSetWindowSize(overlayHandle, mw, mh);
+        if (cfg.entityEspEnabled) {
+            for (EntityESP.EntityData e : EntityESP.snapshot) {
+                drawBox(ps, vc, cam,
+                        e.minX(), e.minY(), e.minZ(),
+                        e.maxX(), e.maxY(), e.maxZ(), e.boxColor());
             }
-            glfwSetWindowPos(overlayHandle, mc.getWindow().getX(), mc.getWindow().getY());
         }
+
+        if (cfg.oreEspEnabled) {
+            for (OreESP.OreData o : OreESP.snapshot) {
+                drawBox(ps, vc, cam,
+                        o.x() - 0.5, o.y() - 0.5, o.z() - 0.5,
+                        o.x() + 0.5, o.y() + 0.5, o.z() + 0.5, o.boxColor());
+            }
+        }
+
+        if (cfg.susChunksEnabled || cfg.showAllChunkBorders) {
+            double py = mc.player.getY();
+            for (SusChunks.ChunkData chunk : SusChunks.snapshot) {
+                int color = chunk.suspicious()
+                        ? VisionConfig.parseColor(cfg.susChunkColor)
+                        : VisionConfig.parseColor(cfg.chunkBorderColor);
+                double bx = chunk.chunkX() * 16.0;
+                double bz = chunk.chunkZ() * 16.0;
+                drawBox(ps, vc, cam, bx, py - 1, bz, bx + 16, py + 3, bz + 16, color);
+            }
+        }
+
+        buf.endBatch(RenderType.lines());
+        RenderSystem.enableDepthTest();
+    }
+
+    private static void drawBox(PoseStack ps, VertexConsumer vc, Vec3 cam,
+                                 double minX, double minY, double minZ,
+                                 double maxX, double maxY, double maxZ, int color) {
+        float r = ((color >> 16) & 0xFF) / 255f;
+        float g = ((color >>  8) & 0xFF) / 255f;
+        float b = ( color        & 0xFF) / 255f;
+        float a = ((color >> 24) & 0xFF) / 255f;
+        AABB bb = new AABB(minX - cam.x, minY - cam.y, minZ - cam.z,
+                           maxX - cam.x, maxY - cam.y, maxZ - cam.z);
+        LevelRenderer.renderLineBox(ps, vc, bb, r, g, b, a);
     }
 }
