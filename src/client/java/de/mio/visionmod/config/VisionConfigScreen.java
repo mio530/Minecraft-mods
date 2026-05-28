@@ -17,24 +17,16 @@ public class VisionConfigScreen extends Screen {
     private static final int LIST_TOP = 68;
     private static final int FOOTER_H = 32;
 
-    // 10 preset colours in the palette row
     private static final int[] PALETTE = {
-        0xFFFF3333,  // Rot
-        0xFFFF8800,  // Orange
-        0xFFFFDD00,  // Gelb
-        0xFF33FF44,  // Grün
-        0xFF00FFCC,  // Türkis
-        0xFF22AAFF,  // Blau
-        0xFFAA55FF,  // Lila
-        0xFFFF55BB,  // Pink
-        0xFFFFFFFF,  // Weiß
-        0xFF888888,  // Grau
+        0xFFFF3333, 0xFFFF8800, 0xFFFFDD00, 0xFF33FF44,
+        0xFF00FFCC, 0xFF22AAFF, 0xFFAA55FF, 0xFFFF55BB,
+        0xFFFFFFFF, 0xFF888888,
     };
 
     private final Screen parent;
-    private int    activeTab   = 0;
-    private int    scrollPx    = 0;
-    private String rebindingKey = null; // which keybind is waiting for input
+    private int    activeTab    = 0;
+    private int    scrollPx     = 0;
+    private String rebindingKey = null;
 
     private final List<Label>  labels   = new ArrayList<>();
     private final List<Swatch> swatches = new ArrayList<>();
@@ -58,14 +50,14 @@ public class VisionConfigScreen extends Screen {
         swatches.clear();
         VisionConfig cfg = VisionConfig.get();
 
-        // 4 tab buttons – evenly spaced
+        // 4 tab buttons
         int[] tx = {5, 84, 163, 244};
         int[] tw = {76, 76, 78, 70};
         String[] tn = {"Entities", "Erze", "Optionen", "Tasten"};
         for (int i = 0; i < 4; i++) {
             final int tab = i;
-            String lbl = (activeTab == tab ? "§e▶ " : "") + tn[i];
-            addRenderableWidget(Button.builder(Component.literal(lbl),
+            addRenderableWidget(Button.builder(
+                    Component.literal((activeTab == tab ? "§e▶ " : "") + tn[i]),
                     b -> switchTab(tab)).bounds(tx[i], 38, tw[i], 18).build());
         }
 
@@ -77,39 +69,33 @@ public class VisionConfigScreen extends Screen {
         switch (activeTab) {
             case 0 -> buildEntityTab(cfg, listBottom);
             case 1 -> buildOreTab(cfg, listBottom);
-            case 2 -> buildSettingsTab(cfg);
+            case 2 -> buildSettingsTab(cfg, listBottom);
             case 3 -> buildKeybindsTab(cfg);
         }
     }
 
-    private void switchTab(int t) {
-        activeTab   = t;
-        scrollPx    = 0;
-        rebindingKey = null;
-        rebuildWidgets();
-    }
+    private void switchTab(int t) { activeTab = t; scrollPx = 0; rebindingKey = null; rebuildWidgets(); }
 
     // ====================================================  ENTITY TAB  ===
 
     private void buildEntityTab(VisionConfig cfg, int listBottom) {
-        labels.add(new Label(18,  LIST_TOP - 20, "§7AN/AUS"));
-        labels.add(new Label(62,  LIST_TOP - 20, "§7Typ"));
-        labels.add(new Label(5,   LIST_TOP - 8,
+        labels.add(new Label(18, LIST_TOP - 20, "§7AN/AUS"));
+        labels.add(new Label(62, LIST_TOP - 20, "§7Typ"));
+        labels.add(new Label(5,  LIST_TOP - 8,
                 "§8← Box-Farbe anklicken        §8[L]=Linie  ← Linie-Farbe anklicken"));
 
         List<String> items = VisionConfig.ALL_ENTITY_TYPES;
         int rowCount = items.size();
         scrollPx = clamp(scrollPx, 0, Math.max(0, rowCount * ROW_H - (listBottom - LIST_TOP - 30)));
 
-        int first  = scrollPx / ROW_H;
-        int pixOff = scrollPx % ROW_H;
+        int first = scrollPx / ROW_H, pixOff = scrollPx % ROW_H;
 
         for (int i = first; i < rowCount; i++) {
             int y = LIST_TOP + (i - first) * ROW_H - pixOff;
             if (y + ROW_H < LIST_TOP) continue;
-            if (y > listBottom - 30) break;
+            if (y > listBottom - 30)  break;
 
-            String id  = items.get(i);
+            String id = items.get(i);
             boolean on = cfg.enabledEntityTypes.contains(id);
             addRenderableWidget(Button.builder(
                     Component.literal(on ? "§a[AN]" : "§c[AUS]"),
@@ -120,12 +106,9 @@ public class VisionConfigScreen extends Screen {
             int bCol = parseRGB(cfg.entityBoxColors.getOrDefault(id, "#FFFF0000"));
             addCurrent(5, y + 25, bCol);
             for (int ci = 0; ci < PALETTE.length; ci++) {
-                final String fid = id;
-                final int    pc  = PALETTE[ci];
+                final String fid = id; final int pc = PALETTE[ci];
                 addPalette(22 + ci * 13, y + 25, pc, () -> {
-                    cfg.entityBoxColors.put(fid, rgb(pc));
-                    VisionConfig.save(); rebuildWidgets();
-                });
+                    cfg.entityBoxColors.put(fid, rgb(pc)); VisionConfig.save(); rebuildWidgets(); });
             }
 
             boolean lineOn = cfg.entityLinesEnabled.contains(id);
@@ -137,12 +120,9 @@ public class VisionConfigScreen extends Screen {
             int lCol = parseRGB(cfg.entityLineColors.getOrDefault(id, "#FFFF0000"));
             addCurrent(190, y + 25, lCol);
             for (int ci = 0; ci < PALETTE.length; ci++) {
-                final String fid = id;
-                final int    pc  = PALETTE[ci];
+                final String fid = id; final int pc = PALETTE[ci];
                 addPalette(207 + ci * 13, y + 25, pc, () -> {
-                    cfg.entityLineColors.put(fid, rgb(pc));
-                    VisionConfig.save(); rebuildWidgets();
-                });
+                    cfg.entityLineColors.put(fid, rgb(pc)); VisionConfig.save(); rebuildWidgets(); });
             }
         }
 
@@ -155,10 +135,7 @@ public class VisionConfigScreen extends Screen {
         names.setHint(Component.literal("§7z.B. Steve,Alex  (leer = alle Spieler)"));
         names.setResponder(val -> {
             cfg.enabledPlayerNames.clear();
-            for (String n : val.split(",")) {
-                String t = n.trim();
-                if (!t.isEmpty()) cfg.enabledPlayerNames.add(t);
-            }
+            for (String n : val.split(",")) { String t = n.trim(); if (!t.isEmpty()) cfg.enabledPlayerNames.add(t); }
             VisionConfig.save();
         });
         addRenderableWidget(names);
@@ -167,24 +144,23 @@ public class VisionConfigScreen extends Screen {
     // ======================================================  ORE TAB  ===
 
     private void buildOreTab(VisionConfig cfg, int listBottom) {
-        labels.add(new Label(18,  LIST_TOP - 20, "§7AN/AUS"));
-        labels.add(new Label(62,  LIST_TOP - 20, "§7Erztyp"));
-        labels.add(new Label(5,   LIST_TOP - 8,
+        labels.add(new Label(18, LIST_TOP - 20, "§7AN/AUS"));
+        labels.add(new Label(62, LIST_TOP - 20, "§7Erztyp"));
+        labels.add(new Label(5,  LIST_TOP - 8,
                 "§8← Box-Farbe anklicken        §8[L]=Linie  ← Linie-Farbe anklicken"));
 
         List<String> items = VisionConfig.ALL_ORES;
         int rowCount = items.size();
         scrollPx = clamp(scrollPx, 0, Math.max(0, rowCount * ROW_H - (listBottom - LIST_TOP)));
 
-        int first  = scrollPx / ROW_H;
-        int pixOff = scrollPx % ROW_H;
+        int first = scrollPx / ROW_H, pixOff = scrollPx % ROW_H;
 
         for (int i = first; i < rowCount; i++) {
             int y = LIST_TOP + (i - first) * ROW_H - pixOff;
             if (y + ROW_H < LIST_TOP) continue;
-            if (y > listBottom) break;
+            if (y > listBottom)        break;
 
-            String id  = items.get(i);
+            String id = items.get(i);
             boolean on = cfg.enabledOres.contains(id);
             addRenderableWidget(Button.builder(
                     Component.literal(on ? "§a[AN]" : "§c[AUS]"),
@@ -195,12 +171,9 @@ public class VisionConfigScreen extends Screen {
             int bCol = parseRGB(cfg.oreBoxColors.getOrDefault(id, "#FFFFFFFF"));
             addCurrent(5, y + 25, bCol);
             for (int ci = 0; ci < PALETTE.length; ci++) {
-                final String fid = id;
-                final int    pc  = PALETTE[ci];
+                final String fid = id; final int pc = PALETTE[ci];
                 addPalette(22 + ci * 13, y + 25, pc, () -> {
-                    cfg.oreBoxColors.put(fid, rgb(pc));
-                    VisionConfig.save(); rebuildWidgets();
-                });
+                    cfg.oreBoxColors.put(fid, rgb(pc)); VisionConfig.save(); rebuildWidgets(); });
             }
 
             boolean lineOn = cfg.oreLinesEnabled.contains(id);
@@ -212,124 +185,174 @@ public class VisionConfigScreen extends Screen {
             int lCol = parseRGB(cfg.oreLineColors.getOrDefault(id, "#FFFFFFFF"));
             addCurrent(190, y + 25, lCol);
             for (int ci = 0; ci < PALETTE.length; ci++) {
-                final String fid = id;
-                final int    pc  = PALETTE[ci];
+                final String fid = id; final int pc = PALETTE[ci];
                 addPalette(207 + ci * 13, y + 25, pc, () -> {
-                    cfg.oreLineColors.put(fid, rgb(pc));
-                    VisionConfig.save(); rebuildWidgets();
-                });
+                    cfg.oreLineColors.put(fid, rgb(pc)); VisionConfig.save(); rebuildWidgets(); });
             }
         }
     }
 
-    // =================================================  SETTINGS TAB  ===
+    // ================================================  SETTINGS TAB  ===
 
-    private void buildSettingsTab(VisionConfig cfg) {
-        int y = LIST_TOP;
+    private void buildSettingsTab(VisionConfig cfg, int lb) {
+        // ── estimate total content height for scroll cap ──────────────────
+        // 9 sections of ~34px + sub-rows ~24px each ≈ 580px total
+        scrollPx = clamp(scrollPx, 0, Math.max(0, 620 - (lb - LIST_TOP)));
 
-        labels.add(new Label(5, y - 2, "§7─── Entity-ESP ───────────────────────────────────"));
-        y += 10;
-        addToggle("§eEntity-ESP  §8[" + keyName(cfg.keyEntityEsp) + "]: " + onOff(cfg.entityEspEnabled),
-                y, () -> { cfg.entityEspEnabled = !cfg.entityEspEnabled; VisionConfig.save(); rebuildWidgets(); });
-        labels.add(new Label(7, y + 20, "§8Zeigt Entities und Spieler als farbige Boxen durch Wände"));
-        addRadius(y, cfg.entityEspRadius, 1, 16,
-                () -> { cfg.entityEspRadius = Math.max(1,  cfg.entityEspRadius - 1); VisionConfig.save(); rebuildWidgets(); },
-                () -> { cfg.entityEspRadius = Math.min(16, cfg.entityEspRadius + 1); VisionConfig.save(); rebuildWidgets(); });
-        y += 34;
+        // content y = LIST_TOP + position - scrollPx
+        // helper: add y offset to content position
+        final int off = LIST_TOP - scrollPx;
 
-        addToggle("§eEntity Glow §8(statt Box): " + onOff(cfg.entityGlowEnabled),
-                y, () -> { cfg.entityGlowEnabled = !cfg.entityGlowEnabled; VisionConfig.save(); rebuildWidgets(); });
-        labels.add(new Label(7, y + 20, "§8Vanilla Glow-Effekt – farbiger Umriss durch Wände. Nicht in OBS sichtbar."));
-        y += 34;
+        settingsHeader(off + 0,  lb, "§7─── Entity-ESP ─────────────────────────────────────");
+        settingsToggle(off + 12, lb, "§eEntity-ESP §8[" + keyName(cfg.keyEntityEsp) + "]: " + onOff(cfg.entityEspEnabled),
+                () -> { cfg.entityEspEnabled = !cfg.entityEspEnabled; VisionConfig.save(); rebuildWidgets(); });
+        settingsDesc  (off + 32, lb, "§8Zeigt Entities/Spieler als farbige Boxen durch Wände");
+        settingsRadius(off + 12, lb, cfg.entityEspRadius, 1, 16,
+                () -> { cfg.entityEspRadius = Math.max(1,  cfg.entityEspRadius-1); VisionConfig.save(); rebuildWidgets(); },
+                () -> { cfg.entityEspRadius = Math.min(16, cfg.entityEspRadius+1); VisionConfig.save(); rebuildWidgets(); });
 
-        labels.add(new Label(5, y, "§7─── Erz-ESP ───────────────────────────────────────"));
-        y += 12;
-        addToggle("§eErz-ESP  §8[" + keyName(cfg.keyOreEsp) + "]: " + onOff(cfg.oreEspEnabled),
-                y, () -> { cfg.oreEspEnabled = !cfg.oreEspEnabled; VisionConfig.save(); rebuildWidgets(); });
-        labels.add(new Label(7, y + 20, "§8Zeigt Erze (Diamant, Eisen …) als farbige Boxen durch Wände"));
-        addRadius(y, cfg.oreEspRadius, 1, 8,
-                () -> { cfg.oreEspRadius = Math.max(1, cfg.oreEspRadius - 1); VisionConfig.save(); rebuildWidgets(); },
-                () -> { cfg.oreEspRadius = Math.min(8, cfg.oreEspRadius + 1); VisionConfig.save(); rebuildWidgets(); });
-        y += 34;
+        settingsToggle(off + 48, lb, "§eEntity Glow §8(statt Box): " + onOff(cfg.entityGlowEnabled),
+                () -> { cfg.entityGlowEnabled = !cfg.entityGlowEnabled; VisionConfig.save(); rebuildWidgets(); });
+        settingsDesc  (off + 68, lb, "§8Vanilla-Umriss durch Wände. Nicht in OBS sichtbar.");
 
-        labels.add(new Label(5, y, "§7─── Sus Chunks ────────────────────────────────────"));
-        y += 12;
-        addToggle("§eSus Chunks  §8[" + keyName(cfg.keySusChunks) + "]: " + onOff(cfg.susChunksEnabled),
-                y, () -> { cfg.susChunksEnabled = !cfg.susChunksEnabled; VisionConfig.save(); rebuildWidgets(); });
-        labels.add(new Label(7, y + 20, "§8Hebt Chunks mit Kisten/Spawner/Redstone hervor (= versteckte Basen)"));
-        addRadius(y, cfg.susChunksRadius, 1, 8,
-                () -> { cfg.susChunksRadius = Math.max(1, cfg.susChunksRadius - 1); VisionConfig.save(); rebuildWidgets(); },
-                () -> { cfg.susChunksRadius = Math.min(8, cfg.susChunksRadius + 1); VisionConfig.save(); rebuildWidgets(); });
-        y += 34;
+        settingsToggle(off + 84, lb, "§eHealth Bar über Entity: " + onOff(cfg.healthBarEnabled),
+                () -> { cfg.healthBarEnabled = !cfg.healthBarEnabled; VisionConfig.save(); rebuildWidgets(); });
+        settingsDesc  (off + 104, lb, "§83D-Balken über jeder Entity: grün→gelb→rot je nach HP");
 
-        addRenderableWidget(Button.builder(
-                Component.literal("Kisten: " + onOff(cfg.susDetectChests)),
-                b -> { cfg.susDetectChests = !cfg.susDetectChests; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(5, y, 110, 16).build());
-        addRenderableWidget(Button.builder(
-                Component.literal("Spawner: " + onOff(cfg.susDetectSpawners)),
-                b -> { cfg.susDetectSpawners = !cfg.susDetectSpawners; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(120, y, 115, 16).build());
-        addRenderableWidget(Button.builder(
-                Component.literal("Redstone: " + onOff(cfg.susDetectRedstone)),
-                b -> { cfg.susDetectRedstone = !cfg.susDetectRedstone; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(240, y, 120, 16).build());
-        y += 24;
+        settingsHeader(off + 120, lb, "§7─── Vollhelligkeit ─────────────────────────────────");
+        settingsToggle(off + 132, lb, "§eFullbright §8[" + keyName(cfg.keyFullbright) + "]: " + onOff(cfg.fullbrightEnabled),
+                () -> { cfg.fullbrightEnabled = !cfg.fullbrightEnabled; VisionConfig.save(); rebuildWidgets(); });
+        settingsDesc  (off + 152, lb, "§8Versteckter Night-Vision-Effekt. Kein Icon, kein Partikel.");
 
-        addRenderableWidget(Button.builder(
-                Component.literal("Alle Chunk-Grenzen: " + onOff(cfg.showAllChunkBorders)),
-                b -> { cfg.showAllChunkBorders = !cfg.showAllChunkBorders; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(5, y, 185, 16).build());
-        y += 24;
+        settingsHeader(off + 168, lb, "§7─── Erz-ESP ────────────────────────────────────────");
+        settingsToggle(off + 180, lb, "§eErz-ESP §8[" + keyName(cfg.keyOreEsp) + "]: " + onOff(cfg.oreEspEnabled),
+                () -> { cfg.oreEspEnabled = !cfg.oreEspEnabled; VisionConfig.save(); rebuildWidgets(); });
+        settingsDesc  (off + 200, lb, "§8Zeigt Erze (Diamant, Eisen …) als Boxen durch Wände");
+        settingsRadius(off + 180, lb, cfg.oreEspRadius, 1, 8,
+                () -> { cfg.oreEspRadius = Math.max(1, cfg.oreEspRadius-1); VisionConfig.save(); rebuildWidgets(); },
+                () -> { cfg.oreEspRadius = Math.min(8, cfg.oreEspRadius+1); VisionConfig.save(); rebuildWidgets(); });
 
-        labels.add(new Label(5, y, "§7─── Sonstiges ─────────────────────────────────────"));
-        y += 12;
-        addRenderableWidget(Button.builder(
-                Component.literal("Tracer-Linien global: " + onOff(cfg.globalLinesEnabled)),
-                b -> { cfg.globalLinesEnabled = !cfg.globalLinesEnabled; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(5, y, 175, 16).build());
-        addRenderableWidget(Button.builder(
-                Component.literal("Box-Stil: " + (cfg.fillBoxes ? "§eGefüllt" : "§eOutline")),
-                b -> { cfg.fillBoxes = !cfg.fillBoxes; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(185, y, 130, 16).build());
+        settingsHeader(off + 216, lb, "§7─── Item-ESP ───────────────────────────────────────");
+        settingsToggle(off + 228, lb, "§eItem-ESP" + (cfg.keyItemEsp > 0 ? " §8["+keyName(cfg.keyItemEsp)+"]" : "") + ": " + onOff(cfg.itemEspEnabled),
+                () -> { cfg.itemEspEnabled = !cfg.itemEspEnabled; VisionConfig.save(); rebuildWidgets(); });
+        settingsDesc  (off + 248, lb, "§8Zeigt liegende Items als Boxen. Tracer zu jedem Item.");
+        settingsRadius(off + 228, lb, cfg.itemEspRadius, 1, 16,
+                () -> { cfg.itemEspRadius = Math.max(1,  cfg.itemEspRadius-1); VisionConfig.save(); rebuildWidgets(); },
+                () -> { cfg.itemEspRadius = Math.min(16, cfg.itemEspRadius+1); VisionConfig.save(); rebuildWidgets(); });
+        settingsSwatch(off + 255, lb, "§8Item-Farbe:", parseRGB(cfg.itemEspColor),
+                c -> { cfg.itemEspColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
+
+        settingsHeader(off + 282, lb, "§7─── Container-ESP ──────────────────────────────────");
+        settingsToggle(off + 294, lb, "§eContainer-ESP" + (cfg.keyStorageEsp > 0 ? " §8["+keyName(cfg.keyStorageEsp)+"]" : "") + ": " + onOff(cfg.storageEspEnabled),
+                () -> { cfg.storageEspEnabled = !cfg.storageEspEnabled; VisionConfig.save(); rebuildWidgets(); });
+        settingsDesc  (off + 314, lb, "§8Hebt Kisten, Fässer, Shulker, Ender-Kisten hervor");
+        settingsRadius(off + 294, lb, cfg.storageEspRadius, 1, 8,
+                () -> { cfg.storageEspRadius = Math.max(1, cfg.storageEspRadius-1); VisionConfig.save(); rebuildWidgets(); },
+                () -> { cfg.storageEspRadius = Math.min(8, cfg.storageEspRadius+1); VisionConfig.save(); rebuildWidgets(); });
+        settingsSwatch(off + 321, lb, "§8Kiste:",      parseRGB(cfg.chestColor),
+                c -> { cfg.chestColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
+        settingsSwatch(off + 336, lb, "§8Fass:",       parseRGB(cfg.barrelColor),
+                c -> { cfg.barrelColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
+        settingsSwatch(off + 351, lb, "§8Shulker:",    parseRGB(cfg.shulkerColor),
+                c -> { cfg.shulkerColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
+        settingsSwatch(off + 366, lb, "§8Ender Kiste:",parseRGB(cfg.enderChestColor),
+                c -> { cfg.enderChestColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
+
+        settingsHeader(off + 392, lb, "§7─── Sus Chunks ─────────────────────────────────────");
+        settingsToggle(off + 404, lb, "§eSus Chunks §8[" + keyName(cfg.keySusChunks) + "]: " + onOff(cfg.susChunksEnabled),
+                () -> { cfg.susChunksEnabled = !cfg.susChunksEnabled; VisionConfig.save(); rebuildWidgets(); });
+        settingsDesc  (off + 424, lb, "§8Chunks mit Kisten/Spawner/Redstone hervorheben");
+        settingsRadius(off + 404, lb, cfg.susChunksRadius, 1, 8,
+                () -> { cfg.susChunksRadius = Math.max(1, cfg.susChunksRadius-1); VisionConfig.save(); rebuildWidgets(); },
+                () -> { cfg.susChunksRadius = Math.min(8, cfg.susChunksRadius+1); VisionConfig.save(); rebuildWidgets(); });
+
+        if (inView(off + 436, lb)) {
+            addRenderableWidget(Button.builder(Component.literal("Kisten: "  + onOff(cfg.susDetectChests)),
+                    b -> { cfg.susDetectChests = !cfg.susDetectChests; VisionConfig.save(); rebuildWidgets(); })
+                    .bounds(5, off + 436, 110, 16).build());
+            addRenderableWidget(Button.builder(Component.literal("Spawner: " + onOff(cfg.susDetectSpawners)),
+                    b -> { cfg.susDetectSpawners = !cfg.susDetectSpawners; VisionConfig.save(); rebuildWidgets(); })
+                    .bounds(120, off + 436, 115, 16).build());
+            addRenderableWidget(Button.builder(Component.literal("Redstone: "+ onOff(cfg.susDetectRedstone)),
+                    b -> { cfg.susDetectRedstone = !cfg.susDetectRedstone; VisionConfig.save(); rebuildWidgets(); })
+                    .bounds(240, off + 436, 120, 16).build());
+        }
+        if (inView(off + 458, lb))
+            addRenderableWidget(Button.builder(Component.literal("Alle Chunk-Grenzen: " + onOff(cfg.showAllChunkBorders)),
+                    b -> { cfg.showAllChunkBorders = !cfg.showAllChunkBorders; VisionConfig.save(); rebuildWidgets(); })
+                    .bounds(5, off + 458, 200, 16).build());
+
+        settingsHeader(off + 480, lb, "§7─── Sonstiges ──────────────────────────────────────");
+        if (inView(off + 492, lb)) {
+            addRenderableWidget(Button.builder(Component.literal("Tracer-Linien global: " + onOff(cfg.globalLinesEnabled)),
+                    b -> { cfg.globalLinesEnabled = !cfg.globalLinesEnabled; VisionConfig.save(); rebuildWidgets(); })
+                    .bounds(5, off + 492, 175, 16).build());
+            addRenderableWidget(Button.builder(Component.literal("Box-Stil: " + (cfg.fillBoxes ? "§eGefüllt" : "§eOutline")),
+                    b -> { cfg.fillBoxes = !cfg.fillBoxes; VisionConfig.save(); rebuildWidgets(); })
+                    .bounds(185, off + 492, 130, 16).build());
+        }
     }
+
+    // Settings helpers
+    private void settingsHeader(int y, int lb, String text) {
+        if (inView(y, lb)) labels.add(new Label(5, y, text));
+    }
+    private void settingsToggle(int y, int lb, String label, Runnable action) {
+        if (inView(y, lb))
+            addRenderableWidget(Button.builder(Component.literal(label), b -> action.run())
+                    .bounds(5, y, 220, 18).build());
+    }
+    private void settingsDesc(int y, int lb, String text) {
+        if (inView(y, lb)) labels.add(new Label(7, y, text));
+    }
+    private void settingsRadius(int y, int lb, int current, int min, int max, Runnable dec, Runnable inc) {
+        if (!inView(y, lb)) return;
+        labels.add(new Label(228, y + 4, "§7Radius: §f" + current + " §7Chunks"));
+        addRenderableWidget(Button.builder(Component.literal("§c−"), b -> dec.run()).bounds(313, y, 18, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("§a+"), b -> inc.run()).bounds(333, y, 18, 18).build());
+    }
+    private void settingsSwatch(int y, int lb, String label, int currentRgb, java.util.function.IntConsumer onPick) {
+        if (!inView(y, lb)) return;
+        labels.add(new Label(5, y + 2, label));
+        int labelW = font.width(label.replaceAll("§.", "")) + 8;
+        addCurrent(labelW + 5, y, currentRgb);
+        for (int ci = 0; ci < PALETTE.length; ci++) {
+            final int pc = PALETTE[ci];
+            addPalette(labelW + 22 + ci * 13, y, pc, () -> onPick.accept(pc));
+        }
+    }
+    private boolean inView(int y, int lb) { return y >= LIST_TOP - 20 && y < lb + 4; }
+    private boolean inView(int y)         { return inView(y, height - FOOTER_H); }
 
     // ================================================  KEYBINDS TAB  ===
 
     private void buildKeybindsTab(VisionConfig cfg) {
         int y = LIST_TOP;
+        labels.add(new Label(5, y - 18, "§7Klicke §e[Ändern] §7und drücke dann eine Taste. §8ESC = Abbrechen"));
+        labels.add(new Label(5, y - 4,  "§8── Funktion ─────────────────── Taste ──────────── Aktion ─"));
 
-        labels.add(new Label(5, y - 18,
-                "§7Klicke §e[Ändern] §7und drücke dann eine Taste. §8ESC = Abbrechen"));
+        addKeybindRow("§fEntity-ESP",     "entityEsp",  cfg.keyEntityEsp,  y);  y += 28;
+        addKeybindRow("§fErz-ESP",        "oreEsp",     cfg.keyOreEsp,     y);  y += 28;
+        addKeybindRow("§fConfig öffnen",  "openConfig", cfg.keyOpenConfig, y);  y += 28;
+        addKeybindRow("§fSus Chunks",     "susChunks",  cfg.keySusChunks,  y);  y += 28;
+        addKeybindRow("§fFullbright",     "fullbright", cfg.keyFullbright, y);  y += 28;
+        addKeybindRow("§fItem-ESP",       "itemEsp",    cfg.keyItemEsp,    y);  y += 28;
+        addKeybindRow("§fContainer-ESP",  "storageEsp", cfg.keyStorageEsp, y);  y += 28;
 
-        labels.add(new Label(5, y - 4, "§8── Funktion ──────────────────── Taste ──────────────── Aktion ──"));
-
-        addKeybindRow("§fEntity-ESP an/aus",    "entityEsp",  cfg.keyEntityEsp,  y);       y += 28;
-        addKeybindRow("§fErz-ESP an/aus",       "oreEsp",     cfg.keyOreEsp,     y);       y += 28;
-        addKeybindRow("§fConfig öffnen",        "openConfig", cfg.keyOpenConfig, y);       y += 28;
-        addKeybindRow("§fSus Chunks an/aus",    "susChunks",  cfg.keySusChunks,  y);       y += 28;
-
-        y += 10;
-        labels.add(new Label(5, y, "§8Die Tasten erscheinen §lnicht§r§8 im Minecraft-Keybinds-Menü."));
-        y += 12;
-        labels.add(new Label(5, y, "§8Sie sind nur hier sichtbar und konfigurierbar."));
+        y += 8;
+        labels.add(new Label(5, y, "§8Die Tasten sind §lnicht§r§8 im Minecraft-Keybinds-Menü sichtbar."));
+        labels.add(new Label(5, y + 12, "§80 / Keine = Taste deaktiviert (nur über Config-Screen togglebar)"));
     }
 
     private void addKeybindRow(String name, String id, int keyCode, int y) {
-        boolean waiting = id.equals(rebindingKey);
-        String keyLabel = waiting
-                ? "§e< Taste drücken... >"
-                : "§a" + keyName(keyCode);
-
+        boolean waiting  = id.equals(rebindingKey);
+        String  keyLabel = waiting ? "§e< Taste drücken... >" : (keyCode > 0 ? "§a" + keyName(keyCode) : "§8Keine");
         labels.add(new Label(5,   y + 4, name));
         labels.add(new Label(175, y + 4, keyLabel));
-
         addRenderableWidget(Button.builder(
                 Component.literal(waiting ? "§cAbbrechen" : "§7Ändern"),
-                b -> {
-                    rebindingKey = waiting ? null : id;
-                    rebuildWidgets();
-                }).bounds(310, y, 68, 18).build());
+                b -> { rebindingKey = waiting ? null : id; rebuildWidgets(); })
+                .bounds(310, y, 68, 18).build());
     }
 
     // ===================================================  KEY INPUT  ===
@@ -338,9 +361,7 @@ public class VisionConfigScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (rebindingKey != null) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                rebindingKey = null;
-                rebuildWidgets();
-                return true;
+                rebindingKey = null; rebuildWidgets(); return true;
             }
             VisionConfig cfg = VisionConfig.get();
             switch (rebindingKey) {
@@ -348,55 +369,13 @@ public class VisionConfigScreen extends Screen {
                 case "oreEsp"     -> cfg.keyOreEsp      = keyCode;
                 case "openConfig" -> cfg.keyOpenConfig  = keyCode;
                 case "susChunks"  -> cfg.keySusChunks   = keyCode;
+                case "fullbright" -> cfg.keyFullbright  = keyCode;
+                case "itemEsp"    -> cfg.keyItemEsp     = keyCode;
+                case "storageEsp" -> cfg.keyStorageEsp  = keyCode;
             }
-            VisionConfig.save();
-            rebindingKey = null;
-            rebuildWidgets();
-            return true;
+            VisionConfig.save(); rebindingKey = null; rebuildWidgets(); return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    // ===================================================  HELPER UTIL ===
-
-    private void addToggle(String label, int y, Runnable action) {
-        addRenderableWidget(Button.builder(Component.literal(label), b -> action.run())
-                .bounds(5, y, 220, 18).build());
-    }
-
-    private void addRadius(int y, int current, int min, int max, Runnable dec, Runnable inc) {
-        labels.add(new Label(228, y + 4, "§7Radius: §f" + current + " §7Chunks"));
-        addRenderableWidget(Button.builder(Component.literal("§c−"), b -> dec.run())
-                .bounds(313, y, 18, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("§a+"), b -> inc.run())
-                .bounds(333, y, 18, 18).build());
-    }
-
-    private static <T> void toggleSet(java.util.Set<T> set, T val) {
-        if (!set.remove(val)) set.add(val);
-        VisionConfig.save();
-    }
-
-    private static String onOff(boolean on) { return on ? "§aAN" : "§cAUS"; }
-    private static String rgb(int argb)     { return String.format("#%06X", argb & 0x00FFFFFF); }
-    private static int parseRGB(String hex) { return VisionConfig.parseColor(hex) & 0x00FFFFFF; }
-    private static int clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
-
-    private static String keyName(int keyCode) {
-        if (keyCode <= 0) return "Keine";
-        try {
-            return InputConstants.Type.KEYSYM.getOrCreate(keyCode).getDisplayName().getString();
-        } catch (Exception e) {
-            return "Key " + keyCode;
-        }
-    }
-
-    private void addCurrent(int x, int y, int rgb) {
-        swatches.add(new Swatch(x, y, 14, 12, rgb, true, null));
-    }
-
-    private void addPalette(int x, int y, int argb, Runnable onClick) {
-        swatches.add(new Swatch(x, y, 12, 12, argb & 0x00FFFFFF, false, onClick));
     }
 
     // =====================================================  RENDERING  ===
@@ -415,8 +394,21 @@ public class VisionConfigScreen extends Screen {
                     && my >= s.y() && my < s.y() + s.h();
             int border = s.isCurrent() ? 0xFFFFFFFF : (hover ? 0xFFFFFF44 : 0xFF444444);
             int bOff   = s.isCurrent() ? 2 : 1;
-            g.fill(s.x() - bOff, s.y() - bOff, s.x() + s.w() + bOff, s.y() + s.h() + bOff, border);
-            g.fill(s.x(), s.y(), s.x() + s.w(), s.y() + s.h(), 0xFF000000 | s.color());
+            g.fill(s.x()-bOff, s.y()-bOff, s.x()+s.w()+bOff, s.y()+s.h()+bOff, border);
+            g.fill(s.x(), s.y(), s.x()+s.w(), s.y()+s.h(), 0xFF000000 | s.color());
+        }
+
+        // Scroll indicator on right edge for Entities/Ores tabs
+        if (activeTab < 2) {
+            List<String> allItems = activeTab == 0 ? VisionConfig.ALL_ENTITY_TYPES : VisionConfig.ALL_ORES;
+            int contentH = allItems.size() * ROW_H;
+            int viewH    = height - FOOTER_H - LIST_TOP;
+            if (contentH > viewH) {
+                int barH   = Math.max(20, viewH * viewH / contentH);
+                int barY   = LIST_TOP + (int)((long)scrollPx * (viewH - barH) / Math.max(1, contentH - viewH));
+                g.fill(width - 5, LIST_TOP, width - 3, height - FOOTER_H, 0x44FFFFFF);
+                g.fill(width - 5, barY, width - 3, barY + barH, 0xAAFFFFFF);
+            }
         }
 
         g.fill(0, height - FOOTER_H, width, height - FOOTER_H + 1, 0x66FFFFFF);
@@ -432,8 +424,7 @@ public class VisionConfigScreen extends Screen {
                 if (s.onClick() != null
                         && mx >= s.x() && mx < s.x() + s.w()
                         && my >= s.y() && my < s.y() + s.h()) {
-                    s.onClick().run();
-                    return true;
+                    s.onClick().run(); return true;
                 }
             }
         }
@@ -452,5 +443,31 @@ public class VisionConfigScreen extends Screen {
         VisionConfig.save();
         assert minecraft != null;
         minecraft.setScreen(parent);
+    }
+
+    // ===================================================  HELPER UTIL  ===
+
+    private static <T> void toggleSet(java.util.Set<T> set, T val) {
+        if (!set.remove(val)) set.add(val);
+        VisionConfig.save();
+    }
+
+    private static String onOff(boolean on)  { return on ? "§aAN" : "§cAUS"; }
+    private static String rgb(int argb)      { return String.format("#%06X", argb & 0x00FFFFFF); }
+    private static int    parseRGB(String h) { return VisionConfig.parseColor(h) & 0x00FFFFFF; }
+    private static int    clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    private static String keyName(int keyCode) {
+        if (keyCode <= 0) return "Keine";
+        try { return InputConstants.Type.KEYSYM.getOrCreate(keyCode).getDisplayName().getString(); }
+        catch (Exception e) { return "Key " + keyCode; }
+    }
+
+    private void addCurrent(int x, int y, int rgb) {
+        swatches.add(new Swatch(x, y, 14, 12, rgb, true, null));
+    }
+
+    private void addPalette(int x, int y, int argb, Runnable onClick) {
+        swatches.add(new Swatch(x, y, 12, 12, argb & 0x00FFFFFF, false, onClick));
     }
 }

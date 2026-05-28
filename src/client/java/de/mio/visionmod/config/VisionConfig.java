@@ -49,11 +49,33 @@ public class VisionConfig {
     public int  susChunksRadius = 4;   // chunk radius for sus chunk scan
     public boolean fillBoxes    = false;
 
+    // --- Entity extras ---
+    public boolean healthBarEnabled   = false;  // 3D health bar above entity boxes
+
+    // --- Fullbright ---
+    public boolean fullbrightEnabled  = false;
+
+    // --- Item ESP ---
+    public boolean itemEspEnabled     = false;
+    public int     itemEspRadius      = 3;      // chunk radius
+    public String  itemEspColor       = "#FFFF00FF"; // Magenta
+
+    // --- Storage (Container) ESP ---
+    public boolean storageEspEnabled  = false;
+    public int     storageEspRadius   = 3;
+    public String  chestColor         = "#FFFFAA00"; // Gold
+    public String  barrelColor        = "#FFA0522D"; // Sienna
+    public String  shulkerColor       = "#FFDA70D6"; // Orchid
+    public String  enderChestColor    = "#FF800080"; // Purple
+
     // --- Keybinds (GLFW key codes, not registered in MC settings) ---
-    public int keyEntityEsp  = 295; // F6
-    public int keyOreEsp     = 296; // F7
-    public int keyOpenConfig = 297; // F8
-    public int keySusChunks  = 298; // F9
+    public int keyEntityEsp   = 295; // F6
+    public int keyOreEsp      = 296; // F7
+    public int keyOpenConfig  = 297; // F8
+    public int keySusChunks   = 298; // F9
+    public int keyFullbright  = 299; // F10
+    public int keyItemEsp     = 0;   // unbound
+    public int keyStorageEsp  = 0;   // unbound
 
     // --- Sus Chunks (hidden base detector) ---
     public boolean susChunksEnabled       = false;

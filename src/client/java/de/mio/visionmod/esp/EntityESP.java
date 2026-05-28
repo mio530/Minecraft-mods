@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
@@ -21,7 +22,9 @@ public final class EntityESP {
             int boxColor,
             int lineColor,
             boolean showLine,
-            String label
+            String label,
+            float health,
+            float maxHealth
     ) {}
 
     public static volatile List<EntityData> snapshot = Collections.emptyList();
@@ -64,11 +67,13 @@ public final class EntityESP {
             String label = entity instanceof Player p
                     ? p.getGameProfile().name()
                     : VisionConfig.displayName(typeId);
+            float health    = entity instanceof LivingEntity le ? le.getHealth()    : -1f;
+            float maxHealth = entity instanceof LivingEntity le ? le.getMaxHealth() : -1f;
 
             next.add(new EntityData(
                     bb.minX, bb.minY, bb.minZ,
                     bb.maxX, bb.maxY, bb.maxZ,
-                    boxColor, lineColor, showLine, label
+                    boxColor, lineColor, showLine, label, health, maxHealth
             ));
         }
 
