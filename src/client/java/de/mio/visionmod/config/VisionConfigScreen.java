@@ -2,429 +2,542 @@ package de.mio.visionmod.config;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class VisionConfigScreen extends Screen {
 
-    private static final int ROW_H    = 44;
-    private static final int LIST_TOP = 68;
-    private static final int FOOTER_H = 32;
+    // ══════════════════════════════════════ COLORS (Meteor-like dark theme) ══
 
+    private static final int C_BG        = 0xF0121220;
+    private static final int C_HDR       = 0xFF0B0B1A;
+    private static final int C_LEFT_BG   = 0xFF0E0E1C;
+    private static final int C_CAT_HDR   = 0xFF16162A;
+    private static final int C_SEL_BG    = 0xFF1A2040;
+    private static final int C_RIGHT_BG  = 0xFF0F0F1C;
+    private static final int C_DIVIDER   = 0xFF1E1E32;
+    private static final int C_IND_ON    = 0xFF5294E8;  // Meteor blue
+    private static final int C_IND_OFF   = 0xFF374060;
+    private static final int C_TEXT      = 0xFFCFD0E8;
+    private static final int C_DIM       = 0xFF5A5B78;
+    private static final int C_ACCENT    = 0xFF818CF8;
+    private static final int C_BTN       = 0xFF1C1C30;
+    private static final int C_BTN_H     = 0xFF282840;
+    private static final int C_BTN_BD    = 0xFF303050;
+
+    // ══════════════════════════════════════ LAYOUT ════════════════════════════
+
+    private static final int HDR_H   = 20;
+    private static final int LEFT_W  = 142;
+    private static final int CAT_H   = 14;
+    private static final int MOD_H   = 21;
+    private static final int S_ROW   = 19;   // settings row height
+    private static final int E_ROW   = 17;   // entity/ore compact row height
+
+    // Palette – 10 preset colours
     private static final int[] PALETTE = {
         0xFFFF3333, 0xFFFF8800, 0xFFFFDD00, 0xFF33FF44,
         0xFF00FFCC, 0xFF22AAFF, 0xFFAA55FF, 0xFFFF55BB,
-        0xFFFFFFFF, 0xFF888888,
+        0xFFFFFFFF, 0xFF888888
     };
 
+    // ══════════════════════════════════════ MODULE REGISTRY ═══════════════════
+
+    private record ModDef(String id, String name, String desc, String cat) {}
+
+    private static final List<String>  CATS = List.of("ESP", "Render", "World", "Tasten");
+    private static final List<ModDef>  MODS = List.of(
+        new ModDef("entityEsp",  "Entity ESP",    "Entities durch Wände",    "ESP"),
+        new ModDef("entityGlow", "Entity Glow",   "Vanilla Umriss-Effekt",   "ESP"),
+        new ModDef("healthBar",  "Health Bar",    "Herzen über Entities",    "ESP"),
+        new ModDef("oreEsp",     "Ore ESP",       "Erze durch Wände",        "ESP"),
+        new ModDef("itemEsp",    "Item ESP",      "Liegende Items",          "ESP"),
+        new ModDef("storageEsp", "Container ESP", "Kisten & Shulker",        "ESP"),
+        new ModDef("fullbright", "Fullbright",    "Volle Helligkeit",        "Render"),
+        new ModDef("tracers",    "Tracers",       "Linien zu Entities/Erzen","Render"),
+        new ModDef("boxFill",    "Box Fill",      "Ausgefüllte Boxen",       "Render"),
+        new ModDef("susChunks",  "Sus Chunks",    "Verdächtige Chunks",      "World"),
+        new ModDef("keybinds",   "Keybinds",      "Tastenbelegung",          "Tasten")
+    );
+
+    // ══════════════════════════════════════ STATE ═════════════════════════════
+
     private final Screen parent;
-    private int    activeTab    = 0;
-    private int    scrollPx     = 0;
+    private int    px, py, pw, ph;
+    private String selMod      = "entityEsp";
+    private int    leftScroll  = 0;
+    private int    rightScroll = 0;
+    private int    maxRScroll  = 0;
     private String rebindingKey = null;
+    private boolean hoverLeft  = false;
 
-    private final List<Label>  labels   = new ArrayList<>();
-    private final List<Swatch> swatches = new ArrayList<>();
+    // Click zones rebuilt every render frame
+    private final List<int[]> hits = new ArrayList<>(); // {x,y,w,h, action-index}
+    private final List<Runnable> hitActions = new ArrayList<>();
 
-    private record Label(int x, int y, String text) {}
-    private record Swatch(int x, int y, int w, int h, int color,
-                          boolean isCurrent, Runnable onClick) {}
+    // ══════════════════════════════════════ LIFECYCLE ═════════════════════════
 
     public VisionConfigScreen(Screen parent) {
-        super(Component.literal("§6Visual Improvement §7– Einstellungen"));
+        super(Component.literal("Visual Improvement"));
         this.parent = parent;
     }
 
     @Override public boolean isPauseScreen() { return false; }
 
-    // =========================================================  INIT  ===
-
     @Override
     protected void init() {
-        labels.clear();
-        swatches.clear();
-        VisionConfig cfg = VisionConfig.get();
+        pw = Math.min(width - 16, 496);
+        ph = Math.min(height - 16, 284);
+        px = (width  - pw) / 2;
+        py = (height - ph) / 2;
 
-        // 4 tab buttons
-        int[] tx = {5, 84, 163, 244};
-        int[] tw = {76, 76, 78, 70};
-        String[] tn = {"Entities", "Erze", "Optionen", "Tasten"};
-        for (int i = 0; i < 4; i++) {
-            final int tab = i;
-            addRenderableWidget(Button.builder(
-                    Component.literal((activeTab == tab ? "§e▶ " : "") + tn[i]),
-                    b -> switchTab(tab)).bounds(tx[i], 38, tw[i], 18).build());
-        }
-
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"),
-                b -> { VisionConfig.save(); onClose(); })
-                .bounds(width / 2 - 50, height - FOOTER_H + 6, 100, 20).build());
-
-        int listBottom = height - FOOTER_H;
-        switch (activeTab) {
-            case 0 -> buildEntityTab(cfg, listBottom);
-            case 1 -> buildOreTab(cfg, listBottom);
-            case 2 -> buildSettingsTab(cfg, listBottom);
-            case 3 -> buildKeybindsTab(cfg);
+        // EditBox for player name filter (entity ESP only)
+        if ("entityEsp".equals(selMod)) {
+            int ex = px + LEFT_W + 5;
+            int ey = py + ph - 22;
+            int ew = pw - LEFT_W - 9;
+            EditBox nb = new EditBox(font, ex, ey, ew, 14, Component.empty());
+            nb.setMaxLength(512);
+            nb.setValue(String.join(",", VisionConfig.get().enabledPlayerNames));
+            nb.setHint(Component.literal("§8Spieler-Filter (leer = alle)"));
+            nb.setResponder(v -> {
+                VisionConfig c = VisionConfig.get();
+                c.enabledPlayerNames.clear();
+                for (String n : v.split(",")) { String t = n.trim(); if (!t.isEmpty()) c.enabledPlayerNames.add(t); }
+                VisionConfig.save();
+            });
+            addRenderableWidget(nb);
         }
     }
 
-    private void switchTab(int t) { activeTab = t; scrollPx = 0; rebindingKey = null; rebuildWidgets(); }
-
-    // ====================================================  ENTITY TAB  ===
-
-    private void buildEntityTab(VisionConfig cfg, int listBottom) {
-        labels.add(new Label(18, LIST_TOP - 20, "§7AN/AUS"));
-        labels.add(new Label(62, LIST_TOP - 20, "§7Typ"));
-        labels.add(new Label(5,  LIST_TOP - 8,
-                "§8← Box-Farbe anklicken        §8[L]=Linie  ← Linie-Farbe anklicken"));
-
-        List<String> items = VisionConfig.ALL_ENTITY_TYPES;
-        int rowCount = items.size();
-        scrollPx = clamp(scrollPx, 0, Math.max(0, rowCount * ROW_H - (listBottom - LIST_TOP - 30)));
-
-        int first = scrollPx / ROW_H, pixOff = scrollPx % ROW_H;
-
-        for (int i = first; i < rowCount; i++) {
-            int y = LIST_TOP + (i - first) * ROW_H - pixOff;
-            if (y + ROW_H < LIST_TOP) continue;
-            if (y > listBottom - 30)  break;
-
-            String id = items.get(i);
-            boolean on = cfg.enabledEntityTypes.contains(id);
-            addRenderableWidget(Button.builder(
-                    Component.literal(on ? "§a[AN]" : "§c[AUS]"),
-                    b -> { toggleSet(cfg.enabledEntityTypes, id); rebuildWidgets(); })
-                    .bounds(5, y + 2, 52, 16).build());
-            labels.add(new Label(62, y + 6, VisionConfig.displayName(id)));
-
-            int bCol = parseRGB(cfg.entityBoxColors.getOrDefault(id, "#FFFF0000"));
-            addCurrent(5, y + 25, bCol);
-            for (int ci = 0; ci < PALETTE.length; ci++) {
-                final String fid = id; final int pc = PALETTE[ci];
-                addPalette(22 + ci * 13, y + 25, pc, () -> {
-                    cfg.entityBoxColors.put(fid, rgb(pc)); VisionConfig.save(); rebuildWidgets(); });
-            }
-
-            boolean lineOn = cfg.entityLinesEnabled.contains(id);
-            addRenderableWidget(Button.builder(
-                    Component.literal(lineOn ? "§a[L]" : "§8[L]"),
-                    b -> { toggleSet(cfg.entityLinesEnabled, id); rebuildWidgets(); })
-                    .bounds(158, y + 23, 28, 16).build());
-
-            int lCol = parseRGB(cfg.entityLineColors.getOrDefault(id, "#FFFF0000"));
-            addCurrent(190, y + 25, lCol);
-            for (int ci = 0; ci < PALETTE.length; ci++) {
-                final String fid = id; final int pc = PALETTE[ci];
-                addPalette(207 + ci * 13, y + 25, pc, () -> {
-                    cfg.entityLineColors.put(fid, rgb(pc)); VisionConfig.save(); rebuildWidgets(); });
-            }
-        }
-
-        int fy = listBottom - 22;
-        labels.add(new Label(5, fy - 11,
-                "§8Spieler-Filter: leer = alle anzeigen, sonst kommagetrennte Namen"));
-        EditBox names = new EditBox(font, 5, fy, width - 10, 18, Component.empty());
-        names.setMaxLength(512);
-        names.setValue(String.join(",", cfg.enabledPlayerNames));
-        names.setHint(Component.literal("§7z.B. Steve,Alex  (leer = alle Spieler)"));
-        names.setResponder(val -> {
-            cfg.enabledPlayerNames.clear();
-            for (String n : val.split(",")) { String t = n.trim(); if (!t.isEmpty()) cfg.enabledPlayerNames.add(t); }
-            VisionConfig.save();
-        });
-        addRenderableWidget(names);
-    }
-
-    // ======================================================  ORE TAB  ===
-
-    private void buildOreTab(VisionConfig cfg, int listBottom) {
-        labels.add(new Label(18, LIST_TOP - 20, "§7AN/AUS"));
-        labels.add(new Label(62, LIST_TOP - 20, "§7Erztyp"));
-        labels.add(new Label(5,  LIST_TOP - 8,
-                "§8← Box-Farbe anklicken        §8[L]=Linie  ← Linie-Farbe anklicken"));
-
-        List<String> items = VisionConfig.ALL_ORES;
-        int rowCount = items.size();
-        scrollPx = clamp(scrollPx, 0, Math.max(0, rowCount * ROW_H - (listBottom - LIST_TOP)));
-
-        int first = scrollPx / ROW_H, pixOff = scrollPx % ROW_H;
-
-        for (int i = first; i < rowCount; i++) {
-            int y = LIST_TOP + (i - first) * ROW_H - pixOff;
-            if (y + ROW_H < LIST_TOP) continue;
-            if (y > listBottom)        break;
-
-            String id = items.get(i);
-            boolean on = cfg.enabledOres.contains(id);
-            addRenderableWidget(Button.builder(
-                    Component.literal(on ? "§a[AN]" : "§c[AUS]"),
-                    b -> { toggleSet(cfg.enabledOres, id); rebuildWidgets(); })
-                    .bounds(5, y + 2, 52, 16).build());
-            labels.add(new Label(62, y + 6, VisionConfig.displayName(id)));
-
-            int bCol = parseRGB(cfg.oreBoxColors.getOrDefault(id, "#FFFFFFFF"));
-            addCurrent(5, y + 25, bCol);
-            for (int ci = 0; ci < PALETTE.length; ci++) {
-                final String fid = id; final int pc = PALETTE[ci];
-                addPalette(22 + ci * 13, y + 25, pc, () -> {
-                    cfg.oreBoxColors.put(fid, rgb(pc)); VisionConfig.save(); rebuildWidgets(); });
-            }
-
-            boolean lineOn = cfg.oreLinesEnabled.contains(id);
-            addRenderableWidget(Button.builder(
-                    Component.literal(lineOn ? "§a[L]" : "§8[L]"),
-                    b -> { toggleSet(cfg.oreLinesEnabled, id); rebuildWidgets(); })
-                    .bounds(158, y + 23, 28, 16).build());
-
-            int lCol = parseRGB(cfg.oreLineColors.getOrDefault(id, "#FFFFFFFF"));
-            addCurrent(190, y + 25, lCol);
-            for (int ci = 0; ci < PALETTE.length; ci++) {
-                final String fid = id; final int pc = PALETTE[ci];
-                addPalette(207 + ci * 13, y + 25, pc, () -> {
-                    cfg.oreLineColors.put(fid, rgb(pc)); VisionConfig.save(); rebuildWidgets(); });
-            }
-        }
-    }
-
-    // ================================================  SETTINGS TAB  ===
-
-    private void buildSettingsTab(VisionConfig cfg, int lb) {
-        // ── estimate total content height for scroll cap ──────────────────
-        // 9 sections of ~34px + sub-rows ~24px each ≈ 580px total
-        scrollPx = clamp(scrollPx, 0, Math.max(0, 620 - (lb - LIST_TOP)));
-
-        // content y = LIST_TOP + position - scrollPx
-        // helper: add y offset to content position
-        final int off = LIST_TOP - scrollPx;
-
-        settingsHeader(off + 0,  lb, "§7─── Entity-ESP ─────────────────────────────────────");
-        settingsToggle(off + 12, lb, "§eEntity-ESP §8[" + keyName(cfg.keyEntityEsp) + "]: " + onOff(cfg.entityEspEnabled),
-                () -> { cfg.entityEspEnabled = !cfg.entityEspEnabled; VisionConfig.save(); rebuildWidgets(); });
-        settingsDesc  (off + 32, lb, "§8Zeigt Entities/Spieler als farbige Boxen durch Wände");
-        settingsRadius(off + 12, lb, cfg.entityEspRadius, 1, 16,
-                () -> { cfg.entityEspRadius = Math.max(1,  cfg.entityEspRadius-1); VisionConfig.save(); rebuildWidgets(); },
-                () -> { cfg.entityEspRadius = Math.min(16, cfg.entityEspRadius+1); VisionConfig.save(); rebuildWidgets(); });
-
-        settingsToggle(off + 48, lb, "§eEntity Glow §8(statt Box): " + onOff(cfg.entityGlowEnabled),
-                () -> { cfg.entityGlowEnabled = !cfg.entityGlowEnabled; VisionConfig.save(); rebuildWidgets(); });
-        settingsDesc  (off + 68, lb, "§8Vanilla-Umriss durch Wände. Nicht in OBS sichtbar.");
-
-        settingsToggle(off + 84, lb, "§eHealth Bar über Entity: " + onOff(cfg.healthBarEnabled),
-                () -> { cfg.healthBarEnabled = !cfg.healthBarEnabled; VisionConfig.save(); rebuildWidgets(); });
-        settingsDesc  (off + 104, lb, "§83D-Balken über jeder Entity: grün→gelb→rot je nach HP");
-
-        settingsHeader(off + 120, lb, "§7─── Vollhelligkeit ─────────────────────────────────");
-        settingsToggle(off + 132, lb, "§eFullbright §8[" + keyName(cfg.keyFullbright) + "]: " + onOff(cfg.fullbrightEnabled),
-                () -> { cfg.fullbrightEnabled = !cfg.fullbrightEnabled; VisionConfig.save(); rebuildWidgets(); });
-        settingsDesc  (off + 152, lb, "§8Versteckter Night-Vision-Effekt. Kein Icon, kein Partikel.");
-
-        settingsHeader(off + 168, lb, "§7─── Erz-ESP ────────────────────────────────────────");
-        settingsToggle(off + 180, lb, "§eErz-ESP §8[" + keyName(cfg.keyOreEsp) + "]: " + onOff(cfg.oreEspEnabled),
-                () -> { cfg.oreEspEnabled = !cfg.oreEspEnabled; VisionConfig.save(); rebuildWidgets(); });
-        settingsDesc  (off + 200, lb, "§8Zeigt Erze (Diamant, Eisen …) als Boxen durch Wände");
-        settingsRadius(off + 180, lb, cfg.oreEspRadius, 1, 8,
-                () -> { cfg.oreEspRadius = Math.max(1, cfg.oreEspRadius-1); VisionConfig.save(); rebuildWidgets(); },
-                () -> { cfg.oreEspRadius = Math.min(8, cfg.oreEspRadius+1); VisionConfig.save(); rebuildWidgets(); });
-
-        settingsHeader(off + 216, lb, "§7─── Item-ESP ───────────────────────────────────────");
-        settingsToggle(off + 228, lb, "§eItem-ESP" + (cfg.keyItemEsp > 0 ? " §8["+keyName(cfg.keyItemEsp)+"]" : "") + ": " + onOff(cfg.itemEspEnabled),
-                () -> { cfg.itemEspEnabled = !cfg.itemEspEnabled; VisionConfig.save(); rebuildWidgets(); });
-        settingsDesc  (off + 248, lb, "§8Zeigt liegende Items als Boxen. Tracer zu jedem Item.");
-        settingsRadius(off + 228, lb, cfg.itemEspRadius, 1, 16,
-                () -> { cfg.itemEspRadius = Math.max(1,  cfg.itemEspRadius-1); VisionConfig.save(); rebuildWidgets(); },
-                () -> { cfg.itemEspRadius = Math.min(16, cfg.itemEspRadius+1); VisionConfig.save(); rebuildWidgets(); });
-        settingsSwatch(off + 255, lb, "§8Item-Farbe:", parseRGB(cfg.itemEspColor),
-                c -> { cfg.itemEspColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
-
-        settingsHeader(off + 282, lb, "§7─── Container-ESP ──────────────────────────────────");
-        settingsToggle(off + 294, lb, "§eContainer-ESP" + (cfg.keyStorageEsp > 0 ? " §8["+keyName(cfg.keyStorageEsp)+"]" : "") + ": " + onOff(cfg.storageEspEnabled),
-                () -> { cfg.storageEspEnabled = !cfg.storageEspEnabled; VisionConfig.save(); rebuildWidgets(); });
-        settingsDesc  (off + 314, lb, "§8Hebt Kisten, Fässer, Shulker, Ender-Kisten hervor");
-        settingsRadius(off + 294, lb, cfg.storageEspRadius, 1, 8,
-                () -> { cfg.storageEspRadius = Math.max(1, cfg.storageEspRadius-1); VisionConfig.save(); rebuildWidgets(); },
-                () -> { cfg.storageEspRadius = Math.min(8, cfg.storageEspRadius+1); VisionConfig.save(); rebuildWidgets(); });
-        settingsSwatch(off + 321, lb, "§8Kiste:",      parseRGB(cfg.chestColor),
-                c -> { cfg.chestColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
-        settingsSwatch(off + 336, lb, "§8Fass:",       parseRGB(cfg.barrelColor),
-                c -> { cfg.barrelColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
-        settingsSwatch(off + 351, lb, "§8Shulker:",    parseRGB(cfg.shulkerColor),
-                c -> { cfg.shulkerColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
-        settingsSwatch(off + 366, lb, "§8Ender Kiste:",parseRGB(cfg.enderChestColor),
-                c -> { cfg.enderChestColor = rgb(c); VisionConfig.save(); rebuildWidgets(); });
-
-        settingsHeader(off + 392, lb, "§7─── Sus Chunks ─────────────────────────────────────");
-        settingsToggle(off + 404, lb, "§eSus Chunks §8[" + keyName(cfg.keySusChunks) + "]: " + onOff(cfg.susChunksEnabled),
-                () -> { cfg.susChunksEnabled = !cfg.susChunksEnabled; VisionConfig.save(); rebuildWidgets(); });
-        settingsDesc  (off + 424, lb, "§8Chunks mit Kisten/Spawner/Redstone hervorheben");
-        settingsRadius(off + 404, lb, cfg.susChunksRadius, 1, 8,
-                () -> { cfg.susChunksRadius = Math.max(1, cfg.susChunksRadius-1); VisionConfig.save(); rebuildWidgets(); },
-                () -> { cfg.susChunksRadius = Math.min(8, cfg.susChunksRadius+1); VisionConfig.save(); rebuildWidgets(); });
-
-        if (inView(off + 436, lb)) {
-            addRenderableWidget(Button.builder(Component.literal("Kisten: "  + onOff(cfg.susDetectChests)),
-                    b -> { cfg.susDetectChests = !cfg.susDetectChests; VisionConfig.save(); rebuildWidgets(); })
-                    .bounds(5, off + 436, 110, 16).build());
-            addRenderableWidget(Button.builder(Component.literal("Spawner: " + onOff(cfg.susDetectSpawners)),
-                    b -> { cfg.susDetectSpawners = !cfg.susDetectSpawners; VisionConfig.save(); rebuildWidgets(); })
-                    .bounds(120, off + 436, 115, 16).build());
-            addRenderableWidget(Button.builder(Component.literal("Redstone: "+ onOff(cfg.susDetectRedstone)),
-                    b -> { cfg.susDetectRedstone = !cfg.susDetectRedstone; VisionConfig.save(); rebuildWidgets(); })
-                    .bounds(240, off + 436, 120, 16).build());
-        }
-        if (inView(off + 458, lb))
-            addRenderableWidget(Button.builder(Component.literal("Alle Chunk-Grenzen: " + onOff(cfg.showAllChunkBorders)),
-                    b -> { cfg.showAllChunkBorders = !cfg.showAllChunkBorders; VisionConfig.save(); rebuildWidgets(); })
-                    .bounds(5, off + 458, 200, 16).build());
-
-        settingsHeader(off + 480, lb, "§7─── Sonstiges ──────────────────────────────────────");
-        if (inView(off + 492, lb)) {
-            addRenderableWidget(Button.builder(Component.literal("Tracer-Linien global: " + onOff(cfg.globalLinesEnabled)),
-                    b -> { cfg.globalLinesEnabled = !cfg.globalLinesEnabled; VisionConfig.save(); rebuildWidgets(); })
-                    .bounds(5, off + 492, 175, 16).build());
-            addRenderableWidget(Button.builder(Component.literal("Box-Stil: " + (cfg.fillBoxes ? "§eGefüllt" : "§eOutline")),
-                    b -> { cfg.fillBoxes = !cfg.fillBoxes; VisionConfig.save(); rebuildWidgets(); })
-                    .bounds(185, off + 492, 130, 16).build());
-        }
-    }
-
-    // Settings helpers
-    private void settingsHeader(int y, int lb, String text) {
-        if (inView(y, lb)) labels.add(new Label(5, y, text));
-    }
-    private void settingsToggle(int y, int lb, String label, Runnable action) {
-        if (inView(y, lb))
-            addRenderableWidget(Button.builder(Component.literal(label), b -> action.run())
-                    .bounds(5, y, 220, 18).build());
-    }
-    private void settingsDesc(int y, int lb, String text) {
-        if (inView(y, lb)) labels.add(new Label(7, y, text));
-    }
-    private void settingsRadius(int y, int lb, int current, int min, int max, Runnable dec, Runnable inc) {
-        if (!inView(y, lb)) return;
-        labels.add(new Label(228, y + 4, "§7Radius: §f" + current + " §7Chunks"));
-        addRenderableWidget(Button.builder(Component.literal("§c−"), b -> dec.run()).bounds(313, y, 18, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("§a+"), b -> inc.run()).bounds(333, y, 18, 18).build());
-    }
-    private void settingsSwatch(int y, int lb, String label, int currentRgb, java.util.function.IntConsumer onPick) {
-        if (!inView(y, lb)) return;
-        labels.add(new Label(5, y + 2, label));
-        int labelW = font.width(label.replaceAll("§.", "")) + 8;
-        addCurrent(labelW + 5, y, currentRgb);
-        for (int ci = 0; ci < PALETTE.length; ci++) {
-            final int pc = PALETTE[ci];
-            addPalette(labelW + 22 + ci * 13, y, pc, () -> onPick.accept(pc));
-        }
-    }
-    private boolean inView(int y, int lb) { return y >= LIST_TOP - 20 && y < lb + 4; }
-    private boolean inView(int y)         { return inView(y, height - FOOTER_H); }
-
-    // ================================================  KEYBINDS TAB  ===
-
-    private void buildKeybindsTab(VisionConfig cfg) {
-        int y = LIST_TOP;
-        labels.add(new Label(5, y - 18, "§7Klicke §e[Ändern] §7und drücke dann eine Taste. §8ESC = Abbrechen"));
-        labels.add(new Label(5, y - 4,  "§8── Funktion ─────────────────── Taste ──────────── Aktion ─"));
-
-        addKeybindRow("§fEntity-ESP",     "entityEsp",  cfg.keyEntityEsp,  y);  y += 28;
-        addKeybindRow("§fErz-ESP",        "oreEsp",     cfg.keyOreEsp,     y);  y += 28;
-        addKeybindRow("§fConfig öffnen",  "openConfig", cfg.keyOpenConfig, y);  y += 28;
-        addKeybindRow("§fSus Chunks",     "susChunks",  cfg.keySusChunks,  y);  y += 28;
-        addKeybindRow("§fFullbright",     "fullbright", cfg.keyFullbright, y);  y += 28;
-        addKeybindRow("§fItem-ESP",       "itemEsp",    cfg.keyItemEsp,    y);  y += 28;
-        addKeybindRow("§fContainer-ESP",  "storageEsp", cfg.keyStorageEsp, y);  y += 28;
-
-        y += 8;
-        labels.add(new Label(5, y, "§8Die Tasten sind §lnicht§r§8 im Minecraft-Keybinds-Menü sichtbar."));
-        labels.add(new Label(5, y + 12, "§80 / Keine = Taste deaktiviert (nur über Config-Screen togglebar)"));
-    }
-
-    private void addKeybindRow(String name, String id, int keyCode, int y) {
-        boolean waiting  = id.equals(rebindingKey);
-        String  keyLabel = waiting ? "§e< Taste drücken... >" : (keyCode > 0 ? "§a" + keyName(keyCode) : "§8Keine");
-        labels.add(new Label(5,   y + 4, name));
-        labels.add(new Label(175, y + 4, keyLabel));
-        addRenderableWidget(Button.builder(
-                Component.literal(waiting ? "§cAbbrechen" : "§7Ändern"),
-                b -> { rebindingKey = waiting ? null : id; rebuildWidgets(); })
-                .bounds(310, y, 68, 18).build());
-    }
-
-    // ===================================================  KEY INPUT  ===
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (rebindingKey != null) {
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                rebindingKey = null; rebuildWidgets(); return true;
-            }
-            VisionConfig cfg = VisionConfig.get();
-            switch (rebindingKey) {
-                case "entityEsp"  -> cfg.keyEntityEsp   = keyCode;
-                case "oreEsp"     -> cfg.keyOreEsp      = keyCode;
-                case "openConfig" -> cfg.keyOpenConfig  = keyCode;
-                case "susChunks"  -> cfg.keySusChunks   = keyCode;
-                case "fullbright" -> cfg.keyFullbright  = keyCode;
-                case "itemEsp"    -> cfg.keyItemEsp     = keyCode;
-                case "storageEsp" -> cfg.keyStorageEsp  = keyCode;
-            }
-            VisionConfig.save(); rebindingKey = null; rebuildWidgets(); return true;
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    // =====================================================  RENDERING  ===
+    // ══════════════════════════════════════ MAIN RENDER ═══════════════════════
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float delta) {
-        renderBackground(g, mx, my, delta);
-        g.drawCenteredString(font, title, width / 2, 13, 0xFFFFFF);
+        hits.clear();
+        hitActions.clear();
 
-        for (Label l : labels)
-            g.drawString(font, l.text(), l.x(), l.y(), 0xAAAAAA, false);
+        // Dark full-screen vignette
+        g.fill(0, 0, width, height, 0xA0000010);
 
-        for (Swatch s : swatches) {
-            boolean hover = s.onClick() != null
-                    && mx >= s.x() && mx < s.x() + s.w()
-                    && my >= s.y() && my < s.y() + s.h();
-            int border = s.isCurrent() ? 0xFFFFFFFF : (hover ? 0xFFFFFF44 : 0xFF444444);
-            int bOff   = s.isCurrent() ? 2 : 1;
-            g.fill(s.x()-bOff, s.y()-bOff, s.x()+s.w()+bOff, s.y()+s.h()+bOff, border);
-            g.fill(s.x(), s.y(), s.x()+s.w(), s.y()+s.h(), 0xFF000000 | s.color());
-        }
+        // Panel shadow
+        g.fill(px + 3, py + 3, px + pw + 3, py + ph + 3, 0x60000018);
 
-        // Scroll indicator on right edge for Entities/Ores tabs
-        if (activeTab < 2) {
-            List<String> allItems = activeTab == 0 ? VisionConfig.ALL_ENTITY_TYPES : VisionConfig.ALL_ORES;
-            int contentH = allItems.size() * ROW_H;
-            int viewH    = height - FOOTER_H - LIST_TOP;
-            if (contentH > viewH) {
-                int barH   = Math.max(20, viewH * viewH / contentH);
-                int barY   = LIST_TOP + (int)((long)scrollPx * (viewH - barH) / Math.max(1, contentH - viewH));
-                g.fill(width - 5, LIST_TOP, width - 3, height - FOOTER_H, 0x44FFFFFF);
-                g.fill(width - 5, barY, width - 3, barY + barH, 0xAAFFFFFF);
-            }
-        }
+        // Panel bg + border
+        g.fill(px - 1, py - 1, px + pw + 1, py + ph + 1, C_DIVIDER);
+        g.fill(px, py, px + pw, py + ph, C_BG);
 
-        g.fill(0, height - FOOTER_H, width, height - FOOTER_H + 1, 0x66FFFFFF);
+        // Header
+        g.fill(px, py, px + pw, py + HDR_H, C_HDR);
+        g.fill(px, py + HDR_H - 1, px + pw, py + HDR_H, C_IND_ON);
+        g.drawString(font, "§l§3VISUAL §l§7IMPROVEMENT", px + 7, py + 6, C_ACCENT, false);
+        g.drawString(font, "§8ESC", px + pw - font.width("ESC") - 8, py + 6, C_DIM, false);
+        hit(px + pw - 36, py, 36, HDR_H, () -> { VisionConfig.save(); onClose(); });
+
+        int iy = py + HDR_H;
+        int ih = ph - HDR_H;
+
+        // Panel structure
+        g.fill(px, iy, px + LEFT_W, py + ph, C_LEFT_BG);
+        g.fill(px + LEFT_W, iy, px + LEFT_W + 1, py + ph, C_DIVIDER);
+        g.fill(px + LEFT_W + 1, iy, px + pw, py + ph, C_RIGHT_BG);
+
+        // Left panel
+        g.enableScissor(px, iy, px + LEFT_W, py + ph);
+        renderLeft(g, mx, my, px, iy, LEFT_W, ih);
+        g.disableScissor();
+
+        // Right panel
+        int rx = px + LEFT_W + 1, rw = pw - LEFT_W - 1;
+        g.enableScissor(rx, iy, rx + rw, py + ph);
+        renderRight(g, mx, my, rx, iy, rw, ih);
+        g.disableScissor();
+
+        hoverLeft = mx < px + LEFT_W;
         super.render(g, mx, my, delta);
     }
 
-    // =====================================================  MOUSE  ===
+    // ══════════════════════════════════════ LEFT PANEL ════════════════════════
+
+    private void renderLeft(GuiGraphics g, int mx, int my, int lx, int ly, int lw, int lh) {
+        int y = ly - leftScroll;
+        for (String cat : CATS) {
+            // Category header
+            if (vis(y, CAT_H, ly, lh)) {
+                g.fill(lx, y, lx + lw, y + CAT_H, C_CAT_HDR);
+                g.drawString(font, cat, lx + 6, y + 3, C_DIM, false);
+            }
+            y += CAT_H;
+
+            for (ModDef m : MODS) {
+                if (!m.cat().equals(cat)) continue;
+                if (vis(y, MOD_H, ly, lh)) {
+                    boolean sel   = m.id().equals(selMod);
+                    boolean hover = inRect(mx, my, lx, y, lw, MOD_H);
+                    boolean on    = isOn(m.id());
+
+                    if (sel)        g.fill(lx, y, lx + lw, y + MOD_H, C_SEL_BG);
+                    else if (hover) g.fill(lx, y, lx + lw, y + MOD_H, 0x18FFFFFF);
+
+                    // Left indicator bar
+                    g.fill(lx, y + 4, lx + 3, y + MOD_H - 4, on ? C_IND_ON : C_IND_OFF);
+
+                    // Name
+                    g.drawString(font, m.name(), lx + 8, y + 7, on ? C_TEXT : C_DIM, false);
+
+                    final String mid = m.id(), mname = m.name();
+                    final int    fy  = y;
+                    // Single-click: select
+                    hit(lx, fy, lw, MOD_H, () -> selMod(mid));
+                }
+                y += MOD_H;
+            }
+            y += 3;
+        }
+    }
+
+    // ══════════════════════════════════════ RIGHT PANEL ═══════════════════════
+
+    // Settings rendering state – set before each settings call
+    private int sX, sY, sW, sH, sMX, sMY, sCY;
+
+    private void renderRight(GuiGraphics g, int mx, int my, int rx, int ry, int rw, int rh) {
+        ModDef m = MODS.stream().filter(md -> md.id().equals(selMod)).findFirst().orElse(null);
+        if (m == null) return;
+
+        // Module title bar
+        g.fill(rx, ry, rx + rw, ry + 16, 0xFF0D0D1E);
+        g.fill(rx, ry + 15, rx + rw, ry + 16, 0xFF252540);
+        String dot = isOn(m.id()) ? "§a●" : "§8●";
+        g.drawString(font, dot + " §f" + m.name(), rx + 6, ry + 4, C_TEXT, false);
+        g.drawString(font, "§8" + m.desc(), rx + 6 + font.width("● " + m.name()) + 6, ry + 4, C_DIM, false);
+
+        int cy = ry + 16;
+        int ch = rh - 16;
+        // Reserve bottom space for EditBox if needed
+        int reserve = "entityEsp".equals(selMod) ? 20 : 0;
+        ch -= reserve;
+
+        g.enableScissor(rx, cy, rx + rw, cy + ch);
+        sX = rx; sY = cy; sW = rw; sH = ch; sMX = mx; sMY = my;
+        sCY = cy - rightScroll;
+        drawSettings(g, m.id(), VisionConfig.get());
+        maxRScroll = Math.max(0, sCY - (cy + ch));
+        g.disableScissor();
+
+        if (reserve > 0) {
+            g.drawString(font, "§8Spieler-Filter:", rx + 5, cy + ch + 3, C_DIM, false);
+        }
+    }
+
+    private void drawSettings(GuiGraphics g, String id, VisionConfig c) {
+        switch (id) {
+            case "entityEsp"  -> {
+                sToggle(g, "Entity ESP",   c.entityEspEnabled,  () -> { c.entityEspEnabled  = !c.entityEspEnabled;  save(); });
+                sRadius(g, "Radius",       c.entityEspRadius,  1, 16,
+                        () -> { c.entityEspRadius = Math.max(1,  c.entityEspRadius-1); save(); },
+                        () -> { c.entityEspRadius = Math.min(16, c.entityEspRadius+1); save(); });
+                sSep(g, "Entity-Farben");
+                for (String eid : VisionConfig.ALL_ENTITY_TYPES)
+                    sEntityRow(g, eid, c);
+            }
+            case "entityGlow" -> {
+                sToggle(g, "Entity Glow",  c.entityGlowEnabled, () -> { c.entityGlowEnabled = !c.entityGlowEnabled; save(); });
+                sDesc(g, "Vanilla Glow-Umriss durch Wände.");
+                sDesc(g, "Nicht in OBS sichtbar.");
+                sDesc(g, "Überschreibt die ESP-Boxen.");
+            }
+            case "healthBar"  -> {
+                sToggle(g, "Health Bar",   c.healthBarEnabled,  () -> { c.healthBarEnabled  = !c.healthBarEnabled;  save(); });
+                sDesc(g, "Vanilla-Herzen über jeder Entity.");
+                sDesc(g, "Benötigt Entity ESP (aktiv).");
+            }
+            case "oreEsp"     -> {
+                sToggle(g, "Ore ESP",      c.oreEspEnabled,     () -> { c.oreEspEnabled     = !c.oreEspEnabled;     save(); });
+                sRadius(g, "Radius",       c.oreEspRadius,     1,  8,
+                        () -> { c.oreEspRadius = Math.max(1, c.oreEspRadius-1); save(); },
+                        () -> { c.oreEspRadius = Math.min(8, c.oreEspRadius+1); save(); });
+                sSep(g, "Erz-Farben");
+                for (String oid : VisionConfig.ALL_ORES)
+                    sOreRow(g, oid, c);
+            }
+            case "itemEsp"    -> {
+                sToggle(g, "Item ESP",     c.itemEspEnabled,    () -> { c.itemEspEnabled    = !c.itemEspEnabled;    save(); });
+                sRadius(g, "Radius",       c.itemEspRadius,    1, 16,
+                        () -> { c.itemEspRadius = Math.max(1,  c.itemEspRadius-1); save(); },
+                        () -> { c.itemEspRadius = Math.min(16, c.itemEspRadius+1); save(); });
+                sSep(g, "Farbe");
+                sColorRow(g, "Items", parseRGB(c.itemEspColor),
+                        col -> { c.itemEspColor = rgb(col); save(); });
+            }
+            case "storageEsp" -> {
+                sToggle(g, "Container ESP",c.storageEspEnabled, () -> { c.storageEspEnabled = !c.storageEspEnabled; save(); });
+                sRadius(g, "Radius",       c.storageEspRadius, 1,  8,
+                        () -> { c.storageEspRadius = Math.max(1, c.storageEspRadius-1); save(); },
+                        () -> { c.storageEspRadius = Math.min(8, c.storageEspRadius+1); save(); });
+                sSep(g, "Farben");
+                sColorRow(g, "Kiste",      parseRGB(c.chestColor),      col -> { c.chestColor = rgb(col); save(); });
+                sColorRow(g, "Fass",       parseRGB(c.barrelColor),     col -> { c.barrelColor = rgb(col); save(); });
+                sColorRow(g, "Shulker",    parseRGB(c.shulkerColor),    col -> { c.shulkerColor = rgb(col); save(); });
+                sColorRow(g, "Ender Kiste",parseRGB(c.enderChestColor), col -> { c.enderChestColor = rgb(col); save(); });
+            }
+            case "fullbright" -> {
+                sToggle(g, "Fullbright",   c.fullbrightEnabled, () -> { c.fullbrightEnabled = !c.fullbrightEnabled; save(); });
+                sDesc(g, "Versteckter Night-Vision-Effekt.");
+                sDesc(g, "Kein Icon, keine Partikel.");
+                sSep(g, "Taste");
+                sKeybindRow(g, "Fullbright", "fullbright", c.keyFullbright, c);
+            }
+            case "tracers"    -> {
+                sToggle(g, "Tracer Lines", c.globalLinesEnabled,() -> { c.globalLinesEnabled= !c.globalLinesEnabled;save(); });
+                sDesc(g, "Linien von dir zu allen Entities");
+                sDesc(g, "und Erzen (ESP muss aktiv sein).");
+            }
+            case "boxFill"    -> {
+                sToggle(g, "Filled Boxes", c.fillBoxes,         () -> { c.fillBoxes         = !c.fillBoxes;         save(); });
+                sDesc(g, "Ausgefüllte statt transparente");
+                sDesc(g, "ESP-Boxen.");
+            }
+            case "susChunks"  -> {
+                sToggle(g, "Sus Chunks",   c.susChunksEnabled,  () -> { c.susChunksEnabled  = !c.susChunksEnabled;  save(); });
+                sToggle(g, "Chunk-Grenzen",c.showAllChunkBorders,()->{ c.showAllChunkBorders=!c.showAllChunkBorders;save(); });
+                sRadius(g, "Radius",       c.susChunksRadius,  1,  8,
+                        () -> { c.susChunksRadius = Math.max(1, c.susChunksRadius-1); save(); },
+                        () -> { c.susChunksRadius = Math.min(8, c.susChunksRadius+1); save(); });
+                sSep(g, "Erkennen");
+                sToggle(g, "Kisten",       c.susDetectChests,   () -> { c.susDetectChests   = !c.susDetectChests;   save(); });
+                sToggle(g, "Spawner",      c.susDetectSpawners, () -> { c.susDetectSpawners = !c.susDetectSpawners; save(); });
+                sToggle(g, "Redstone",     c.susDetectRedstone, () -> { c.susDetectRedstone = !c.susDetectRedstone; save(); });
+            }
+            case "keybinds"   -> {
+                sSep(g, "Tastenbelegung");
+                sDesc(g, "[Ändern] klicken, dann Taste drücken.");
+                sCY += 4;
+                sKeybindRow(g, "Entity ESP",    "entityEsp",  c.keyEntityEsp,  c);
+                sKeybindRow(g, "Ore ESP",       "oreEsp",     c.keyOreEsp,     c);
+                sKeybindRow(g, "Config öffnen", "openConfig", c.keyOpenConfig, c);
+                sKeybindRow(g, "Sus Chunks",    "susChunks",  c.keySusChunks,  c);
+                sKeybindRow(g, "Fullbright",    "fullbright", c.keyFullbright, c);
+                sKeybindRow(g, "Item ESP",      "itemEsp",    c.keyItemEsp,    c);
+                sKeybindRow(g, "Container ESP", "storageEsp", c.keyStorageEsp, c);
+                sCY += 6;
+                sDesc(g, "§8Nicht im MC-Keybinds-Menü sichtbar.");
+            }
+        }
+    }
+
+    // ══════════════════════════════════════ SETTINGS HELPERS ══════════════════
+
+    private void sToggle(GuiGraphics g, String label, boolean val, Runnable toggle) {
+        int y = sCY;
+        if (vis(y, S_ROW, sY, sH)) {
+            boolean hover = inRect(sMX, sMY, sX, y, sW, S_ROW);
+            if (hover) g.fill(sX, y, sX + sW, y + S_ROW, 0x14FFFFFF);
+            // Indicator square
+            int ic = val ? C_IND_ON : C_IND_OFF;
+            g.fill(sX + 5, y + 5, sX + 13, y + 13, ic);
+            g.fill(sX + 6, y + 6, sX + 12, y + 12, val ? 0xCC3A6FBF : 0xCC202035);
+            // Label
+            g.drawString(font, label, sX + 17, y + 5, val ? C_TEXT : C_DIM, false);
+            // ON/OFF right side
+            g.drawString(font, val ? "§aAN" : "§8AUS", sX + sW - 26, y + 5, C_DIM, false);
+            hit(sX, y, sW, S_ROW, toggle);
+        }
+        sCY += S_ROW;
+    }
+
+    private void sRadius(GuiGraphics g, String label, int val, int min, int max,
+                          Runnable dec, Runnable inc) {
+        int y = sCY;
+        if (vis(y, S_ROW, sY, sH)) {
+            g.drawString(font, label + ": §f" + val + " §8Chunks", sX + 5, y + 5, C_DIM, false);
+            int bx = sX + sW - 42;
+            drawBtn(g, bx,    y + 2, 18, 14, "§c−", sMX, sMY); hit(bx,    y + 2, 18, 14, dec);
+            drawBtn(g, bx+20, y + 2, 18, 14, "§a+", sMX, sMY); hit(bx+20, y + 2, 18, 14, inc);
+        }
+        sCY += S_ROW;
+    }
+
+    private void sSep(GuiGraphics g, String label) {
+        int y = sCY;
+        if (vis(y, 14, sY, sH)) {
+            g.fill(sX, y, sX + sW, y + 13, 0xFF0C0C1A);
+            g.fill(sX, y + 12, sX + sW, y + 13, 0xFF1E1E35);
+            g.drawString(font, "§8" + label, sX + 5, y + 3, 0xFF474770, false);
+        }
+        sCY += 14;
+    }
+
+    private void sDesc(GuiGraphics g, String text) {
+        int y = sCY;
+        if (vis(y, 11, sY, sH))
+            g.drawString(font, text, sX + 16, y + 1, C_DIM, false);
+        sCY += 11;
+    }
+
+    private void sColorRow(GuiGraphics g, String label, int currentRgb,
+                            java.util.function.IntConsumer onPick) {
+        int y = sCY;
+        if (vis(y, S_ROW, sY, sH)) {
+            g.drawString(font, label, sX + 5, y + 5, C_DIM, false);
+            int swX = sX + 72;
+            // Current color swatch
+            drawSwatch(g, swX, y + 4, 12, 11, currentRgb, true, null);
+            swX += 15;
+            // Palette
+            for (int ci = 0; ci < PALETTE.length; ci++) {
+                final int pc = PALETTE[ci];
+                boolean sel = (pc & 0xFFFFFF) == (currentRgb & 0xFFFFFF);
+                drawSwatch(g, swX + ci * 12, y + 4, 11, 11, pc & 0xFFFFFF,
+                        sel, () -> onPick.accept(pc));
+            }
+        }
+        sCY += S_ROW;
+    }
+
+    private void sEntityRow(GuiGraphics g, String id, VisionConfig c) {
+        int y = sCY;
+        if (vis(y, E_ROW, sY, sH)) {
+            boolean on     = c.enabledEntityTypes.contains(id);
+            boolean hover  = inRect(sMX, sMY, sX, y, sW, E_ROW);
+            if (hover) g.fill(sX, y, sX + sW, y + E_ROW, 0x0CFFFFFF);
+
+            // Toggle dot
+            int ic = on ? C_IND_ON : C_IND_OFF;
+            g.fill(sX + 4, y + 5, sX + 10, y + 11, ic);
+            hit(sX + 4, y + 5, 6, 6, () -> { toggleSet(c.enabledEntityTypes, id); save(); });
+
+            // Name
+            g.drawString(font, VisionConfig.displayName(id), sX + 13, y + 4, on ? C_TEXT : C_DIM, false);
+
+            // Box color swatch + mini palette (5 colors)
+            int nameW = font.width(VisionConfig.displayName(id));
+            int cx    = sX + 13 + Math.max(nameW, 70) + 4;
+            int boxRgb = VisionConfig.parseColor(c.entityBoxColors.getOrDefault(id, "#FFFF0000")) & 0xFFFFFF;
+            drawSwatch(g, cx, y + 4, 10, 9, boxRgb, true, null);
+            cx += 13;
+            for (int ci = 0; ci < 5; ci++) {
+                final String fid = id; final int pc = PALETTE[ci];
+                drawSwatch(g, cx + ci * 11, y + 4, 10, 9, pc & 0xFFFFFF, false,
+                        () -> { c.entityBoxColors.put(fid, rgb(pc)); save(); });
+            }
+            cx += 57;
+
+            // Line toggle
+            boolean lineOn = c.entityLinesEnabled.contains(id);
+            g.fill(cx, y + 4, cx + 9, y + 13, lineOn ? C_IND_ON : C_IND_OFF);
+            g.drawString(font, "§8L", cx + 1, y + 4, 0xFFBBBBCC, false);
+            hit(cx, y + 4, 9, 9, () -> { toggleSet(c.entityLinesEnabled, id); save(); });
+            cx += 12;
+
+            // Line color swatch + mini palette (5 colors)
+            int lineRgb = VisionConfig.parseColor(c.entityLineColors.getOrDefault(id, "#FFFF0000")) & 0xFFFFFF;
+            drawSwatch(g, cx, y + 4, 10, 9, lineRgb, true, null);
+            cx += 13;
+            for (int ci = 0; ci < 5; ci++) {
+                final String fid = id; final int pc = PALETTE[ci + 5];
+                drawSwatch(g, cx + ci * 11, y + 4, 10, 9, pc & 0xFFFFFF, false,
+                        () -> { c.entityLineColors.put(fid, rgb(pc)); save(); });
+            }
+        }
+        sCY += E_ROW;
+    }
+
+    private void sOreRow(GuiGraphics g, String id, VisionConfig c) {
+        int y = sCY;
+        if (vis(y, E_ROW, sY, sH)) {
+            boolean on    = c.enabledOres.contains(id);
+            boolean hover = inRect(sMX, sMY, sX, y, sW, E_ROW);
+            if (hover) g.fill(sX, y, sX + sW, y + E_ROW, 0x0CFFFFFF);
+
+            g.fill(sX + 4, y + 5, sX + 10, y + 11, on ? C_IND_ON : C_IND_OFF);
+            hit(sX + 4, y + 5, 6, 6, () -> { toggleSet(c.enabledOres, id); save(); });
+
+            g.drawString(font, VisionConfig.displayName(id), sX + 13, y + 4, on ? C_TEXT : C_DIM, false);
+
+            int nameW = font.width(VisionConfig.displayName(id));
+            int cx    = sX + 13 + Math.max(nameW, 80) + 4;
+
+            int bRgb = VisionConfig.parseColor(c.oreBoxColors.getOrDefault(id, "#FFFFFFFF")) & 0xFFFFFF;
+            drawSwatch(g, cx, y + 4, 10, 9, bRgb, true, null); cx += 13;
+            for (int ci = 0; ci < 5; ci++) {
+                final String fid = id; final int pc = PALETTE[ci];
+                drawSwatch(g, cx + ci * 11, y + 4, 10, 9, pc & 0xFFFFFF, false,
+                        () -> { c.oreBoxColors.put(fid, rgb(pc)); save(); });
+            }
+            cx += 57;
+
+            boolean lineOn = c.oreLinesEnabled.contains(id);
+            g.fill(cx, y + 4, cx + 9, y + 13, lineOn ? C_IND_ON : C_IND_OFF);
+            g.drawString(font, "§8L", cx + 1, y + 4, 0xFFBBBBCC, false);
+            hit(cx, y + 4, 9, 9, () -> { toggleSet(c.oreLinesEnabled, id); save(); });
+            cx += 12;
+
+            int lRgb = VisionConfig.parseColor(c.oreLineColors.getOrDefault(id, "#FFFFFFFF")) & 0xFFFFFF;
+            drawSwatch(g, cx, y + 4, 10, 9, lRgb, true, null); cx += 13;
+            for (int ci = 0; ci < 5; ci++) {
+                final String fid = id; final int pc = PALETTE[ci + 5];
+                drawSwatch(g, cx + ci * 11, y + 4, 10, 9, pc & 0xFFFFFF, false,
+                        () -> { c.oreLineColors.put(fid, rgb(pc)); save(); });
+            }
+        }
+        sCY += E_ROW;
+    }
+
+    private void sKeybindRow(GuiGraphics g, String label, String bindId, int keyCode, VisionConfig c) {
+        int y = sCY;
+        if (vis(y, S_ROW, sY, sH)) {
+            boolean waiting = bindId.equals(rebindingKey);
+            g.drawString(font, label, sX + 5, y + 5, C_TEXT, false);
+
+            String keyStr = waiting ? "§e< Taste drücken... >"
+                    : (keyCode > 0 ? "§a" + keyName(keyCode) : "§8Keine");
+            int kw = font.width(keyStr.replaceAll("§.", ""));
+            g.drawString(font, keyStr, sX + sW - kw - 52, y + 5, C_TEXT, false);
+
+            String btnLabel = waiting ? "§cAbbr." : "§7Ändern";
+            drawBtn(g, sX + sW - 48, y + 2, 44, 14, btnLabel, sMX, sMY);
+            hit(sX + sW - 48, y + 2, 44, 14, () -> {
+                rebindingKey = waiting ? null : bindId;
+            });
+        }
+        sCY += S_ROW;
+    }
+
+    // ══════════════════════════════════════ PRIMITIVE DRAWING ═════════════════
+
+    private void drawBtn(GuiGraphics g, int x, int y, int w, int h, String label, int mx, int my) {
+        boolean hover = inRect(mx, my, x, y, w, h);
+        g.fill(x, y, x + w, y + h, hover ? C_BTN_H : C_BTN);
+        g.fill(x, y, x + w, y + 1, C_BTN_BD);
+        g.fill(x, y + h - 1, x + w, y + h, 0xFF090910);
+        String plain = label.replaceAll("§.", "");
+        g.drawString(font, label, x + (w - font.width(plain)) / 2, y + (h - 8) / 2, C_TEXT, false);
+    }
+
+    private void drawSwatch(GuiGraphics g, int x, int y, int w, int h,
+                             int rgb, boolean current, Runnable onClick) {
+        boolean hover = !current && onClick != null && inRect(sMX, sMY, x, y, w, h);
+        int borderC = current ? 0xFFAAAAAA : (hover ? 0xFFFFFF44 : 0xFF333355);
+        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, borderC);
+        g.fill(x, y, x + w, y + h, 0xFF000000 | rgb);
+        if (onClick != null) hit(x, y, w, h, onClick);
+    }
+
+    // ══════════════════════════════════════ INPUT ═════════════════════════════
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
         if (btn == 0) {
-            for (Swatch s : swatches) {
-                if (s.onClick() != null
-                        && mx >= s.x() && mx < s.x() + s.w()
-                        && my >= s.y() && my < s.y() + s.h()) {
-                    s.onClick().run(); return true;
+            for (int i = 0; i < hits.size(); i++) {
+                int[] z = hits.get(i);
+                if (mx >= z[0] && mx < z[0] + z[2] && my >= z[1] && my < z[1] + z[3]) {
+                    hitActions.get(i).run();
+                    return true;
                 }
             }
         }
@@ -433,9 +546,35 @@ public class VisionConfigScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-        scrollPx = clamp(scrollPx - (int)(sy * ROW_H), 0, Integer.MAX_VALUE);
-        rebuildWidgets();
+        int delta = (int)(-sy * 14);
+        if (hoverLeft) {
+            leftScroll = Math.max(0, leftScroll + delta);
+        } else {
+            rightScroll = Math.max(0, Math.min(maxRScroll + 40, rightScroll + delta));
+        }
         return true;
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (rebindingKey != null) {
+            if (keyCode != GLFW.GLFW_KEY_ESCAPE) {
+                VisionConfig c = VisionConfig.get();
+                switch (rebindingKey) {
+                    case "entityEsp"  -> c.keyEntityEsp   = keyCode;
+                    case "oreEsp"     -> c.keyOreEsp      = keyCode;
+                    case "openConfig" -> c.keyOpenConfig  = keyCode;
+                    case "susChunks"  -> c.keySusChunks   = keyCode;
+                    case "fullbright" -> c.keyFullbright  = keyCode;
+                    case "itemEsp"    -> c.keyItemEsp     = keyCode;
+                    case "storageEsp" -> c.keyStorageEsp  = keyCode;
+                }
+                VisionConfig.save();
+            }
+            rebindingKey = null;
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -445,29 +584,56 @@ public class VisionConfigScreen extends Screen {
         minecraft.setScreen(parent);
     }
 
-    // ===================================================  HELPER UTIL  ===
+    // ══════════════════════════════════════ UTILITIES ═════════════════════════
 
-    private static <T> void toggleSet(java.util.Set<T> set, T val) {
+    private void selMod(String id) {
+        if (!id.equals(selMod)) { selMod = id; rightScroll = 0; rebuildWidgets(); }
+    }
+
+    private void hit(int x, int y, int w, int h, Runnable action) {
+        hits.add(new int[]{x, y, w, h});
+        hitActions.add(action);
+    }
+
+    private boolean isOn(String id) {
+        VisionConfig c = VisionConfig.get();
+        return switch (id) {
+            case "entityEsp"  -> c.entityEspEnabled;
+            case "entityGlow" -> c.entityGlowEnabled;
+            case "healthBar"  -> c.healthBarEnabled;
+            case "oreEsp"     -> c.oreEspEnabled;
+            case "itemEsp"    -> c.itemEspEnabled;
+            case "storageEsp" -> c.storageEspEnabled;
+            case "fullbright" -> c.fullbrightEnabled;
+            case "tracers"    -> c.globalLinesEnabled;
+            case "boxFill"    -> c.fillBoxes;
+            case "susChunks"  -> c.susChunksEnabled;
+            default -> false;
+        };
+    }
+
+    private static <T> void toggleSet(Set<T> set, T val) {
         if (!set.remove(val)) set.add(val);
-        VisionConfig.save();
     }
 
-    private static String onOff(boolean on)  { return on ? "§aAN" : "§cAUS"; }
-    private static String rgb(int argb)      { return String.format("#%06X", argb & 0x00FFFFFF); }
-    private static int    parseRGB(String h) { return VisionConfig.parseColor(h) & 0x00FFFFFF; }
-    private static int    clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
+    private static void save() { VisionConfig.save(); }
 
-    private static String keyName(int keyCode) {
-        if (keyCode <= 0) return "Keine";
-        try { return InputConstants.Type.KEYSYM.getOrCreate(keyCode).getDisplayName().getString(); }
-        catch (Exception e) { return "Key " + keyCode; }
+    private static String rgb(int argb) { return String.format("#%06X", argb & 0xFFFFFF); }
+
+    private static int parseRGB(String hex) { return VisionConfig.parseColor(hex) & 0xFFFFFF; }
+
+    private static String keyName(int k) {
+        if (k <= 0) return "Keine";
+        try { return InputConstants.Type.KEYSYM.getOrCreate(k).getDisplayName().getString(); }
+        catch (Exception e) { return "Key " + k; }
     }
 
-    private void addCurrent(int x, int y, int rgb) {
-        swatches.add(new Swatch(x, y, 14, 12, rgb, true, null));
+    private static boolean inRect(int mx, int my, int x, int y, int w, int h) {
+        return mx >= x && mx < x + w && my >= y && my < y + h;
     }
 
-    private void addPalette(int x, int y, int argb, Runnable onClick) {
-        swatches.add(new Swatch(x, y, 12, 12, argb & 0x00FFFFFF, false, onClick));
+    /** True if the row [y, y+h) overlaps the visible scrolled region [oy, oy+oh). */
+    private static boolean vis(int y, int h, int oy, int oh) {
+        return y + h > oy && y < oy + oh;
     }
 }
