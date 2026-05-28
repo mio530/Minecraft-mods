@@ -4,7 +4,16 @@
   "package": "de.mio.visionmod.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "EntityGlowMixin"
+    "EntityGlowMixin",
+    "GameRendererMixin",
+    "VelocityMixin",
+    "FogMixin",
+    "NoWeatherMixin",
+    "CritMixin",
+    "AntiHungerMixin",
+    "NoSlowMixin",
+    "AntiBlindMixin",
+    "NoFallMixin"
   ],
   "injectors": {
     "defaultRequire": 1

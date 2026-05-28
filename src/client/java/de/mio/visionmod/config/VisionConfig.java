@@ -77,6 +77,54 @@ public class VisionConfig {
     public int keyItemEsp     = 0;   // unbound
     public int keyStorageEsp  = 0;   // unbound
 
+    // === COMBAT ===
+    public boolean killAuraEnabled    = false;
+    public float   killAuraRange      = 4.5f;
+    public boolean killAuraPlayers    = true;
+    public boolean killAuraMobs       = true;
+    public int     killAuraCps        = 12;
+    public boolean criticalsEnabled   = false;
+    public boolean autoClickerEnabled = false;
+    public int     autoClickerCps     = 12;
+    public boolean velocityEnabled    = false;
+    public boolean autoTotemEnabled   = false;
+    public float   autoTotemHpThresh  = 8.0f;
+    public boolean noHurtCamEnabled   = false;
+
+    // === MOVEMENT ===
+    public boolean sprintEnabled      = false;
+    public boolean flyEnabled         = false;
+    public float   flySpeed           = 1.0f;
+    public boolean speedEnabled       = false;
+    public float   speedMultiplier    = 1.5f;
+    public boolean noFallEnabled      = false;
+    public boolean stepEnabled        = false;
+    public float   stepHeight         = 1.25f;
+    public boolean jesusEnabled       = false;
+    public boolean noSlowEnabled      = false;
+    public boolean scaffoldEnabled    = false;
+
+    // === PLAYER ===
+    public boolean autoEatEnabled     = false;
+    public int     autoEatThreshold   = 16;
+    public boolean antiHungerEnabled  = false;
+    public boolean antiPoisonEnabled  = false;
+    public boolean antiAfkEnabled     = false;
+    public int     antiAfkInterval    = 200;
+
+    // === RENDER EXTRAS ===
+    public int     keyZoom            = 0;
+    public float   zoomFov            = 15f;
+    public boolean noFogEnabled       = false;
+    public boolean noWeatherEnabled   = false;
+    public boolean antiBlindEnabled   = false;
+    public boolean coordsHudEnabled   = false;
+
+    // === WORLD ===
+    public boolean nukerEnabled       = false;
+    public float   nukerRange         = 4.5f;
+    public int     nukerDelay         = 1;
+
     // --- Sus Chunks (hidden base detector) ---
     public boolean susChunksEnabled       = false;
     public boolean susDetectChests        = true;   // chests, barrels, shulker boxes

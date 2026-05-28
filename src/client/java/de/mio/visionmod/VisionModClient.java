@@ -1,5 +1,6 @@
 package de.mio.visionmod;
 
+import de.mio.visionmod.combat.CombatHacks;
 import de.mio.visionmod.config.VisionConfig;
 import de.mio.visionmod.config.VisionConfigScreen;
 import de.mio.visionmod.esp.EntityESP;
@@ -8,7 +9,11 @@ import de.mio.visionmod.esp.OreESP;
 import de.mio.visionmod.esp.StorageESP;
 import de.mio.visionmod.esp.SusChunks;
 import de.mio.visionmod.hud.HudOverlay;
+import de.mio.visionmod.movement.MovementHacks;
 import de.mio.visionmod.overlay.OverlayWindow;
+import de.mio.visionmod.player.PlayerHacks;
+import de.mio.visionmod.render.RenderHacks;
+import de.mio.visionmod.world.Nuker;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -42,6 +47,10 @@ public class VisionModClient implements ClientModInitializer {
             boolean f_item    = cfg.keyItemEsp > 0 && justPressed(win, cfg.keyItemEsp);
             boolean f_storage = cfg.keyStorageEsp > 0 && justPressed(win, cfg.keyStorageEsp);
 
+            // Zoom: hold-key (no toggle)
+            RenderHacks.zoomActive = cfg.keyZoom > 0
+                && GLFW.glfwGetKey(win, cfg.keyZoom) == GLFW.GLFW_PRESS;
+
             if (mc.screen == null) {
                 if (f_entity)  { cfg.entityEspEnabled   = !cfg.entityEspEnabled;   VisionConfig.save(); }
                 if (f_ore)     { cfg.oreEspEnabled       = !cfg.oreEspEnabled;       VisionConfig.save(); }
@@ -67,6 +76,10 @@ public class VisionModClient implements ClientModInitializer {
             ItemESP.tick(mc);
             StorageESP.tick(mc);
             SusChunks.tick(mc);
+            CombatHacks.tick(mc);
+            MovementHacks.tick(mc);
+            PlayerHacks.tick(mc);
+            Nuker.tick(mc);
         });
 
         WorldRenderEvents.END_MAIN.register(ctx -> OverlayWindow.INSTANCE.onRenderEnd(ctx));
