@@ -13,21 +13,21 @@ public class VisionConfigScreen extends Screen {
 
     // ══════════════════════════════════════ COLORS (Meteor-like dark theme) ══
 
-    private static final int C_BG        = 0xF0121220;
-    private static final int C_HDR       = 0xFF0B0B1A;
-    private static final int C_LEFT_BG   = 0xFF0E0E1C;
-    private static final int C_CAT_HDR   = 0xFF16162A;
-    private static final int C_SEL_BG    = 0xFF1A2040;
-    private static final int C_RIGHT_BG  = 0xFF0F0F1C;
-    private static final int C_DIVIDER   = 0xFF1E1E32;
-    private static final int C_IND_ON    = 0xFF5294E8;  // Meteor blue
-    private static final int C_IND_OFF   = 0xFF374060;
-    private static final int C_TEXT      = 0xFFCFD0E8;
-    private static final int C_DIM       = 0xFF5A5B78;
-    private static final int C_ACCENT    = 0xFF818CF8;
-    private static final int C_BTN       = 0xFF1C1C30;
-    private static final int C_BTN_H     = 0xFF282840;
-    private static final int C_BTN_BD    = 0xFF303050;
+    private static final int C_BG        = 0xF0101812;
+    private static final int C_HDR       = 0xFF090F0B;
+    private static final int C_LEFT_BG   = 0xFF0C130E;
+    private static final int C_CAT_HDR   = 0xFF121F14;
+    private static final int C_SEL_BG    = 0xFF122010;
+    private static final int C_RIGHT_BG  = 0xFF0D140F;
+    private static final int C_DIVIDER   = 0xFF1A2E1C;
+    private static final int C_IND_ON    = 0xFF4ADE80;  // light green
+    private static final int C_IND_OFF   = 0xFF2A4030;
+    private static final int C_TEXT      = 0xFFCFE8D0;
+    private static final int C_DIM       = 0xFF4A6050;
+    private static final int C_ACCENT    = 0xFF86EFAC;
+    private static final int C_BTN       = 0xFF141E16;
+    private static final int C_BTN_H     = 0xFF1E2E20;
+    private static final int C_BTN_BD    = 0xFF243428;
 
     // ══════════════════════════════════════ LAYOUT ════════════════════════════
 
@@ -210,8 +210,8 @@ public class VisionConfigScreen extends Screen {
         if (m == null) return;
 
         // Module title bar
-        g.fill(rx, ry, rx + rw, ry + 16, 0xFF0D0D1E);
-        g.fill(rx, ry + 15, rx + rw, ry + 16, 0xFF252540);
+        g.fill(rx, ry, rx + rw, ry + 16, 0xFF0B110C);
+        g.fill(rx, ry + 15, rx + rw, ry + 16, 0xFF1E3824);
         String dot = isOn(m.id()) ? "§a●" : "§8●";
         g.drawString(font, dot + " §f" + m.name(), rx + 6, ry + 4, C_TEXT, false);
         g.drawString(font, "§8" + m.desc(), rx + 6 + font.width("● " + m.name()) + 6, ry + 4, C_DIM, false);
@@ -340,7 +340,7 @@ public class VisionConfigScreen extends Screen {
             // Indicator square
             int ic = val ? C_IND_ON : C_IND_OFF;
             g.fill(sX + 5, y + 5, sX + 13, y + 13, ic);
-            g.fill(sX + 6, y + 6, sX + 12, y + 12, val ? 0xCC3A6FBF : 0xCC202035);
+            g.fill(sX + 6, y + 6, sX + 12, y + 12, val ? 0xCC1A7040 : 0xCC101A12);
             // Label
             g.drawString(font, label, sX + 17, y + 5, val ? C_TEXT : C_DIM, false);
             // ON/OFF right side
@@ -366,8 +366,8 @@ public class VisionConfigScreen extends Screen {
         int y = sCY;
         if (vis(y, 14, sY, sH)) {
             g.fill(sX, y, sX + sW, y + 13, 0xFF0C0C1A);
-            g.fill(sX, y + 12, sX + sW, y + 13, 0xFF1E1E35);
-            g.drawString(font, "§8" + label, sX + 5, y + 3, 0xFF474770, false);
+            g.fill(sX, y + 12, sX + sW, y + 13, 0xFF1A2E1C);
+            g.drawString(font, "§8" + label, sX + 5, y + 3, 0xFF2E4830, false);
         }
         sCY += 14;
     }
@@ -430,7 +430,7 @@ public class VisionConfigScreen extends Screen {
             // Line toggle
             boolean lineOn = c.entityLinesEnabled.contains(id);
             g.fill(cx, y + 4, cx + 9, y + 13, lineOn ? C_IND_ON : C_IND_OFF);
-            g.drawString(font, "§8L", cx + 1, y + 4, 0xFFBBBBCC, false);
+            g.drawString(font, "§8L", cx + 1, y + 4, 0xFFAABBAA, false);
             hit(cx, y + 4, 9, 9, () -> { toggleSet(c.entityLinesEnabled, id); save(); });
             cx += 12;
 
@@ -473,7 +473,7 @@ public class VisionConfigScreen extends Screen {
 
             boolean lineOn = c.oreLinesEnabled.contains(id);
             g.fill(cx, y + 4, cx + 9, y + 13, lineOn ? C_IND_ON : C_IND_OFF);
-            g.drawString(font, "§8L", cx + 1, y + 4, 0xFFBBBBCC, false);
+            g.drawString(font, "§8L", cx + 1, y + 4, 0xFFAABBAA, false);
             hit(cx, y + 4, 9, 9, () -> { toggleSet(c.oreLinesEnabled, id); save(); });
             cx += 12;
 
@@ -522,7 +522,7 @@ public class VisionConfigScreen extends Screen {
     private void drawSwatch(GuiGraphics g, int x, int y, int w, int h,
                              int rgb, boolean current, Runnable onClick) {
         boolean hover = !current && onClick != null && inRect(sMX, sMY, x, y, w, h);
-        int borderC = current ? 0xFFAAAAAA : (hover ? 0xFFFFFF44 : 0xFF333355);
+        int borderC = current ? 0xFFAABBAA : (hover ? 0xFFAAFF44 : 0xFF2A3F2C);
         g.fill(x - 1, y - 1, x + w + 1, y + h + 1, borderC);
         g.fill(x, y, x + w, y + h, 0xFF000000 | rgb);
         if (onClick != null) hit(x, y, w, h, onClick);
