@@ -1,6 +1,6 @@
 package de.mio.visionmod.overlay;
 
-import com.mojang.blaze3d.systems.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import de.mio.visionmod.config.VisionConfig;
@@ -14,9 +14,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import org.joml.Matrix4f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.ShapeRenderer;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.world.phys.AABB;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.phys.Vec3;
 
 public final class OverlayWindow {
@@ -37,14 +35,14 @@ public final class OverlayWindow {
         VisionConfig cfg = VisionConfig.get();
 
         // Cache matrices for HudOverlay projection this frame
-        ProjectionUtil.cachedMv   = new Matrix4f(ctx.positionMatrix());
-        ProjectionUtil.cachedProj = new Matrix4f(ctx.projectionMatrix());
+        ProjectionUtil.cachedMv   = new Matrix4f(ctx.matrices().last().pose());
+        ProjectionUtil.cachedProj = new Matrix4f(RenderSystem.getProjectionMatrix());
         ProjectionUtil.cachedCamX = cam.x;
         ProjectionUtil.cachedCamY = cam.y;
         ProjectionUtil.cachedCamZ = cam.z;
 
-        GlStateManager._disableDepthTest();
-        VertexConsumer vc = buf.getBuffer(RenderTypes.lines());
+        RenderSystem.disableDepthTest();
+        VertexConsumer vc = buf.getBuffer(RenderType.lines());
 
         // ── Entity ESP ──────────────────────────────────────────────────
         if (cfg.entityEspEnabled && !cfg.entityGlowEnabled) {
@@ -60,8 +58,6 @@ public final class OverlayWindow {
                     double cz = (e.minZ() + e.maxZ()) * 0.5;
                     drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, e.lineColor());
                 }
-
-                // Health bar is rendered as 2D hearts by HudOverlay
             }
         }
 
@@ -85,7 +81,6 @@ public final class OverlayWindow {
                 drawBox(ps, vc, cam,
                         it.minX(), it.minY(), it.minZ(),
                         it.maxX(), it.maxY(), it.maxZ(), it.color());
-                // Tracer to item centre
                 double cx = (it.minX() + it.maxX()) * 0.5;
                 double cy = (it.minY() + it.maxY()) * 0.5;
                 double cz = (it.minZ() + it.maxZ()) * 0.5;
@@ -115,8 +110,8 @@ public final class OverlayWindow {
             }
         }
 
-        buf.endBatch(RenderTypes.lines());
-        GlStateManager._enableDepthTest();
+        buf.endBatch(RenderType.lines());
+        RenderSystem.enableDepthTest();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
@@ -124,13 +119,38 @@ public final class OverlayWindow {
     private static void drawBox(PoseStack ps, VertexConsumer vc, Vec3 cam,
                                  double minX, double minY, double minZ,
                                  double maxX, double maxY, double maxZ, int color) {
-        float r = ((color >> 16) & 0xFF) / 255f;
-        float g = ((color >>  8) & 0xFF) / 255f;
-        float b = ( color        & 0xFF) / 255f;
-        float a = ((color >> 24) & 0xFF) / 255f;
-        AABB bb = new AABB(minX - cam.x, minY - cam.y, minZ - cam.z,
-                           maxX - cam.x, maxY - cam.y, maxZ - cam.z);
-        ShapeRenderer.renderLineBox(ps.last(), vc, bb, r, g, b, a);
+        int r = (color >> 16) & 0xFF;
+        int g = (color >>  8) & 0xFF;
+        int b =  color        & 0xFF;
+        int a = (color >> 24) & 0xFF;
+
+        float x1 = (float)(minX - cam.x), y1 = (float)(minY - cam.y), z1 = (float)(minZ - cam.z);
+        float x2 = (float)(maxX - cam.x), y2 = (float)(maxY - cam.y), z2 = (float)(maxZ - cam.z);
+
+        PoseStack.Pose pose = ps.last();
+        // 12 edges of the bounding box
+        boxLine(pose, vc, x1,y1,z1, x2,y1,z1, r,g,b,a);
+        boxLine(pose, vc, x2,y1,z1, x2,y1,z2, r,g,b,a);
+        boxLine(pose, vc, x2,y1,z2, x1,y1,z2, r,g,b,a);
+        boxLine(pose, vc, x1,y1,z2, x1,y1,z1, r,g,b,a);
+        boxLine(pose, vc, x1,y2,z1, x2,y2,z1, r,g,b,a);
+        boxLine(pose, vc, x2,y2,z1, x2,y2,z2, r,g,b,a);
+        boxLine(pose, vc, x2,y2,z2, x1,y2,z2, r,g,b,a);
+        boxLine(pose, vc, x1,y2,z2, x1,y2,z1, r,g,b,a);
+        boxLine(pose, vc, x1,y1,z1, x1,y2,z1, r,g,b,a);
+        boxLine(pose, vc, x2,y1,z1, x2,y2,z1, r,g,b,a);
+        boxLine(pose, vc, x2,y1,z2, x2,y2,z2, r,g,b,a);
+        boxLine(pose, vc, x1,y1,z2, x1,y2,z2, r,g,b,a);
+    }
+
+    private static void boxLine(PoseStack.Pose pose, VertexConsumer vc,
+                                  float x1, float y1, float z1,
+                                  float x2, float y2, float z2,
+                                  int r, int g, int b, int a) {
+        float dx = x2-x1, dy = y2-y1, dz = z2-z1;
+        float len = Math.max(0.001f, (float)Math.sqrt(dx*dx+dy*dy+dz*dz));
+        vc.addVertex(pose, x1,y1,z1).setColor(r,g,b,a).setNormal(pose, dx/len,dy/len,dz/len);
+        vc.addVertex(pose, x2,y2,z2).setColor(r,g,b,a).setNormal(pose, dx/len,dy/len,dz/len);
     }
 
     private static void drawLine(PoseStack ps, VertexConsumer vc, Vec3 cam,

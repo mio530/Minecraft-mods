@@ -7,7 +7,6 @@
     "EntityGlowMixin",
     "GameRendererMixin",
     "VelocityMixin",
-    "FogMixin",
     "NoWeatherMixin",
     "CritMixin",
     "AntiHungerMixin",
