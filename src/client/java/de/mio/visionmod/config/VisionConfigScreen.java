@@ -683,8 +683,10 @@ public class VisionConfigScreen extends Screen {
     // ══════════════════════════════════════ INPUT ═════════════════════════════
 
     @Override
-    public boolean mouseClicked(double mx, double my, int btn) {
-        if (btn == 0) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
+        if (click.button() == 0) {
+            double mx = click.x();
+            double my = click.y();
             for (int i = 0; i < hits.size(); i++) {
                 int[] z = hits.get(i);
                 if (mx >= z[0] && mx < z[0] + z[2] && my >= z[1] && my < z[1] + z[3]) {
@@ -693,7 +695,7 @@ public class VisionConfigScreen extends Screen {
                 }
             }
         }
-        return super.mouseClicked(mx, my, btn);
+        return super.mouseClicked(click, doubled);
     }
 
     @Override
@@ -705,8 +707,9 @@ public class VisionConfigScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
         if (rebindingKey != null) {
+            int keyCode = event.key();
             if (keyCode != GLFW.GLFW_KEY_ESCAPE) {
                 VisionConfig c = VisionConfig.get();
                 switch (rebindingKey) {
@@ -724,7 +727,7 @@ public class VisionConfigScreen extends Screen {
             rebindingKey = null;
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override

@@ -8,14 +8,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class HudOverlay {
 
     // Vanilla heart sprite IDs (from MC assets/minecraft/atlases/gui.json)
-    private static final ResourceLocation HEART_CONTAINER = ResourceLocation.fromNamespaceAndPath("minecraft", "hud/heart/container");
-    private static final ResourceLocation HEART_FULL      = ResourceLocation.fromNamespaceAndPath("minecraft", "hud/heart/full");
-    private static final ResourceLocation HEART_HALF      = ResourceLocation.fromNamespaceAndPath("minecraft", "hud/heart/half");
+    private static final Identifier HEART_CONTAINER = Identifier.fromNamespaceAndPath("minecraft", "hud/heart/container");
+    private static final Identifier HEART_FULL      = Identifier.fromNamespaceAndPath("minecraft", "hud/heart/full");
+    private static final Identifier HEART_HALF      = Identifier.fromNamespaceAndPath("minecraft", "hud/heart/half");
 
     // Each heart is 9×9 px; vanilla draws them with 8px stride (1px overlap)
     private static final int HEART_SIZE   = 9;

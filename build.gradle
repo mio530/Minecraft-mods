@@ -1,5 +1,5 @@
 plugins {
-    id 'net.fabricmc.fabric-loom-remap' version '1.16-SNAPSHOT'
+    id 'fabric-loom' version '1.8.10'
     id 'maven-publish'
 }
 
@@ -12,6 +12,8 @@ repositories {
 }
 
 loom {
+    accessWidenerPath = file("src/main/resources/visionmod.accesswidener")
+
     splitEnvironmentSourceSets()
 
     mods {

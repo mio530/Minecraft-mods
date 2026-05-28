@@ -59,7 +59,7 @@ public final class CombatHacks {
         if (!cfg.autoClickerEnabled || mc.screen != null) return;
         if (autoClickCooldown > 0) { autoClickCooldown--; return; }
 
-        long win = mc.getWindow().getWindow();
+        long win = GLFW.glfwGetCurrentContext();
         if (GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS) {
             Entity crosshair = mc.crosshairPickEntity;
             if (crosshair instanceof LivingEntity le && le.isAlive()) {

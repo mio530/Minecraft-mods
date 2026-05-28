@@ -35,7 +35,7 @@ public class VisionModClient implements ClientModInitializer {
         VisionConfig.load();
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-            long win = mc.getWindow().getWindow();
+            long win = GLFW.glfwGetCurrentContext();
             VisionConfig cfg = VisionConfig.get();
 
             // Always poll to track state — prevents false triggers after screen closes

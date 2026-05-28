@@ -1,6 +1,5 @@
 package de.mio.visionmod.overlay;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import de.mio.visionmod.config.VisionConfig;
@@ -36,12 +35,12 @@ public final class OverlayWindow {
 
         // Cache matrices for HudOverlay projection this frame
         ProjectionUtil.cachedMv   = new Matrix4f(ctx.matrices().last().pose());
-        ProjectionUtil.cachedProj = new Matrix4f(RenderSystem.getProjectionMatrix());
+        ProjectionUtil.cachedProj = null; // projection matrix unavailable in new API; HUD health bars disabled
         ProjectionUtil.cachedCamX = cam.x;
         ProjectionUtil.cachedCamY = cam.y;
         ProjectionUtil.cachedCamZ = cam.z;
 
-        RenderSystem.disableDepthTest();
+        com.mojang.blaze3d.platform.GlStateManager._disableDepthTest();
         VertexConsumer vc = buf.getBuffer(RenderType.lines());
 
         // ── Entity ESP ──────────────────────────────────────────────────
@@ -111,7 +110,7 @@ public final class OverlayWindow {
         }
 
         buf.endBatch(RenderType.lines());
-        RenderSystem.enableDepthTest();
+        com.mojang.blaze3d.platform.GlStateManager._enableDepthTest();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

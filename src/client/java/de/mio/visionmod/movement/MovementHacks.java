@@ -5,7 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -18,8 +18,8 @@ import net.minecraft.world.phys.Vec3;
 public final class MovementHacks {
     private MovementHacks() {}
 
-    private static final ResourceLocation SPEED_ID    = ResourceLocation.fromNamespaceAndPath("visionmod", "speed");
-    private static final ResourceLocation STEP_ID     = ResourceLocation.fromNamespaceAndPath("visionmod", "step");
+    private static final Identifier SPEED_ID    = Identifier.fromNamespaceAndPath("visionmod", "speed");
+    private static final Identifier STEP_ID     = Identifier.fromNamespaceAndPath("visionmod", "step");
     private static int scaffoldCooldown = 0;
     private static boolean flyWasActive = false;
 
