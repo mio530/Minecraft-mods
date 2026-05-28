@@ -16,18 +16,22 @@ public class VisionConfigScreen extends Screen {
     private static final int FOOTER_H   = 32;
     private static final int COL_TOGGLE = 5;
     private static final int COL_LABEL  = 60;
-    private static final int COL_BOX_F  = 185;
+    private static final int COL_BOX_SW = 180; // box color swatch
+    private static final int COL_BOX_F  = 194; // box color field
     private static final int COL_LINE_T = 270;
-    private static final int COL_LINE_F = 325;
+    private static final int COL_LINE_SW= 308; // line color swatch
+    private static final int COL_LINE_F = 322; // line color field
 
     private final Screen parent;
     private int activeTab = 0; // 0=entities, 1=ores, 2=settings
     private int scrollPx  = 0;
 
-    // Items visible in current frame (for rendering labels)
     private final List<RowInfo> visibleRows = new ArrayList<>();
-
     private record RowInfo(String id, String label, int y) {}
+
+    // For live color-swatch preview next to each color field
+    private final List<SwatchRef> swatches = new ArrayList<>();
+    private record SwatchRef(int x, int y, EditBox field) {}
 
     public VisionConfigScreen(Screen parent) {
         super(Component.translatable("screen.visionmod.config"));
@@ -40,9 +44,9 @@ public class VisionConfigScreen extends Screen {
     @Override
     protected void init() {
         visibleRows.clear();
+        swatches.clear();
         VisionConfig cfg = VisionConfig.get();
 
-        // Tab buttons
         addRenderableWidget(Button.builder(
                 Component.translatable("tab.visionmod.entities"),
                 b -> switchTab(0)).bounds(5, 38, 90, 18).build());
@@ -53,14 +57,12 @@ public class VisionConfigScreen extends Screen {
                 Component.translatable("tab.visionmod.settings"),
                 b -> switchTab(2)).bounds(185, 38, 80, 18).build());
 
-        // Done button
         addRenderableWidget(Button.builder(
                 Component.translatable("gui.done"),
                 b -> { VisionConfig.save(); onClose(); })
                 .bounds(width / 2 - 60, height - FOOTER_H + 6, 120, 20).build());
 
         int listBottom = height - FOOTER_H;
-        int listHeight = listBottom - LIST_TOP;
 
         if (activeTab == 0) buildEntityTab(cfg, listBottom);
         else if (activeTab == 1) buildOreTab(cfg, listBottom);
@@ -98,38 +100,34 @@ public class VisionConfigScreen extends Screen {
                     b -> { toggleEntityEsp(id); rebuildWidgets(); })
                     .bounds(COL_TOGGLE, y + 2, 50, 18).build());
 
-            // Box color field
-            EditBox boxField = new EditBox(font, COL_BOX_F, y + 2, 80, 18,
-                    Component.literal(cfg.entityBoxColors.getOrDefault(id, "#FFFF0000")));
-            boxField.setMaxLength(10);
-            boxField.setValue(cfg.entityBoxColors.getOrDefault(id, "#FFFF0000"));
             final String fid = id;
-            boxField.setResponder(val -> {
-                cfg.entityBoxColors.put(fid, val);
-                VisionConfig.save();
-            });
-            addRenderableWidget(boxField);
 
-            // Line toggle button
+            // Box color swatch + field
+            String bv = toRGB(cfg.entityBoxColors.getOrDefault(id, "#FFFF0000"));
+            EditBox boxField = new EditBox(font, COL_BOX_F, y + 2, 74, 18, Component.literal(bv));
+            boxField.setMaxLength(10);
+            boxField.setValue(bv);
+            boxField.setResponder(val -> { cfg.entityBoxColors.put(fid, val); VisionConfig.save(); });
+            addRenderableWidget(boxField);
+            swatches.add(new SwatchRef(COL_BOX_SW, y + 4, boxField));
+
+            // Line toggle
             boolean lineOn = cfg.entityLinesEnabled.contains(id);
             addRenderableWidget(Button.builder(
                     Component.literal(lineOn ? "§aL§r" : "§cL§r"),
                     b -> { toggleEntityLine(id); rebuildWidgets(); })
                     .bounds(COL_LINE_T, y + 2, 30, 18).build());
 
-            // Line color field
-            EditBox lineField = new EditBox(font, COL_LINE_F, y + 2, 80, 18,
-                    Component.literal(cfg.entityLineColors.getOrDefault(id, "#FFFF0000")));
+            // Line color swatch + field
+            String lv = toRGB(cfg.entityLineColors.getOrDefault(id, "#FFFF0000"));
+            EditBox lineField = new EditBox(font, COL_LINE_F, y + 2, 74, 18, Component.literal(lv));
             lineField.setMaxLength(10);
-            lineField.setValue(cfg.entityLineColors.getOrDefault(id, "#FFFF0000"));
-            lineField.setResponder(val -> {
-                cfg.entityLineColors.put(fid, val);
-                VisionConfig.save();
-            });
+            lineField.setValue(lv);
+            lineField.setResponder(val -> { cfg.entityLineColors.put(fid, val); VisionConfig.save(); });
             addRenderableWidget(lineField);
+            swatches.add(new SwatchRef(COL_LINE_SW, y + 4, lineField));
         }
 
-        // Player name whitelist field at bottom of entity tab
         int fieldY = listBottom - 22;
         EditBox namesField = new EditBox(font, COL_LABEL, fieldY, width - COL_LABEL - 10, 18,
                 Component.literal("Spielernamen (kommagetrennt)"));
@@ -171,16 +169,15 @@ public class VisionConfigScreen extends Screen {
                     b -> { toggleOreEsp(id); rebuildWidgets(); })
                     .bounds(COL_TOGGLE, y + 2, 50, 18).build());
 
-            EditBox boxField = new EditBox(font, COL_BOX_F, y + 2, 80, 18,
-                    Component.literal(cfg.oreBoxColors.getOrDefault(id, "#FFFFFFFF")));
-            boxField.setMaxLength(10);
-            boxField.setValue(cfg.oreBoxColors.getOrDefault(id, "#FFFFFFFF"));
             final String fid = id;
-            boxField.setResponder(val -> {
-                cfg.oreBoxColors.put(fid, val);
-                VisionConfig.save();
-            });
+
+            String bv = toRGB(cfg.oreBoxColors.getOrDefault(id, "#FFFFFFFF"));
+            EditBox boxField = new EditBox(font, COL_BOX_F, y + 2, 74, 18, Component.literal(bv));
+            boxField.setMaxLength(10);
+            boxField.setValue(bv);
+            boxField.setResponder(val -> { cfg.oreBoxColors.put(fid, val); VisionConfig.save(); });
             addRenderableWidget(boxField);
+            swatches.add(new SwatchRef(COL_BOX_SW, y + 4, boxField));
 
             boolean lineOn = cfg.oreLinesEnabled.contains(id);
             addRenderableWidget(Button.builder(
@@ -188,15 +185,13 @@ public class VisionConfigScreen extends Screen {
                     b -> { toggleOreLine(id); rebuildWidgets(); })
                     .bounds(COL_LINE_T, y + 2, 30, 18).build());
 
-            EditBox lineField = new EditBox(font, COL_LINE_F, y + 2, 80, 18,
-                    Component.literal(cfg.oreLineColors.getOrDefault(id, "#FFFFFFFF")));
+            String lv = toRGB(cfg.oreLineColors.getOrDefault(id, "#FFFFFFFF"));
+            EditBox lineField = new EditBox(font, COL_LINE_F, y + 2, 74, 18, Component.literal(lv));
             lineField.setMaxLength(10);
-            lineField.setValue(cfg.oreLineColors.getOrDefault(id, "#FFFFFFFF"));
-            lineField.setResponder(val -> {
-                cfg.oreLineColors.put(fid, val);
-                VisionConfig.save();
-            });
+            lineField.setValue(lv);
+            lineField.setResponder(val -> { cfg.oreLineColors.put(fid, val); VisionConfig.save(); });
             addRenderableWidget(lineField);
+            swatches.add(new SwatchRef(COL_LINE_SW, y + 4, lineField));
         }
     }
 
@@ -205,56 +200,51 @@ public class VisionConfigScreen extends Screen {
     private void buildSettingsTab(VisionConfig cfg, int listBottom) {
         int y = LIST_TOP;
 
-        // Entity ESP + individual radius
         addRenderableWidget(Button.builder(
-                Component.literal("Entity-ESP: " + (cfg.entityEspEnabled ? "§aAN" : "§cAUS")),
+                Component.literal("Entity-ESP (F6): " + (cfg.entityEspEnabled ? "§aAN" : "§cAUS")),
                 b -> { cfg.entityEspEnabled = !cfg.entityEspEnabled; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE, y, 140, 20).build());
+                .bounds(COL_TOGGLE, y, 160, 20).build());
         visibleRows.add(new RowInfo("entity_radius", "Radius: " + cfg.entityEspRadius + " Chunks", y));
         addRenderableWidget(Button.builder(Component.literal("-"),
                 b -> { cfg.entityEspRadius = Math.max(1, cfg.entityEspRadius - 1); VisionConfig.save(); rebuildWidgets(); })
-                .bounds(215, y, 20, 20).build());
+                .bounds(230, y, 20, 20).build());
         addRenderableWidget(Button.builder(Component.literal("+"),
                 b -> { cfg.entityEspRadius = Math.min(16, cfg.entityEspRadius + 1); VisionConfig.save(); rebuildWidgets(); })
-                .bounds(237, y, 20, 20).build());
+                .bounds(252, y, 20, 20).build());
         y += ROW_H + 4;
 
-        // Ore ESP + individual radius
-        addRenderableWidget(Button.builder(
-                Component.literal("Erz-ESP: " + (cfg.oreEspEnabled ? "§aAN" : "§cAUS")),
-                b -> { cfg.oreEspEnabled = !cfg.oreEspEnabled; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE, y, 140, 20).build());
-        visibleRows.add(new RowInfo("ore_radius", "Radius: " + cfg.oreEspRadius + " Chunks", y));
-        addRenderableWidget(Button.builder(Component.literal("-"),
-                b -> { cfg.oreEspRadius = Math.max(1, cfg.oreEspRadius - 1); VisionConfig.save(); rebuildWidgets(); })
-                .bounds(215, y, 20, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("+"),
-                b -> { cfg.oreEspRadius = Math.min(8, cfg.oreEspRadius + 1); VisionConfig.save(); rebuildWidgets(); })
-                .bounds(237, y, 20, 20).build());
-        y += ROW_H + 4;
-
-        // Sus Chunks + individual radius
-        addRenderableWidget(Button.builder(
-                Component.literal("Sus Chunks (F9): " + (cfg.susChunksEnabled ? "§aAN" : "§cAUS")),
-                b -> { cfg.susChunksEnabled = !cfg.susChunksEnabled; VisionConfig.save(); rebuildWidgets(); })
-                .bounds(COL_TOGGLE, y, 140, 20).build());
-        visibleRows.add(new RowInfo("sus_radius", "Radius: " + cfg.susChunksRadius + " Chunks", y));
-        addRenderableWidget(Button.builder(Component.literal("-"),
-                b -> { cfg.susChunksRadius = Math.max(1, cfg.susChunksRadius - 1); VisionConfig.save(); rebuildWidgets(); })
-                .bounds(215, y, 20, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("+"),
-                b -> { cfg.susChunksRadius = Math.min(8, cfg.susChunksRadius + 1); VisionConfig.save(); rebuildWidgets(); })
-                .bounds(237, y, 20, 20).build());
-        y += ROW_H + 4;
-
-        // Entity Glow toggle
         addRenderableWidget(Button.builder(
                 Component.literal("Entity Glow (statt Box): " + (cfg.entityGlowEnabled ? "§aAN" : "§cAUS")),
                 b -> { cfg.entityGlowEnabled = !cfg.entityGlowEnabled; VisionConfig.save(); rebuildWidgets(); })
                 .bounds(COL_TOGGLE, y, 270, 20).build());
         y += ROW_H + 4;
 
-        // Global toggles side by side
+        addRenderableWidget(Button.builder(
+                Component.literal("Erz-ESP (F7): " + (cfg.oreEspEnabled ? "§aAN" : "§cAUS")),
+                b -> { cfg.oreEspEnabled = !cfg.oreEspEnabled; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(COL_TOGGLE, y, 160, 20).build());
+        visibleRows.add(new RowInfo("ore_radius", "Radius: " + cfg.oreEspRadius + " Chunks", y));
+        addRenderableWidget(Button.builder(Component.literal("-"),
+                b -> { cfg.oreEspRadius = Math.max(1, cfg.oreEspRadius - 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(230, y, 20, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("+"),
+                b -> { cfg.oreEspRadius = Math.min(8, cfg.oreEspRadius + 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(252, y, 20, 20).build());
+        y += ROW_H + 4;
+
+        addRenderableWidget(Button.builder(
+                Component.literal("Sus Chunks (F9): " + (cfg.susChunksEnabled ? "§aAN" : "§cAUS")),
+                b -> { cfg.susChunksEnabled = !cfg.susChunksEnabled; VisionConfig.save(); rebuildWidgets(); })
+                .bounds(COL_TOGGLE, y, 160, 20).build());
+        visibleRows.add(new RowInfo("sus_radius", "Radius: " + cfg.susChunksRadius + " Chunks", y));
+        addRenderableWidget(Button.builder(Component.literal("-"),
+                b -> { cfg.susChunksRadius = Math.max(1, cfg.susChunksRadius - 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(230, y, 20, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("+"),
+                b -> { cfg.susChunksRadius = Math.min(8, cfg.susChunksRadius + 1); VisionConfig.save(); rebuildWidgets(); })
+                .bounds(252, y, 20, 20).build());
+        y += ROW_H + 4;
+
         addRenderableWidget(Button.builder(
                 Component.literal("Alle Linien: " + (cfg.globalLinesEnabled ? "§aAN" : "§cAUS")),
                 b -> { cfg.globalLinesEnabled = !cfg.globalLinesEnabled; VisionConfig.save(); rebuildWidgets(); })
@@ -265,7 +255,6 @@ public class VisionConfigScreen extends Screen {
                 .bounds(140, y, 130, 20).build());
         y += ROW_H + 4;
 
-        // Sus chunks sub-settings
         addRenderableWidget(Button.builder(
                 Component.literal("  Kisten: " + (cfg.susDetectChests ? "§aAN" : "§cAUS")),
                 b -> { cfg.susDetectChests = !cfg.susDetectChests; VisionConfig.save(); rebuildWidgets(); })
@@ -312,28 +301,35 @@ public class VisionConfigScreen extends Screen {
         VisionConfig.save();
     }
 
+    // ---- Color helper ---------------------------------------------------
+
+    /** Convert stored #AARRGGBB or #RRGGBB to short #RRGGBB for display. */
+    private static String toRGB(String stored) {
+        if (stored == null || stored.isBlank()) return "#FF0000";
+        String s = stored.startsWith("#") ? stored.substring(1) : stored;
+        if (s.length() == 8) return "#" + s.substring(2); // strip alpha
+        if (s.length() == 6) return "#" + s;
+        return "#FF0000";
+    }
+
     // ---- Rendering ------------------------------------------------------
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float delta) {
         renderBackground(g, mx, my, delta);
 
-        // Title
         g.drawCenteredString(font, title, width / 2, 10, 0xFFFFFF);
 
-        // Tab headers
         g.drawString(font, "§7[Tab 1]", 5, 25, 0xAAAAAA, false);
 
-        // Column headers
         if (activeTab == 0 || activeTab == 1) {
-            g.drawString(font, "§7ESP", COL_TOGGLE + 10, LIST_TOP - 12, 0xAAAAAA, false);
-            g.drawString(font, "§7Name", COL_LABEL, LIST_TOP - 12, 0xAAAAAA, false);
-            g.drawString(font, "§7Box-Farbe", COL_BOX_F, LIST_TOP - 12, 0xAAAAAA, false);
-            g.drawString(font, "§7Linie", COL_LINE_T, LIST_TOP - 12, 0xAAAAAA, false);
-            g.drawString(font, "§7L-Farbe", COL_LINE_F, LIST_TOP - 12, 0xAAAAAA, false);
+            g.drawString(font, "§7ESP",       COL_TOGGLE + 10, LIST_TOP - 12, 0xAAAAAA, false);
+            g.drawString(font, "§7Name",      COL_LABEL,       LIST_TOP - 12, 0xAAAAAA, false);
+            g.drawString(font, "§7Box",       COL_BOX_F,       LIST_TOP - 12, 0xAAAAAA, false);
+            g.drawString(font, "§7Linie",     COL_LINE_T,      LIST_TOP - 12, 0xAAAAAA, false);
+            g.drawString(font, "§7L-Farbe",   COL_LINE_F,      LIST_TOP - 12, 0xAAAAAA, false);
         }
 
-        // Row labels (only for entity/ore tabs)
         if (activeTab == 0 || activeTab == 1) {
             for (RowInfo row : visibleRows) {
                 g.drawString(font, row.label(), COL_LABEL, row.y() + 6, 0xFFFFFF, false);
@@ -342,12 +338,18 @@ public class VisionConfigScreen extends Screen {
             for (RowInfo row : visibleRows) {
                 switch (row.id()) {
                     case "entity_radius", "ore_radius", "sus_radius" ->
-                        g.drawString(font, row.label(), 153, row.y() + 6, 0xAAAAAA, false);
+                        g.drawString(font, row.label(), 168, row.y() + 6, 0xAAAAAA, false);
                 }
             }
         }
 
-        // Separator line above footer
+        // Live color swatches (update as user types)
+        for (SwatchRef s : swatches) {
+            int c = VisionConfig.parseColor(s.field().getValue()) | 0xFF000000;
+            g.fill(s.x() - 1, s.y() - 1, s.x() + 13, s.y() + 13, 0xFF555555); // border
+            g.fill(s.x(),     s.y(),      s.x() + 12, s.y() + 12, c);           // color
+        }
+
         g.fill(0, height - FOOTER_H, width, height - FOOTER_H + 1, 0x88FFFFFF);
 
         super.render(g, mx, my, delta);
