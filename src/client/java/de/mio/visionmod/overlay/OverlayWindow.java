@@ -9,7 +9,9 @@ import de.mio.visionmod.esp.ItemESP;
 import de.mio.visionmod.esp.OreESP;
 import de.mio.visionmod.esp.StorageESP;
 import de.mio.visionmod.esp.SusChunks;
+import de.mio.visionmod.util.ProjectionUtil;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import org.joml.Matrix4f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.ShapeRenderer;
@@ -34,6 +36,13 @@ public final class OverlayWindow {
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
         VisionConfig cfg = VisionConfig.get();
 
+        // Cache matrices for HudOverlay projection this frame
+        ProjectionUtil.cachedMv   = new Matrix4f(ctx.positionMatrix());
+        ProjectionUtil.cachedProj = new Matrix4f(ctx.projectionMatrix());
+        ProjectionUtil.cachedCamX = cam.x;
+        ProjectionUtil.cachedCamY = cam.y;
+        ProjectionUtil.cachedCamZ = cam.z;
+
         GlStateManager._disableDepthTest();
         VertexConsumer vc = buf.getBuffer(RenderTypes.lines());
 
@@ -52,18 +61,7 @@ public final class OverlayWindow {
                     drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, e.lineColor());
                 }
 
-                // Health bar above box
-                if (cfg.healthBarEnabled && e.maxHealth() > 0) {
-                    double bx  = e.minX(), ex = e.maxX();
-                    double barY = e.maxY() + 0.15;
-                    double avgZ = (e.minZ() + e.maxZ()) * 0.5;
-                    float  frac = Math.max(0f, Math.min(1f, e.health() / e.maxHealth()));
-                    // Gray background
-                    drawLine(ps, vc, cam, bx, barY, avgZ, ex, barY, avgZ, 0x88333333);
-                    // Health-coloured fill
-                    drawLine(ps, vc, cam, bx, barY, avgZ,
-                             bx + (ex - bx) * frac, barY, avgZ, healthColor(frac));
-                }
+                // Health bar is rendered as 2D hearts by HudOverlay
             }
         }
 
@@ -151,10 +149,4 @@ public final class OverlayWindow {
         vc.addVertex(pose, x2, y2, z2).setColor(r, g, b, a).setNormal(pose, dx/len, dy/len, dz/len);
     }
 
-    /** Green (1.0) → Yellow (0.5) → Red (0.0) */
-    private static int healthColor(float frac) {
-        int r = frac < 0.5f ? 255 : (int)(255 * 2 * (1f - frac));
-        int g = frac > 0.5f ? 255 : (int)(255 * 2 * frac);
-        return 0xFF000000 | (r << 16) | (g << 8);
-    }
 }

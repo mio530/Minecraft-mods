@@ -5,6 +5,11 @@ import org.joml.Vector4f;
 
 public final class ProjectionUtil {
 
+    // Cached every world-render frame by OverlayWindow
+    public static Matrix4f cachedMv;
+    public static Matrix4f cachedProj;
+    public static double    cachedCamX, cachedCamY, cachedCamZ;
+
     private ProjectionUtil() {}
 
     /**
@@ -37,4 +42,19 @@ public final class ProjectionUtil {
 
         return new float[]{sx, sy, pos.w};
     }
+
+    /**
+     * Project a world position using the cached matrices from the last rendered frame.
+     * Returns null if the point is behind the camera or matrices aren't ready yet.
+     */
+    public static float[] worldToScreen(double wx, double wy, double wz, int sw, int sh) {
+        if (cachedMv == null || cachedProj == null) return null;
+        float[] r = project(
+                (float)(wx - cachedCamX),
+                (float)(wy - cachedCamY),
+                (float)(wz - cachedCamZ),
+                cachedMv, cachedProj, sw, sh);
+        return r[2] > 0f ? r : null;
+    }
 }
+

@@ -7,10 +7,12 @@ import de.mio.visionmod.esp.ItemESP;
 import de.mio.visionmod.esp.OreESP;
 import de.mio.visionmod.esp.StorageESP;
 import de.mio.visionmod.esp.SusChunks;
+import de.mio.visionmod.hud.HudOverlay;
 import de.mio.visionmod.overlay.OverlayWindow;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -68,6 +70,7 @@ public class VisionModClient implements ClientModInitializer {
         });
 
         WorldRenderEvents.END_MAIN.register(ctx -> OverlayWindow.INSTANCE.onRenderEnd(ctx));
+        HudRenderCallback.EVENT.register(HudOverlay::onHudRender);
         ClientLifecycleEvents.CLIENT_STARTED.register(mc -> OverlayWindow.INSTANCE.init(mc));
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> OverlayWindow.INSTANCE.destroy());
     }
