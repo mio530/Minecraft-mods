@@ -49,6 +49,12 @@ public class VisionConfig {
     public int  susChunksRadius = 4;   // chunk radius for sus chunk scan
     public boolean fillBoxes    = false;
 
+    // --- Keybinds (GLFW key codes, not registered in MC settings) ---
+    public int keyEntityEsp  = 295; // F6
+    public int keyOreEsp     = 296; // F7
+    public int keyOpenConfig = 297; // F8
+    public int keySusChunks  = 298; // F9
+
     // --- Sus Chunks (hidden base detector) ---
     public boolean susChunksEnabled       = false;
     public boolean susDetectChests        = true;   // chests, barrels, shulker boxes
