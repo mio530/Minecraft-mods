@@ -11,10 +11,9 @@ import de.mio.visionmod.esp.SusChunks;
 import de.mio.visionmod.util.ProjectionUtil;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL11;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.Vec3;
 
 public final class OverlayWindow {
@@ -41,8 +40,7 @@ public final class OverlayWindow {
         ProjectionUtil.cachedCamY = cam.y;
         ProjectionUtil.cachedCamZ = cam.z;
 
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
-        VertexConsumer vc = buf.getBuffer(RenderType.getLines());
+        VertexConsumer vc = buf.getBuffer(RenderTypes.lines());
 
         // ── Entity ESP ──────────────────────────────────────────────────
         if (cfg.entityEspEnabled && !cfg.entityGlowEnabled) {
@@ -110,8 +108,7 @@ public final class OverlayWindow {
             }
         }
 
-        buf.endBatch(RenderType.getLines());
-        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        buf.endBatch(RenderTypes.lines());
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
