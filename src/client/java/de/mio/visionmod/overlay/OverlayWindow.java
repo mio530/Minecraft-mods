@@ -28,8 +28,10 @@ public final class OverlayWindow {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        Vec3 cam = mc.player.getEyePosition(1.0f);
         PoseStack ps = ctx.matrices();
+        if (ps == null) return;
+
+        Vec3 cam = mc.player.getEyePosition(1.0f);
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
         VisionConfig cfg = VisionConfig.get();
 

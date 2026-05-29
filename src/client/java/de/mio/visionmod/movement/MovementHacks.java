@@ -23,6 +23,11 @@ public final class MovementHacks {
     private static int scaffoldCooldown = 0;
     private static boolean flyWasActive = false;
 
+    public static void resetOnDisconnect() {
+        flyWasActive    = false;
+        scaffoldCooldown = 0;
+    }
+
     public static void tick(Minecraft mc) {
         if (mc.player == null) return;
         VisionConfig cfg = VisionConfig.get();

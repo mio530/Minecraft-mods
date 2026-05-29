@@ -13,6 +13,12 @@ public final class Nuker {
     private static int stuckTimer = 0;
     private static int delay = 0;
 
+    public static void resetOnDisconnect() {
+        currentTarget = null;
+        stuckTimer    = 0;
+        delay         = 0;
+    }
+
     public static void tick(Minecraft mc) {
         VisionConfig cfg = VisionConfig.get();
         if (!cfg.nukerEnabled || mc.player == null || mc.level == null || mc.screen != null) return;

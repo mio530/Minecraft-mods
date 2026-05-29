@@ -17,6 +17,7 @@ import de.mio.visionmod.world.Nuker;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -91,6 +92,18 @@ public class VisionModClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register(HudOverlay::onHudRender);
         ClientLifecycleEvents.CLIENT_STARTED.register(mc -> OverlayWindow.INSTANCE.init(mc));
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> OverlayWindow.INSTANCE.destroy());
+
+        // Clear all snapshots and reset static hack state on disconnect so stale
+        // values from the previous session don't fire immediately on the next join.
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
+            EntityESP.snapshot  = java.util.Collections.emptyList();
+            OreESP.snapshot     = java.util.Collections.emptyList();
+            ItemESP.snapshot    = java.util.Collections.emptyList();
+            StorageESP.snapshot = java.util.Collections.emptyList();
+            SusChunks.snapshot  = java.util.Collections.emptyList();
+            MovementHacks.resetOnDisconnect();
+            Nuker.resetOnDisconnect();
+        });
     }
 
     /** Returns true only on the tick the key transitions from released → pressed. */
