@@ -39,3 +39,17 @@ jobs:
           name: AppleskinV2-${{ steps.safe_ref.outputs.name }}
           path: build/libs/AppleskinV2-*.jar
           if-no-files-found: warn
+
+      - name: Publish latest release
+        if: success()
+        run: |
+          # Remove old "latest" release and tag so we can recreate them
+          gh release delete latest --yes 2>/dev/null || true
+          git push --delete origin latest 2>/dev/null || true
+          # Create fresh release with the new JAR
+          gh release create latest build/libs/AppleskinV2-*.jar \
+            --title "AppleskinV2 – Latest Build" \
+            --notes "Automatisch gebaut aus Branch \`${{ github.ref_name }}\` (Commit \`${{ github.sha }}\`)." \
+            --prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
