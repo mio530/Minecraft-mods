@@ -38,7 +38,7 @@ public final class OverlayWindow {
         if (mc.player == null) return;
 
         PoseStack ps = ctx.matrices();
-        if (ps == null || ps.clear()) return;
+        if (ps == null) return;
 
         Vec3 cam = mc.player.getEyePosition(1.0f);
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
