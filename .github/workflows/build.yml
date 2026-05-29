@@ -29,9 +29,13 @@ jobs:
       - name: Build
         run: ./gradlew build
 
+      - name: Sanitize ref name
+        id: safe_ref
+        run: echo "name=$(echo '${{ github.ref_name }}' | tr '/' '-')" >> "$GITHUB_OUTPUT"
+
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: AppleskinV2-${{ github.ref_name }}
+          name: AppleskinV2-${{ steps.safe_ref.outputs.name }}
           path: build/libs/AppleskinV2-*.jar
           if-no-files-found: warn
