@@ -1,5 +1,6 @@
 package de.mio.visionmod.mixin;
 
+import de.mio.visionmod.VisionModClient;
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -22,10 +23,10 @@ public class EntityGlowMixin {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.level == null) return;
-            // Camera.getFocusedEntity() is null during the server-join window even when
-            // mc.player is already set. Glow rendering calls
-            // camera.getFocusedEntity().getEyePosition(partialTick) and crashes if null.
-            if (mc.gameRenderer.getMainCamera().entity() == null) return;
+            // Wait until Camera.setup() has had time to run on the render thread.
+            // camera.entity() is null for the first ~40 ticks after world join, and
+            // vanilla glow rendering NPEs if any entity claims to glow before it's set.
+            if (VisionModClient.postJoinTicks < 40) return;
 
             Entity self = (Entity) (Object) this;
             Identifier typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType());
@@ -43,7 +44,7 @@ public class EntityGlowMixin {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.level == null) return;
-            if (mc.gameRenderer.getMainCamera().entity() == null) return;
+            if (VisionModClient.postJoinTicks < 40) return;
 
             Entity self = (Entity) (Object) this;
             Identifier typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType());

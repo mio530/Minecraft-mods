@@ -31,6 +31,14 @@ public class VisionModClient implements ClientModInitializer {
 
     private static final Map<Integer, Boolean> prevKey = new HashMap<>();
 
+    /**
+     * Counts ticks where player+level are both non-null. Reset on disconnect.
+     * The glow mixin uses this to skip glow until Camera.setup() has had time
+     * to run, preventing the NPE that occurs when camera.entity() is null on
+     * the very first render frame after a server join.
+     */
+    public static volatile int postJoinTicks = 0;
+
     @Override
     public void onInitializeClient() {
         VisionConfig.load();
@@ -38,6 +46,13 @@ public class VisionModClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             long win = GLFW.glfwGetCurrentContext();
             VisionConfig cfg = VisionConfig.get();
+
+            // Track ticks since world join so glow mixin can wait for camera init
+            if (mc.player != null && mc.level != null) {
+                if (postJoinTicks < 200) postJoinTicks++;
+            } else {
+                postJoinTicks = 0;
+            }
 
             // Always poll to track state — prevents false triggers after screen closes
             boolean f_entity  = justPressed(win, cfg.keyEntityEsp);
@@ -94,6 +109,7 @@ public class VisionModClient implements ClientModInitializer {
         // Clear all snapshots and reset static hack state on disconnect so stale
         // values from the previous session don't fire immediately on the next join.
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
+            postJoinTicks       = 0;
             EntityESP.snapshot  = java.util.Collections.emptyList();
             OreESP.snapshot     = java.util.Collections.emptyList();
             ItemESP.snapshot    = java.util.Collections.emptyList();
