@@ -62,16 +62,6 @@ public class VisionModClient implements ClientModInitializer {
                 if (f_storage) { cfg.storageEspEnabled   = !cfg.storageEspEnabled;   VisionConfig.save(); }
             }
 
-            // Fullbright: re-apply hidden Night Vision every 4 sec so it never expires
-            if (cfg.fullbrightEnabled && mc.player != null) {
-                MobEffectInstance existing = mc.player.getEffect(MobEffects.NIGHT_VISION);
-                if (existing == null || existing.getDuration() < 80) {
-                    // ambient=false, visible=false, showIcon=false → completely hidden
-                    mc.player.addEffect(new MobEffectInstance(
-                            MobEffects.NIGHT_VISION, 300, 1, false, false, false));
-                }
-            }
-
             // ESP ticks are read-only and guard themselves internally
             EntityESP.tick(mc);
             OreESP.tick(mc);
@@ -81,6 +71,14 @@ public class VisionModClient implements ClientModInitializer {
 
             // Hack ticks send network packets — only run when fully connected
             if (mc.player != null && mc.level != null && mc.getConnection() != null) {
+                // Fullbright needs connection guard too: addEffect() goes through the network layer
+                if (cfg.fullbrightEnabled) {
+                    MobEffectInstance existing = mc.player.getEffect(MobEffects.NIGHT_VISION);
+                    if (existing == null || existing.getDuration() < 80) {
+                        mc.player.addEffect(new MobEffectInstance(
+                                MobEffects.NIGHT_VISION, 300, 1, false, false, false));
+                    }
+                }
                 CombatHacks.tick(mc);
                 MovementHacks.tick(mc);
                 PlayerHacks.tick(mc);

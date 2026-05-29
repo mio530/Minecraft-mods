@@ -25,18 +25,27 @@ public final class OverlayWindow {
     public void destroy() {}
 
     public void onRenderEnd(WorldRenderContext ctx) {
+        try {
+            onRenderEndInner(ctx);
+        } catch (Exception e) {
+            // Swallow render-thread exceptions so a transient state during world
+            // join/leave never silently kills the game.
+        }
+    }
+
+    private void onRenderEndInner(WorldRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
         PoseStack ps = ctx.matrices();
-        if (ps == null) return;
+        if (ps == null || ps.clear()) return;
 
         Vec3 cam = mc.player.getEyePosition(1.0f);
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
         VisionConfig cfg = VisionConfig.get();
 
         // Cache matrices for HudOverlay projection this frame
-        ProjectionUtil.cachedMv   = new Matrix4f(ctx.matrices().last().pose());
+        ProjectionUtil.cachedMv   = new Matrix4f(ps.last().pose());
         ProjectionUtil.cachedProj = null; // projection matrix unavailable in new API; HUD health bars disabled
         ProjectionUtil.cachedCamX = cam.x;
         ProjectionUtil.cachedCamY = cam.y;
