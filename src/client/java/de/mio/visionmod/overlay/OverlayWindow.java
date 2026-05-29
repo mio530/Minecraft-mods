@@ -42,7 +42,7 @@ public final class OverlayWindow {
         ProjectionUtil.cachedCamZ = cam.z;
 
         GL11.glDisable(GL11.GL_DEPTH_TEST);
-        VertexConsumer vc = buf.getBuffer(RenderType.lines());
+        VertexConsumer vc = buf.getBuffer(RenderType.getLines());
 
         // ── Entity ESP ──────────────────────────────────────────────────
         if (cfg.entityEspEnabled && !cfg.entityGlowEnabled) {
@@ -110,7 +110,7 @@ public final class OverlayWindow {
             }
         }
 
-        buf.endBatch(RenderType.lines());
+        buf.endBatch(RenderType.getLines());
         GL11.glEnable(GL11.GL_DEPTH_TEST);
     }
 
