@@ -33,15 +33,27 @@ public class VisionModClient implements ClientModInitializer {
 
     /**
      * Counts ticks where player+level are both non-null. Reset on disconnect.
-     * The glow mixin uses this to skip glow until Camera.setup() has had time
-     * to run, preventing the NPE that occurs when camera.entity() is null on
-     * the very first render frame after a server join.
+     * The glow mixin uses this to skip glow until Camera.setup() has run.
      */
     public static volatile int postJoinTicks = 0;
+
+    /**
+     * True only after ClientPlayConnectionEvents.JOIN fires, i.e. the server
+     * connection is fully in the play-phase and the Netty channel is ready.
+     * mc.getConnection() != null is NOT sufficient: the handler exists during
+     * the configuration phase (MC 1.19.3+) but the channel isn't play-ready,
+     * so sending packets there crashes with a channel NPE.
+     */
+    public static volatile boolean fullyJoined = false;
 
     @Override
     public void onInitializeClient() {
         VisionConfig.load();
+
+        // Set fullyJoined only after the play-phase handshake completes.
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
+            fullyJoined = true;
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             long win = GLFW.glfwGetCurrentContext();
@@ -84,8 +96,8 @@ public class VisionModClient implements ClientModInitializer {
             StorageESP.tick(mc);
             SusChunks.tick(mc);
 
-            // Hack ticks send network packets — only run when fully connected
-            if (mc.player != null && mc.level != null && mc.getConnection() != null) {
+            // Hack ticks send network packets — only run after play-phase join
+            if (fullyJoined && mc.player != null && mc.level != null) {
                 // Fullbright needs connection guard too: addEffect() goes through the network layer
                 if (cfg.fullbrightEnabled) {
                     MobEffectInstance existing = mc.player.getEffect(MobEffects.NIGHT_VISION);
@@ -109,6 +121,7 @@ public class VisionModClient implements ClientModInitializer {
         // Clear all snapshots and reset static hack state on disconnect so stale
         // values from the previous session don't fire immediately on the next join.
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
+            fullyJoined         = false;
             postJoinTicks       = 0;
             EntityESP.snapshot  = java.util.Collections.emptyList();
             OreESP.snapshot     = java.util.Collections.emptyList();

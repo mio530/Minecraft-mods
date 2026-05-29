@@ -22,7 +22,7 @@ public class EntityGlowMixin {
             if (!cfg.entityEspEnabled || !cfg.entityGlowEnabled) return;
 
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || mc.level == null || mc.getConnection() == null) return;
+            if (mc.player == null || mc.level == null || !VisionModClient.fullyJoined) return;
             // Wait until Camera.setup() has run (join window) and bail early during
             // disconnect (leave window) before mc.player clears but camera entity is null.
             if (VisionModClient.postJoinTicks < 40) return;
@@ -42,7 +42,7 @@ public class EntityGlowMixin {
             if (!cfg.entityEspEnabled || !cfg.entityGlowEnabled) return;
 
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || mc.level == null || mc.getConnection() == null) return;
+            if (mc.player == null || mc.level == null || !VisionModClient.fullyJoined) return;
             if (VisionModClient.postJoinTicks < 40) return;
 
             Entity self = (Entity) (Object) this;
