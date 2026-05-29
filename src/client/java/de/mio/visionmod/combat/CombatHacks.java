@@ -30,7 +30,7 @@ public final class CombatHacks {
     // ── Kill Aura ──────────────────────────────────────────────────────────────
 
     private static void tickKillAura(Minecraft mc, VisionConfig cfg) {
-        if (!cfg.killAuraEnabled || mc.screen != null) return;
+        if (!cfg.killAuraEnabled || mc.screen != null || mc.gameMode == null) return;
         if (killAuraCooldown > 0) { killAuraCooldown--; return; }
 
         float atkStrength = mc.player.getAttackStrengthScale(0f);
@@ -56,7 +56,7 @@ public final class CombatHacks {
     // ── Auto Clicker ──────────────────────────────────────────────────────────
 
     private static void tickAutoClicker(Minecraft mc, VisionConfig cfg) {
-        if (!cfg.autoClickerEnabled || mc.screen != null) return;
+        if (!cfg.autoClickerEnabled || mc.screen != null || mc.gameMode == null) return;
         if (autoClickCooldown > 0) { autoClickCooldown--; return; }
 
         long win = GLFW.glfwGetCurrentContext();

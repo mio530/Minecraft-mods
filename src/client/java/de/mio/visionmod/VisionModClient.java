@@ -71,15 +71,20 @@ public class VisionModClient implements ClientModInitializer {
                 }
             }
 
+            // ESP ticks are read-only and guard themselves internally
             EntityESP.tick(mc);
             OreESP.tick(mc);
             ItemESP.tick(mc);
             StorageESP.tick(mc);
             SusChunks.tick(mc);
-            CombatHacks.tick(mc);
-            MovementHacks.tick(mc);
-            PlayerHacks.tick(mc);
-            Nuker.tick(mc);
+
+            // Hack ticks send network packets — only run when fully connected
+            if (mc.player != null && mc.level != null && mc.getConnection() != null) {
+                CombatHacks.tick(mc);
+                MovementHacks.tick(mc);
+                PlayerHacks.tick(mc);
+                Nuker.tick(mc);
+            }
         });
 
         WorldRenderEvents.END_MAIN.register(ctx -> OverlayWindow.INSTANCE.onRenderEnd(ctx));

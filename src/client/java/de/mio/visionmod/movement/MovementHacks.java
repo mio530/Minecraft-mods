@@ -40,14 +40,14 @@ public final class MovementHacks {
         if (cfg.flyEnabled) {
             if (!p.getAbilities().mayfly) {
                 p.getAbilities().mayfly = true;
-                p.onUpdateAbilities();
+                if (mc.getConnection() != null) p.onUpdateAbilities();
             }
             p.getAbilities().flyingSpeed = 0.05f * cfg.flySpeed;
             flyWasActive = true;
         } else if (flyWasActive) {
             p.getAbilities().mayfly = false;
             p.getAbilities().flying = false;
-            p.onUpdateAbilities();
+            if (mc.getConnection() != null) p.onUpdateAbilities();
             flyWasActive = false;
         }
 
