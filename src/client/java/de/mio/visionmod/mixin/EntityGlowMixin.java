@@ -25,7 +25,7 @@ public class EntityGlowMixin {
             // Camera.getFocusedEntity() is null during the server-join window even when
             // mc.player is already set. Glow rendering calls
             // camera.getFocusedEntity().getEyePosition(partialTick) and crashes if null.
-            if (mc.gameRenderer.getMainCamera().getFocusedEntity() == null) return;
+            if (mc.gameRenderer.getMainCamera().entity() == null) return;
 
             Entity self = (Entity) (Object) this;
             Identifier typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType());
@@ -43,7 +43,7 @@ public class EntityGlowMixin {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.level == null) return;
-            if (mc.gameRenderer.getMainCamera().getFocusedEntity() == null) return;
+            if (mc.gameRenderer.getMainCamera().entity() == null) return;
 
             Entity self = (Entity) (Object) this;
             Identifier typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType());
