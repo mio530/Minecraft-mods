@@ -23,9 +23,9 @@ public class EntityGlowMixin {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.level == null || !VisionModClient.fullyJoined) return;
-            // Wait until Camera.setup() has run (join window) and bail early during
-            // disconnect (leave window) before mc.player clears but camera entity is null.
-            if (VisionModClient.postJoinTicks < 40) return;
+            // Guard: don't activate glow if Camera.entity is null — vanilla glow rendering
+            // calls camera.entity().getEyePosition() and would NPE during join/leave windows.
+            if (((CameraEntityAccessor) mc.gameRenderer.getMainCamera()).visionmod_getCameraEntity() == null) return;
 
             Entity self = (Entity) (Object) this;
             Identifier typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType());
@@ -43,7 +43,7 @@ public class EntityGlowMixin {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.level == null || !VisionModClient.fullyJoined) return;
-            if (VisionModClient.postJoinTicks < 40) return;
+            if (((CameraEntityAccessor) mc.gameRenderer.getMainCamera()).visionmod_getCameraEntity() == null) return;
 
             Entity self = (Entity) (Object) this;
             Identifier typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType());

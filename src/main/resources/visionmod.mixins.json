@@ -4,6 +4,7 @@
   "package": "de.mio.visionmod.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "CameraEntityAccessor",
     "CameraSafetyMixin",
     "EntityGlowMixin",
     "GameRendererMixin",
