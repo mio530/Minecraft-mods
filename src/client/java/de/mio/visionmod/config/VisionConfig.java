@@ -125,6 +125,10 @@ public class VisionConfig {
     public float   nukerRange         = 4.5f;
     public int     nukerDelay         = 1;
 
+    // --- Session reset ---
+    public boolean resetOnRelog    = false;
+    public boolean resetOnRestart  = false;
+
     // --- Sus Chunks (hidden base detector) ---
     public boolean susChunksEnabled       = false;
     public boolean susDetectChests        = true;   // chests, barrels, shulker boxes
@@ -276,6 +280,7 @@ public class VisionConfig {
                     loaded.oreLineColors.putIfAbsent(id, DEFAULT_ORE_BOX.get(id));
                 }
                 INSTANCE = loaded;
+                if (loaded.resetOnRestart) loaded.resetFeatureToggles();
             }
         } catch (Exception e) {
             System.err.println("[VisionMod] Failed to load config: " + e.getMessage());
@@ -297,6 +302,41 @@ public class VisionConfig {
 
     public static Path configPath() {
         return FabricLoader.getInstance().getConfigDir().resolve("visionmod.json");
+    }
+
+    /** Sets every feature toggle to false (keeps settings like colors, radii, keybinds intact). */
+    public void resetFeatureToggles() {
+        entityEspEnabled   = false;
+        entityGlowEnabled  = false;
+        oreEspEnabled      = false;
+        fullbrightEnabled  = false;
+        itemEspEnabled     = false;
+        storageEspEnabled  = false;
+        susChunksEnabled   = false;
+        showAllChunkBorders = false;
+        killAuraEnabled    = false;
+        criticalsEnabled   = false;
+        autoClickerEnabled = false;
+        velocityEnabled    = false;
+        autoTotemEnabled   = false;
+        noHurtCamEnabled   = false;
+        sprintEnabled      = false;
+        flyEnabled         = false;
+        speedEnabled       = false;
+        noFallEnabled      = false;
+        stepEnabled        = false;
+        jesusEnabled       = false;
+        noSlowEnabled      = false;
+        scaffoldEnabled    = false;
+        autoEatEnabled     = false;
+        antiHungerEnabled  = false;
+        antiPoisonEnabled  = false;
+        antiAfkEnabled     = false;
+        noFogEnabled       = false;
+        noWeatherEnabled   = false;
+        antiBlindEnabled   = false;
+        nukerEnabled       = false;
+        coordsHudEnabled   = false;
     }
 
     /** Parse "#AARRGGBB" or "#RRGGBB" to packed ARGB int. */

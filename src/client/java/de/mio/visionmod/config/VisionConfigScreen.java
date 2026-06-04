@@ -92,6 +92,8 @@ public class VisionConfigScreen extends Screen {
         // World
         new ModDef("susChunks",   "Sus Chunks",     "Verdächtige Chunks",        "World"),
         new ModDef("nuker",       "Nuker",          "Blöcke in Reichweite",      "World"),
+        // Session
+        new ModDef("session",     "Session",        "Reset bei Relog/Neustart",  "Session"),
         // Tasten
         new ModDef("keybinds",    "Keybinds",       "Tastenbelegung",            "Tasten")
     );
@@ -467,6 +469,14 @@ public class VisionConfigScreen extends Screen {
             sDesc(g, "Kreativ: sofort. Überleben: normal.");
         }
 
+        // ── Session ──────────────────────────────────────────────────────────
+        case "session"    -> {
+            sToggle(g, "Reset bei Relog",    c.resetOnRelog,   () -> { c.resetOnRelog   = !c.resetOnRelog;   save(); });
+            sDesc(g, "Alle Features deaktivieren wenn du den Server verlässt.");
+            sToggle(g, "Reset bei Neustart", c.resetOnRestart, () -> { c.resetOnRestart = !c.resetOnRestart; save(); });
+            sDesc(g, "Alle Features deaktivieren beim Spielstart.");
+        }
+
         // ── Tasten ───────────────────────────────────────────────────────────
         case "keybinds"   -> {
             sSep(g, "Tastenbelegung");
@@ -785,6 +795,7 @@ public class VisionConfigScreen extends Screen {
             case "coords"      -> c.coordsHudEnabled;
             case "susChunks"   -> c.susChunksEnabled;
             case "nuker"       -> c.nukerEnabled;
+            case "session"     -> c.resetOnRelog || c.resetOnRestart;
             default -> false;
         };
     }

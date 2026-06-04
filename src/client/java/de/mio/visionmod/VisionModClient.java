@@ -123,6 +123,8 @@ public class VisionModClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
             fullyJoined         = false;
             postJoinTicks       = 0;
+            VisionConfig cfg = VisionConfig.get();
+            if (cfg.resetOnRelog) { cfg.resetFeatureToggles(); VisionConfig.save(); }
             EntityESP.snapshot  = java.util.Collections.emptyList();
             ItemESP.snapshot    = java.util.Collections.emptyList();
             OreESP.resetOnDisconnect();
