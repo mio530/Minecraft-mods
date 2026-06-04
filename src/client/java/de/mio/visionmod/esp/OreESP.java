@@ -24,6 +24,11 @@ public final class OreESP {
 
     private static int tickCounter = 0;
 
+    public static void resetOnDisconnect() {
+        tickCounter = 0;
+        snapshot = Collections.emptyList();
+    }
+
     // Approximate Y-level ranges per ore for scan optimisation (minY inclusive, maxY inclusive)
     private static final Map<String, int[]> Y_RANGES = new HashMap<>();
 

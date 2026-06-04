@@ -23,6 +23,11 @@ public final class StorageESP {
 
     private static int tickCounter = 0;
 
+    public static void resetOnDisconnect() {
+        tickCounter = 0;
+        snapshot = Collections.emptyList();
+    }
+
     public static void tick(Minecraft mc) {
         VisionConfig cfg = VisionConfig.get();
         if (!cfg.storageEspEnabled || mc.level == null || mc.player == null) {

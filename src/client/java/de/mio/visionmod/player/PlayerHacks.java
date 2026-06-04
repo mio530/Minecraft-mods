@@ -12,6 +12,14 @@ public final class PlayerHacks {
     private static int afkTimer    = 0;
     private static boolean eating  = false;
 
+    public static void resetOnDisconnect(Minecraft mc) {
+        afkTimer = 0;
+        if (eating) {
+            mc.options.keyUse.setDown(false);
+            eating = false;
+        }
+    }
+
     public static void tick(Minecraft mc) {
         if (mc.player == null) return;
         VisionConfig cfg = VisionConfig.get();

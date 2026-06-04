@@ -124,11 +124,12 @@ public class VisionModClient implements ClientModInitializer {
             fullyJoined         = false;
             postJoinTicks       = 0;
             EntityESP.snapshot  = java.util.Collections.emptyList();
-            OreESP.snapshot     = java.util.Collections.emptyList();
             ItemESP.snapshot    = java.util.Collections.emptyList();
-            StorageESP.snapshot = java.util.Collections.emptyList();
-            SusChunks.snapshot  = java.util.Collections.emptyList();
+            OreESP.resetOnDisconnect();
+            StorageESP.resetOnDisconnect();
+            SusChunks.resetOnDisconnect();
             MovementHacks.resetOnDisconnect();
+            PlayerHacks.resetOnDisconnect(mc);
             Nuker.resetOnDisconnect();
         });
     }

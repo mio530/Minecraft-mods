@@ -17,6 +17,11 @@ public final class SusChunks {
 
     private static int tickCounter = 0;
 
+    public static void resetOnDisconnect() {
+        tickCounter = 0;
+        snapshot = Collections.emptyList();
+    }
+
     // All block types that count as "sus" per category
     private static final Set<Block> CHEST_BLOCKS = new HashSet<>(Arrays.asList(
             Blocks.CHEST,
