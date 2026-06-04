@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Entity.class)
-public class EntityGlowMixin {
+public class EntityRenderStateMixin {
 
     // require=0: silently skip if Mojang renamed the method in this MC version.
     @Inject(method = "isCurrentlyGlowing()Z", at = @At("HEAD"), cancellable = true, require = 0)
@@ -25,7 +25,7 @@ public class EntityGlowMixin {
             if (mc.player == null || mc.level == null || !VisionModClient.fullyJoined) return;
             // Guard: don't activate glow if Camera.entity is null — vanilla glow rendering
             // calls camera.entity().getEyePosition() and would NPE during join/leave windows.
-            if (((CameraEntityAccessor) mc.gameRenderer.getMainCamera()).visionmod_getCameraEntity() == null) return;
+            if (((CameraAccessor) mc.gameRenderer.getMainCamera()).visionmod_getCameraEntity() == null) return;
 
             Entity self = (Entity) (Object) this;
             Identifier typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType());
@@ -43,7 +43,7 @@ public class EntityGlowMixin {
 
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.level == null || !VisionModClient.fullyJoined) return;
-            if (((CameraEntityAccessor) mc.gameRenderer.getMainCamera()).visionmod_getCameraEntity() == null) return;
+            if (((CameraAccessor) mc.gameRenderer.getMainCamera()).visionmod_getCameraEntity() == null) return;
 
             Entity self = (Entity) (Object) this;
             Identifier typeKey = BuiltInRegistries.ENTITY_TYPE.getKey(self.getType());

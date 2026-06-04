@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Anti-Knockback: cancels incoming knockback for the local player. */
 @Mixin(LivingEntity.class)
-public class VelocityMixin {
+public class EntityMotionMixin {
 
     @Inject(method = "knockback", at = @At("HEAD"), cancellable = true)
     private void visionmod_velocity(double strength, double x, double z, CallbackInfo ci) {

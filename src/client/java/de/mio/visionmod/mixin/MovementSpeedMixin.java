@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** NoSlow: cancels the stuck-speed multiplier applied by cobwebs and berry bushes. */
 @Mixin(Entity.class)
-public class NoSlowMixin {
+public class MovementSpeedMixin {
 
     @Inject(method = "setStuckSpeedMultiplier", at = @At("HEAD"), cancellable = true, require = 0)
     private void visionmod_noSlow(Vec3 multiplier, CallbackInfo ci) {

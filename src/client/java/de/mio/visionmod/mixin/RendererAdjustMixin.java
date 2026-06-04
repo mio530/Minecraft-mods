@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(GameRenderer.class)
-public class GameRendererMixin {
+public class RendererAdjustMixin {
 
     /** Zoom: override FOV when zoom key is held. */
     @Inject(method = "getFov", at = @At("RETURN"), cancellable = true, require = 0)

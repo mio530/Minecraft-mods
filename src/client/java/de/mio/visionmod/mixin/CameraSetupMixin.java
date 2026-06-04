@@ -27,14 +27,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * EntityGlowMixin's own null guard remains as a second line of defence.
  */
 @Mixin(Camera.class)
-public class CameraSafetyMixin {
+public class CameraSetupMixin {
 
     @Unique
     private static Entity visionmod_lastEntity = null;
 
     @Inject(method = "setup", at = @At("TAIL"), require = 0)
     private void visionmod_keepEntityNonNull(CallbackInfo ci) {
-        CameraEntityAccessor self = (CameraEntityAccessor) this;
+        CameraAccessor self = (CameraAccessor) this;
         Entity current = self.visionmod_getCameraEntity();
         if (current != null) {
             visionmod_lastEntity = current;

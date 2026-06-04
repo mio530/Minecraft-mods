@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** NoWeather: cancels rain/snow particle rendering. */
 @Mixin(LevelRenderer.class)
-public class NoWeatherMixin {
+public class WeatherRendererMixin {
 
     @Inject(method = "renderSnowAndRain", at = @At("HEAD"), cancellable = true, require = 0)
     private void visionmod_noWeather(LightTexture lightTexture, float partialTick,

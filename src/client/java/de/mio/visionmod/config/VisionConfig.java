@@ -283,7 +283,7 @@ public class VisionConfig {
                 if (loaded.resetOnRestart) loaded.resetFeatureToggles();
             }
         } catch (Exception e) {
-            System.err.println("[VisionMod] Failed to load config: " + e.getMessage());
+            // config load error — fall through to defaults
             INSTANCE = new VisionConfig();
         }
     }
@@ -296,7 +296,7 @@ public class VisionConfig {
                 GSON.toJson(INSTANCE, writer);
             }
         } catch (Exception e) {
-            System.err.println("[VisionMod] Failed to save config: " + e.getMessage());
+            // save error — silently ignore
         }
     }
 

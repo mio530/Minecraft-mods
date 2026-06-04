@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** AntiBlind: prevents blindness and darkness effects from being applied to the local player. */
 @Mixin(LivingEntity.class)
-public class AntiBlindMixin {
+public class EffectHandlerMixin {
 
     @Inject(method = "onEffectAdded", at = @At("HEAD"), cancellable = true, require = 0)
     private void visionmod_antiBlind(MobEffectInstance effect, Entity source, CallbackInfo ci) {

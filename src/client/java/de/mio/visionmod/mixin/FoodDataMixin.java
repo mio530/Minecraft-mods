@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** AntiHunger: cancels FoodData tick to freeze hunger/saturation on client. */
 @Mixin(FoodData.class)
-public class AntiHungerMixin {
+public class FoodDataMixin {
 
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true, require = 0)
     private void visionmod_antiHunger(Player player, CallbackInfo ci) {

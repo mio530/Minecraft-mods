@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * field by name ("entity"), which is stable across all versions.
  */
 @Mixin(Camera.class)
-public interface CameraEntityAccessor {
+public interface CameraAccessor {
 
     @Accessor("entity")
     Entity visionmod_getCameraEntity();

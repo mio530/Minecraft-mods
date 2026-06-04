@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Criticals: forces isCritHit to return true when enabled. */
 @Mixin(Player.class)
-public class CritMixin {
+public class AttackMechanicsMixin {
 
     @Inject(method = "isCritHit", at = @At("HEAD"), cancellable = true, require = 0)
     private void visionmod_crit(Entity entity, CallbackInfoReturnable<Boolean> cir) {

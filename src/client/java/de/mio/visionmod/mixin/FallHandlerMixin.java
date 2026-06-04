@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** NoFall backup: also resets fallDistance at the start of aiStep so damage never accumulates. */
 @Mixin(LocalPlayer.class)
-public class NoFallMixin {
+public class FallHandlerMixin {
 
     @Inject(method = "aiStep", at = @At("HEAD"), require = 0)
     private void visionmod_noFall(CallbackInfo ci) {
