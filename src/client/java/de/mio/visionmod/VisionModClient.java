@@ -9,6 +9,7 @@ import de.mio.visionmod.esp.OreESP;
 import de.mio.visionmod.esp.StorageESP;
 import de.mio.visionmod.esp.SusChunks;
 import de.mio.visionmod.hud.HudOverlay;
+import de.mio.visionmod.mixin.CameraAccessor;
 import de.mio.visionmod.movement.MovementHacks;
 import de.mio.visionmod.overlay.OverlayWindow;
 import de.mio.visionmod.player.PlayerHacks;
@@ -20,9 +21,11 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;
@@ -48,6 +51,15 @@ public class VisionModClient implements ClientModInitializer {
      */
     public static volatile boolean fullyJoined = false;
 
+    /**
+     * Layer 3 camera-NPE defence: last known non-null Camera entity, updated from
+     * both the tick thread (mc.player) and the render thread (WorldRenderEvents.START).
+     * WorldRenderEvents.START fires before LevelRenderer runs any rendering pass
+     * (including the outline/glow pass), so writing here ensures Camera.entity is
+     * populated before method_74920 tries to call camera.entity().
+     */
+    public static volatile Entity lastKnownCameraEntity = null;
+
     @Override
     public void onInitializeClient() {
         VisionConfig.load();
@@ -64,6 +76,8 @@ public class VisionModClient implements ClientModInitializer {
             // Track ticks since world join so glow mixin can wait for camera init
             if (mc.player != null && mc.level != null) {
                 if (postJoinTicks < 200) postJoinTicks++;
+                // Layer 3: tick-side camera entity tracking (render side also updated via START event)
+                lastKnownCameraEntity = mc.player;
             } else {
                 postJoinTicks = 0;
             }
@@ -125,6 +139,18 @@ public class VisionModClient implements ClientModInitializer {
                 MovementHacks.tick(mc);
                 PlayerHacks.tick(mc);
                 Nuker.tick(mc);
+            }
+        });
+
+        // Layer 3 camera-NPE defence: write lastKnownCameraEntity into Camera.entity
+        // at the very start of each render pass, before the outline/glow loop runs.
+        WorldRenderEvents.START.register(ctx -> {
+            Camera cam = ctx.camera();
+            Entity e = ((CameraAccessor) cam).visionmod_getCameraEntity();
+            if (e != null) {
+                lastKnownCameraEntity = e;
+            } else if (lastKnownCameraEntity != null) {
+                ((CameraAccessor) cam).visionmod_setCameraEntity(lastKnownCameraEntity);
             }
         });
 
