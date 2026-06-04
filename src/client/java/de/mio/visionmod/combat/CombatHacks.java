@@ -6,6 +6,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
@@ -17,9 +18,12 @@ import java.util.List;
 public final class CombatHacks {
     private CombatHacks() {}
 
-    private static int     killAuraCooldown  = 0;
-    private static int     autoClickCooldown = 0;
-    private static int     autoTotemCooldown = 0;
+    private static int     killAuraCooldown    = 0;
+    private static int     autoClickCooldown   = 0;
+    private static int     autoTotemCooldown   = 0;
+    private static int     stunSlamCooldown    = 0;
+    private static int     stunSlamRestoreSlot = -1;
+    private static int     stunSlamRestoreTick = 0;
     private static boolean maceDmgLaunched   = false;
     /** True while a mace-fall is in progress; FallHandlerMixin reads this to skip noFall. */
     public  static boolean suppressNoFall    = false;
@@ -30,6 +34,7 @@ public final class CombatHacks {
         suppressNoFall = false; // each mace method sets it if needed this tick
         tickMaceDmg(mc, cfg);
         tickMaceDmgClassic(mc, cfg);
+        tickStunSlam(mc, cfg);
         tickKillAura(mc, cfg);
         tickAutoClicker(mc, cfg);
         tickAutoTotem(mc, cfg);
@@ -90,6 +95,62 @@ public final class CombatHacks {
                         && (e instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs))
                 .stream().min(Comparator.comparingDouble(mc.player::distanceTo))
                 .ifPresent(t -> mc.gameMode.attack(mc.player, t));
+    }
+
+    // ── StunSlam ──────────────────────────────────────────────────────────────
+    // When falling >= minFall blocks and a blocking (shielded) target is in range,
+    // auto-switch to the best axe in hotbar, sprint-attack to stun the shield,
+    // then restore the previous slot.
+
+    private static void tickStunSlam(Minecraft mc, VisionConfig cfg) {
+        if (!cfg.stunSlamEnabled || mc.screen != null || mc.gameMode == null) {
+            if (stunSlamRestoreSlot >= 0) {
+                mc.player.getInventory().selected = stunSlamRestoreSlot;
+                stunSlamRestoreSlot = -1;
+            }
+            return;
+        }
+        // Restore slot after attack
+        if (stunSlamRestoreSlot >= 0) {
+            if (--stunSlamRestoreTick <= 0) {
+                mc.player.getInventory().selected = stunSlamRestoreSlot;
+                stunSlamRestoreSlot = -1;
+            }
+            return;
+        }
+        if (stunSlamCooldown > 0) { stunSlamCooldown--; return; }
+        if (mc.player.onGround()) return;
+        if (mc.player.fallDistance < cfg.stunSlamMinFall) return;
+
+        double range = cfg.killAuraRange;
+        LivingEntity target = mc.level.getEntitiesOfClass(LivingEntity.class,
+                mc.player.getBoundingBox().inflate(range),
+                e -> e != mc.player && e.isAlive() && e.isBlocking()
+                        && mc.player.distanceTo(e) <= range
+                        && (e instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs))
+                .stream().min(Comparator.comparingDouble(mc.player::distanceTo)).orElse(null);
+        if (target == null) return;
+
+        // Find best axe in hotbar (prefer current slot)
+        int cur = mc.player.getInventory().selected;
+        int axeSlot = mc.player.getInventory().getItem(cur).getItem() instanceof AxeItem ? cur : -1;
+        if (axeSlot < 0) {
+            for (int i = 0; i < 9; i++) {
+                if (mc.player.getInventory().getItem(i).getItem() instanceof AxeItem) {
+                    axeSlot = i; break;
+                }
+            }
+        }
+        if (axeSlot < 0) return;
+
+        if (axeSlot != cur) {
+            stunSlamRestoreSlot = cur;
+            stunSlamRestoreTick = 3;
+            mc.player.getInventory().selected = axeSlot;
+        }
+        mc.player.setSprinting(true);
+        mc.gameMode.attack(mc.player, target);
+        stunSlamCooldown = 20;
     }
 
     // ── Kill Aura ──────────────────────────────────────────────────────────────

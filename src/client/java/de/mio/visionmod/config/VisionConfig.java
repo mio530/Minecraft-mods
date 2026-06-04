@@ -99,6 +99,8 @@ public class VisionConfig {
     public boolean noHurtCamEnabled   = false;
     public boolean autoLogEnabled     = false;
     public float   autoLogHp          = 6.0f;
+    public boolean stunSlamEnabled    = false;
+    public float   stunSlamMinFall    = 3.0f;  // min fallDistance blocks to trigger
 
     // === MOVEMENT ===
     public boolean sprintEnabled      = false;
@@ -127,7 +129,8 @@ public class VisionConfig {
     public boolean chestStealerEnabled = false;
 
     // === RENDER EXTRAS ===
-    public int     keyPanic           = 0;   // unbound – disable all + disconnect + halt
+    public int     keyPanic           = 0;   // disable all + disconnect + fake crash + halt(1)
+    public int     keyPanic2          = 0;   // disable all hacks silently, no exit
     public int     keyZoom            = 0;
 
     // Per-module toggle keybinds: module-id → GLFW key code (0 = unbound)
@@ -141,7 +144,8 @@ public class VisionConfig {
         "scaffold", "surround", "safeWalk", "invMove",
         "autoEat", "antiHunger", "antiPoison", "antiAfk", "autoRespawn", "chestStealer",
         "fullbright", "noFog", "noWeather", "antiBlind", "coords",
-        "susChunks", "nuker"
+        "susChunks", "nuker",
+        "stunSlam"
     );
     public float   zoomFov            = 15f;
     public boolean noFogEnabled       = false;
@@ -361,6 +365,7 @@ public class VisionConfig {
         showAllChunkBorders = false;
         maceDmgEnabled         = false;
         maceDmgClassicEnabled  = false;
+        stunSlamEnabled        = false;
         killAuraEnabled        = false;
         criticalsEnabled   = false;
         autoClickerEnabled = false;

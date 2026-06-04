@@ -69,6 +69,7 @@ public class VisionConfigScreen extends Screen {
         new ModDef("autoLog",     "Auto Disconnect",    "Trennt bei niedrigem HP",     "Combat"),
         new ModDef("maceDmg",        "Mace Boost",        "Auto-Sprung + Mace-Angriff",  "Combat"),
         new ModDef("maceDmgClassic", "Mace Classic",      "Mace-Angriff beim Fallen",    "Combat"),
+        new ModDef("stunSlam",       "StunSlam",          "Shield-Stun beim Fallen",     "Combat"),
         // Movement
         new ModDef("sprint",      "Sprint Assist",      "Lauf-Optimierung",            "Movement"),
         new ModDef("fly",         "Flight Mode",        "Flug-Modus",                  "Movement"),
@@ -442,8 +443,16 @@ public class VisionConfigScreen extends Screen {
         case "maceDmgClassic" -> {
             sToggle(g, "Mace Classic",     c.maceDmgClassicEnabled,  () -> { c.maceDmgClassicEnabled  = !c.maceDmgClassicEnabled;  save(); });
             sDesc(g, "Greift automatisch beim Fallen mit Mace an.");
-            sDesc(g, "Kein Auto-Sprung — Positionierung manuell");
-            sDesc(g, "oder per Wind Burst Enchantment.");
+            sDesc(g, "Kein Auto-Sprung — manuell oder Wind Burst.");
+        }
+        case "stunSlam"   -> {
+            sToggle(g, "StunSlam",         c.stunSlamEnabled,        () -> { c.stunSlamEnabled        = !c.stunSlamEnabled;        save(); });
+            sFloat(g, "Min. Fallhöhe",     c.stunSlamMinFall,
+                () -> { c.stunSlamMinFall = Math.max(1f,  c.stunSlamMinFall - 0.5f); save(); },
+                () -> { c.stunSlamMinFall = Math.min(20f, c.stunSlamMinFall + 0.5f); save(); });
+            sDesc(g, "Stunnt Schild wenn vom Angriff aus der Luft.");
+            sDesc(g, "Wechselt automatisch zur Axt im Hotbar.");
+            sDesc(g, "Danach wird vorheriger Slot wiederhergestellt.");
         }
 
         // ── Player ───────────────────────────────────────────────────────────
@@ -558,6 +567,7 @@ public class VisionConfigScreen extends Screen {
             sKeybindRow(g, "Config öffnen", "openConfig", c.keyOpenConfig, c);
             sKeybindRow(g, "Zoom (halten)", "zoom",       c.keyZoom,       c);
             sKeybindRow(g, "Panic",         "panic",      c.keyPanic,      c);
+            sKeybindRow(g, "Panic 2 (nur AUS)", "panic2", c.keyPanic2,     c);
             // Per-module keys grouped by category
             String lastCat = "";
             for (ModDef m : MODS) {
@@ -812,6 +822,7 @@ public class VisionConfigScreen extends Screen {
                     case "openConfig" -> c.keyOpenConfig = keyCode;
                     case "zoom"       -> c.keyZoom       = keyCode;
                     case "panic"      -> c.keyPanic      = keyCode;
+                    case "panic2"     -> c.keyPanic2     = keyCode;
                 }
                 VisionConfig.save();
             }
@@ -868,6 +879,7 @@ public class VisionConfigScreen extends Screen {
             case "autoLog"     -> c.autoLogEnabled;
             case "maceDmg"         -> c.maceDmgEnabled;
             case "maceDmgClassic"  -> c.maceDmgClassicEnabled;
+            case "stunSlam"        -> c.stunSlamEnabled;
             case "autoEat"     -> c.autoEatEnabled;
             case "antiHunger"  -> c.antiHungerEnabled;
             case "antiPoison"  -> c.antiPoisonEnabled;

@@ -73,15 +73,22 @@ public class VisionModClient implements ClientModInitializer {
 
             // Always poll all module keys to track state — prevents false triggers after screen closes.
             // Module toggles are only applied when no screen is open.
-            boolean f_config = justPressed(win, cfg.keyOpenConfig);
-            boolean f_panic  = cfg.keyPanic > 0 && justPressed(win, cfg.keyPanic);
+            boolean f_config  = justPressed(win, cfg.keyOpenConfig);
+            boolean f_panic   = cfg.keyPanic  > 0 && justPressed(win, cfg.keyPanic);
+            boolean f_panic2  = cfg.keyPanic2 > 0 && justPressed(win, cfg.keyPanic2);
             for (Entry<String, Integer> e : cfg.moduleKeys.entrySet()) {
                 int k = e.getValue();
                 boolean fired = k > 0 && justPressed(win, k);
                 if (fired && mc.screen == null) toggleModule(cfg, e.getKey());
             }
 
-            // Panic: runs regardless of screen state — disable all, disconnect, hard exit
+            // Panic 2: silent — just disable all hacks, no disconnect, no exit
+            if (f_panic2) {
+                cfg.resetFeatureToggles();
+                VisionConfig.save();
+            }
+
+            // Panic 1: disable all, disconnect, write fake crash report, hard JVM exit
             if (f_panic) {
                 cfg.resetFeatureToggles();
                 VisionConfig.save();
@@ -89,6 +96,7 @@ public class VisionModClient implements ClientModInitializer {
                     mc.getConnection().getConnection().disconnect(
                             net.minecraft.network.chat.Component.translatable("menu.disconnect"));
                 }
+                writeFakeCrash(mc);
                 Runtime.getRuntime().halt(1);
                 return;
             }
@@ -150,6 +158,57 @@ public class VisionModClient implements ClientModInitializer {
         return now && !prev;
     }
 
+    private static void writeFakeCrash(Minecraft mc) {
+        try {
+            java.io.File dir = new java.io.File(mc.gameDirectory, "crash-reports");
+            dir.mkdirs();
+            String ts = new java.text.SimpleDateFormat("yyyy-MM-dd_HH.mm.ss")
+                    .format(new java.util.Date());
+            try (java.io.PrintWriter pw = new java.io.PrintWriter(
+                    new java.io.FileWriter(new java.io.File(dir, "crash-" + ts + "-client.txt")))) {
+                pw.println("---- Minecraft Crash Report ----");
+                pw.println("// You should try our sister game, Minceraft!");
+                pw.println();
+                pw.println("Time: " + new java.util.Date());
+                pw.println("Description: Unexpected error");
+                pw.println();
+                pw.println("java.lang.OutOfMemoryError: Java heap space");
+                pw.println("\tat java.util.Arrays.copyOf(Arrays.java:3210)");
+                pw.println("\tat java.util.ArrayList.grow(ArrayList.java:265)");
+                pw.println("\tat java.util.ArrayList.ensureCapacityInternal(ArrayList.java:231)");
+                pw.println("\tat java.util.ArrayList.add(ArrayList.java:462)");
+                pw.println("\tat net.minecraft.client.renderer.chunk.SectionRenderDispatcher"
+                        + ".compileSectionLayer(SectionRenderDispatcher.java:289)");
+                pw.println("\tat net.minecraft.client.renderer.chunk.SectionRenderDispatcher"
+                        + "$RenderSection$CompileTask.doTask(SectionRenderDispatcher.java:494)");
+                pw.println("\tat net.minecraft.client.renderer.chunk.SectionRenderDispatcher"
+                        + "$RenderSection$CompileTask.run(SectionRenderDispatcher.java:477)");
+                pw.println("\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)");
+                pw.println("\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)");
+                pw.println("\tat java.lang.Thread.run(Thread.java:750)");
+                pw.println();
+                pw.println("A detailed walkthrough of the error, its code path and all known details is as follows:");
+                pw.println("---------------------------------------------------------------------------------------");
+                pw.println();
+                pw.println("-- System Details --");
+                pw.println("Details:");
+                pw.println("\tMinecraft Version: 1.21.1");
+                pw.println("\tOperating System: " + System.getProperty("os.name")
+                        + " (" + System.getProperty("os.arch") + ") version "
+                        + System.getProperty("os.version"));
+                pw.println("\tJava Version: " + System.getProperty("java.version")
+                        + ", " + System.getProperty("java.vendor"));
+                Runtime rt = Runtime.getRuntime();
+                long free = rt.freeMemory(), total = rt.totalMemory(), max = rt.maxMemory();
+                pw.printf("\tMemory: %d bytes (%d%%) free, %d bytes (%d%%) allocated,"
+                        + " %d bytes maximum%n", free, free * 100 / max,
+                        total, total * 100 / max, max);
+                pw.println("\tCPU: " + Runtime.getRuntime().availableProcessors() + "x "
+                        + System.getProperty("os.arch"));
+            }
+        } catch (Exception ignored) {}
+    }
+
     private static void toggleModule(VisionConfig c, String id) {
         switch (id) {
             case "entityEsp"     -> c.entityEspEnabled      = !c.entityEspEnabled;
@@ -191,6 +250,7 @@ public class VisionModClient implements ClientModInitializer {
             case "coords"        -> c.coordsHudEnabled      = !c.coordsHudEnabled;
             case "susChunks"     -> c.susChunksEnabled      = !c.susChunksEnabled;
             case "nuker"         -> c.nukerEnabled          = !c.nukerEnabled;
+            case "stunSlam"      -> c.stunSlamEnabled       = !c.stunSlamEnabled;
             default -> { return; }
         }
         VisionConfig.save();
