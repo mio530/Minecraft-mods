@@ -1,44 +1,45 @@
 package de.mio.visionmod.mixin;
 
 import net.minecraft.client.Camera;
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Prevents NPE in vanilla glow/outline rendering.
  *
- * camera.entity() (or getEntity() in older builds) returns null during the
- * server-join and server-disconnect windows. Vanilla glow rendering then
- * calls camera.entity().getEyePosition(partialTick) and crashes.
+ * Vanilla's outline post-process (GameRenderer) calls
+ * camera.entity().getEyePosition(partialTick). During the server join/kick
+ * window there is a frame where both mc.player and the camera entity are null
+ * (Camera.setup is called with a null entity), so that call NPEs.
  *
- * We substitute the local player entity when null so vanilla can finish the
- * frame cleanly. require=0 on both variants: whichever name exists in this
- * MC build applies; the other silently skips.
+ * Camera.setup() runs at the very start of every render frame, BEFORE the
+ * outline pass. We hook its tail: whenever the camera ends up with a valid
+ * entity we remember it; whenever it would be null we restore the last known
+ * entity. A stale entity reference still returns a valid getEyePosition(), so
+ * the outline pass can never dereference null — regardless of whether our glow
+ * feature is what triggered the pass.
+ *
+ * require=0: if "setup" is renamed in some MC build the hook silently skips;
+ * EntityGlowMixin's own null guard remains as a second line of defence.
  */
 @Mixin(Camera.class)
 public class CameraSafetyMixin {
 
-    // MC >= 1.21.10: Camera refactored to record-style accessor entity()
-    @Inject(method = "entity()Lnet/minecraft/world/entity/Entity;",
-            at = @At("RETURN"), cancellable = true, require = 0)
-    private void visionmod_safeEntity(CallbackInfoReturnable<Entity> cir) {
-        if (cir.getReturnValue() == null) {
-            Entity player = Minecraft.getInstance().player;
-            if (player != null) cir.setReturnValue(player);
-        }
-    }
+    @Unique
+    private static Entity visionmod_lastEntity = null;
 
-    // MC < 1.21.10: traditional getter getEntity()
-    @Inject(method = "getEntity()Lnet/minecraft/world/entity/Entity;",
-            at = @At("RETURN"), cancellable = true, require = 0)
-    private void visionmod_safeGetEntity(CallbackInfoReturnable<Entity> cir) {
-        if (cir.getReturnValue() == null) {
-            Entity player = Minecraft.getInstance().player;
-            if (player != null) cir.setReturnValue(player);
+    @Inject(method = "setup", at = @At("TAIL"), require = 0)
+    private void visionmod_keepEntityNonNull(CallbackInfo ci) {
+        CameraEntityAccessor self = (CameraEntityAccessor) this;
+        Entity current = self.visionmod_getCameraEntity();
+        if (current != null) {
+            visionmod_lastEntity = current;
+        } else if (visionmod_lastEntity != null) {
+            self.visionmod_setCameraEntity(visionmod_lastEntity);
         }
     }
 }
