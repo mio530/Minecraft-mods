@@ -1,5 +1,6 @@
 package de.mio.visionmod.movement;
 
+import de.mio.visionmod.VisionModClient;
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -21,11 +22,13 @@ public final class MovementHacks {
     private static final Identifier SPEED_ID    = Identifier.fromNamespaceAndPath("visionmod", "speed");
     private static final Identifier STEP_ID     = Identifier.fromNamespaceAndPath("visionmod", "step");
     private static int scaffoldCooldown = 0;
+    private static int surroundCooldown = 0;
     private static boolean flyWasActive = false;
 
     public static void resetOnDisconnect() {
-        flyWasActive    = false;
+        flyWasActive     = false;
         scaffoldCooldown = 0;
+        surroundCooldown = 0;
     }
 
     public static void tick(Minecraft mc) {
@@ -36,10 +39,43 @@ public final class MovementHacks {
         // ── NoFall (always runs, even with screen open) ───────────────────────
         if (cfg.noFallEnabled) p.fallDistance = 0f;
 
-        if (mc.screen != null) return;
+        // ── SafeWalk (works even with screen open) ────────────────────────────
+        if (cfg.safeWalkEnabled && mc.screen == null) {
+            Vec3 movement = p.getDeltaMovement();
+            if (movement.horizontalDistance() > 0.01) {
+                p.setShiftKeyDown(true);
+            } else {
+                p.setShiftKeyDown(false);
+            }
+        }
 
-        // ── Sprint ────────────────────────────────────────────────────────────
-        if (cfg.sprintEnabled && !p.isCrouching()) p.setSprinting(true);
+        // ── InvMove: allow sprint/speed even with screen open if invMoveEnabled
+        boolean screenBlocked = mc.screen != null && !cfg.invMoveEnabled;
+
+        if (!screenBlocked) {
+            // ── Sprint ────────────────────────────────────────────────────────
+            if (cfg.sprintEnabled && !p.isCrouching()) p.setSprinting(true);
+
+            // ── Speed ─────────────────────────────────────────────────────────
+            AttributeInstance speedAttr = p.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (speedAttr != null) {
+                speedAttr.removeModifier(SPEED_ID);
+                if (cfg.speedEnabled) {
+                    double bonus = 0.1 * (cfg.speedMultiplier - 1.0);
+                    speedAttr.addOrUpdateTransientModifier(
+                        new AttributeModifier(SPEED_ID, bonus, AttributeModifier.Operation.ADD_VALUE));
+                }
+            }
+        } else {
+            // Screen open and invMove disabled: remove speed modifier
+            AttributeInstance speedAttr = p.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (speedAttr != null) speedAttr.removeModifier(SPEED_ID);
+        }
+
+        if (mc.screen != null) {
+            // Only speed/sprint allowed with invMove when screen is open, rest skipped
+            return;
+        }
 
         // ── Fly ───────────────────────────────────────────────────────────────
         if (cfg.flyEnabled) {
@@ -54,17 +90,6 @@ public final class MovementHacks {
             p.getAbilities().flying = false;
             if (mc.getConnection() != null) p.onUpdateAbilities();
             flyWasActive = false;
-        }
-
-        // ── Speed ─────────────────────────────────────────────────────────────
-        AttributeInstance speedAttr = p.getAttribute(Attributes.MOVEMENT_SPEED);
-        if (speedAttr != null) {
-            speedAttr.removeModifier(SPEED_ID);
-            if (cfg.speedEnabled) {
-                double bonus = 0.1 * (cfg.speedMultiplier - 1.0);
-                speedAttr.addOrUpdateTransientModifier(
-                    new AttributeModifier(SPEED_ID, bonus, AttributeModifier.Operation.ADD_VALUE));
-            }
         }
 
         // ── Step ──────────────────────────────────────────────────────────────
@@ -104,6 +129,38 @@ public final class MovementHacks {
                         scaffoldCooldown = 3;
                         break;
                     }
+                }
+            }
+        }
+
+        // ── Surround ──────────────────────────────────────────────────────────
+        if (cfg.surroundEnabled && VisionModClient.fullyJoined && mc.level != null && mc.gameMode != null) {
+            if (surroundCooldown > 0) { surroundCooldown--; }
+            else {
+                BlockPos feet = p.blockPosition();
+                BlockPos[] cardinals = {
+                    feet.north(), feet.south(), feet.east(), feet.west()
+                };
+                for (BlockPos pos : cardinals) {
+                    BlockPos supportPos = pos.below();
+                    if (!mc.level.getBlockState(pos).isAir()) continue;
+                    if (mc.level.getBlockState(supportPos).isAir()) continue;
+
+                    int saved = p.getInventory().selected;
+                    boolean placed = false;
+                    for (int i = 0; i < 9; i++) {
+                        ItemStack stack = p.getInventory().getItem(i);
+                        if (!(stack.getItem() instanceof BlockItem)) continue;
+                        p.getInventory().selected = i;
+                        Vec3 hitPos = new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+                        mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND,
+                            new BlockHitResult(hitPos, Direction.UP, supportPos, false));
+                        p.getInventory().selected = saved;
+                        surroundCooldown = 1;
+                        placed = true;
+                        break;
+                    }
+                    if (placed) break;
                 }
             }
         }

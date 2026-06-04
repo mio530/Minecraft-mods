@@ -66,6 +66,7 @@ public class VisionConfigScreen extends Screen {
         new ModDef("velocity",    "Motion Adjust",      "Bewegungskorrektur",          "Combat"),
         new ModDef("autoTotem",   "Totem Handler",      "Totem automatisch anlegen",   "Combat"),
         new ModDef("noHurtCam",   "Camera Stabilizer",  "Kamera-Stabilisierung",       "Combat"),
+        new ModDef("autoLog",     "Auto Disconnect",    "Trennt bei niedrigem HP",     "Combat"),
         // Movement
         new ModDef("sprint",      "Sprint Assist",      "Lauf-Optimierung",            "Movement"),
         new ModDef("fly",         "Flight Mode",        "Flug-Modus",                  "Movement"),
@@ -75,11 +76,16 @@ public class VisionConfigScreen extends Screen {
         new ModDef("jesus",       "Liquid Walk",        "Auf Wasser laufen",           "Movement"),
         new ModDef("noSlow",      "Move Optimizer",     "Bewegungs-Optimierung",       "Movement"),
         new ModDef("scaffold",    "Block Placer",       "Auto-Platzierung",            "Movement"),
+        new ModDef("surround",    "Block Surround",     "Blöcke um den Spieler",       "Movement"),
+        new ModDef("safeWalk",    "Edge Protection",    "Nicht von Kanten fallen",     "Movement"),
+        new ModDef("invMove",     "Inventory Move",     "Bewegung im Inventar",        "Movement"),
         // Player
         new ModDef("autoEat",     "Nutrition Assist",   "Automatische Nahrung",        "Player"),
         new ModDef("antiHunger",  "Saturation Keep",    "Hunger-Stabilisierung",       "Player"),
         new ModDef("antiPoison",  "Effect Filter",      "Effekt-Filterung",            "Player"),
         new ModDef("antiAfk",     "Idle Prevention",    "Inaktivitäts-Schutz",         "Player"),
+        new ModDef("autoRespawn", "Auto Respawn",       "Automatisch respawnen",       "Player"),
+        new ModDef("chestStealer","Item Transfer",      "Kisten automatisch leeren",   "Player"),
         // Render
         new ModDef("fullbright",  "Light Boost",        "Maximale Sichtweite",         "Render"),
         new ModDef("tracers",     "Path Display",       "Linien zu Zielen",            "Render"),
@@ -309,6 +315,27 @@ public class VisionConfigScreen extends Screen {
             sInt(g, "CPS", c.killAuraCps, "", 1, 20,
                 () -> { c.killAuraCps = Math.max(1,  c.killAuraCps - 1); save(); },
                 () -> { c.killAuraCps = Math.min(20, c.killAuraCps + 1); save(); });
+            sToggle(g, "Rotation",         c.killAuraRotate,     () -> { c.killAuraRotate     = !c.killAuraRotate;     save(); });
+            sPriority(g, "Priorität", c.killAuraPriority,
+                () -> {
+                    c.killAuraPriority = switch (c.killAuraPriority) {
+                        case "Nearest"   -> "LowestHP";
+                        case "LowestHP"  -> "HighestHP";
+                        default          -> "Nearest";
+                    };
+                    save();
+                },
+                () -> {
+                    c.killAuraPriority = switch (c.killAuraPriority) {
+                        case "Nearest"   -> "HighestHP";
+                        case "HighestHP" -> "LowestHP";
+                        default          -> "Nearest";
+                    };
+                    save();
+                });
+            sFloat(g, "FOV",               c.killAuraFov,
+                () -> { c.killAuraFov = Math.max(10f,  c.killAuraFov - 10f); save(); },
+                () -> { c.killAuraFov = Math.min(360f, c.killAuraFov + 10f); save(); });
             sDesc(g, "Greift nächste Entity in Reichweite an.");
         }
         case "criticals"  -> {
@@ -323,8 +350,14 @@ public class VisionConfigScreen extends Screen {
             sDesc(g, "Linke Maustaste halten → auto klicken.");
         }
         case "velocity"   -> {
-            sToggle(g, "Velocity",         c.velocityEnabled,    () -> { c.velocityEnabled    = !c.velocityEnabled;    save(); });
-            sDesc(g, "Kein Knockback. Vollständig gecancelt.");
+            sToggle(g, "Motion Adjust",    c.velocityEnabled,    () -> { c.velocityEnabled    = !c.velocityEnabled;    save(); });
+            sFloat(g, "Horizontal %",      c.velocityXZ * 100f,
+                () -> { c.velocityXZ = Math.max(0f, c.velocityXZ - 0.05f); save(); },
+                () -> { c.velocityXZ = Math.min(1f, c.velocityXZ + 0.05f); save(); });
+            sFloat(g, "Vertikal %",        c.velocityY * 100f,
+                () -> { c.velocityY = Math.max(0f, c.velocityY - 0.05f); save(); },
+                () -> { c.velocityY = Math.min(1f, c.velocityY + 0.05f); save(); });
+            sDesc(g, "0% = komplett abbrechen, 100% = normal");
         }
         case "autoTotem"  -> {
             sToggle(g, "Auto Totem",       c.autoTotemEnabled,   () -> { c.autoTotemEnabled   = !c.autoTotemEnabled;   save(); });
@@ -381,6 +414,24 @@ public class VisionConfigScreen extends Screen {
             sDesc(g, "Legt Blöcke unter die Füße beim Laufen.");
             sDesc(g, "Block im Hotbar muss vorhanden sein.");
         }
+        case "surround"   -> {
+            sToggle(g, "Block Surround",   c.surroundEnabled,    () -> { c.surroundEnabled    = !c.surroundEnabled;    save(); });
+            sDesc(g, "Platziert Blöcke um den Spieler.");
+        }
+        case "safeWalk"   -> {
+            sToggle(g, "Edge Protection",  c.safeWalkEnabled,    () -> { c.safeWalkEnabled    = !c.safeWalkEnabled;    save(); });
+            sDesc(g, "Verhindert das Herunterfallen von Kanten.");
+        }
+        case "invMove"    -> {
+            sToggle(g, "Inventory Move",   c.invMoveEnabled,     () -> { c.invMoveEnabled     = !c.invMoveEnabled;     save(); });
+            sDesc(g, "Erlaubt Bewegung während Inventar geöffnet ist.");
+        }
+        case "autoLog"    -> {
+            sToggle(g, "Auto Disconnect",  c.autoLogEnabled,     () -> { c.autoLogEnabled     = !c.autoLogEnabled;     save(); });
+            sFloat(g, "HP Schwelle",       c.autoLogHp,
+                () -> { c.autoLogHp = Math.max(1f,  c.autoLogHp - 1f); save(); },
+                () -> { c.autoLogHp = Math.min(20f, c.autoLogHp + 1f); save(); });
+        }
 
         // ── Player ───────────────────────────────────────────────────────────
         case "autoEat"    -> {
@@ -405,6 +456,14 @@ public class VisionConfigScreen extends Screen {
                 () -> { c.antiAfkInterval = Math.max(100, c.antiAfkInterval - 20); save(); },
                 () -> { c.antiAfkInterval = Math.min(1200, c.antiAfkInterval + 20); save(); });
             sDesc(g, "Mikro-Rotation gegen AFK-Kick.");
+        }
+        case "autoRespawn" -> {
+            sToggle(g, "Auto Respawn",     c.autoRespawnEnabled, () -> { c.autoRespawnEnabled = !c.autoRespawnEnabled; save(); });
+            sDesc(g, "Respawnt automatisch nach dem Tod.");
+        }
+        case "chestStealer" -> {
+            sToggle(g, "Item Transfer",    c.chestStealerEnabled,() -> { c.chestStealerEnabled = !c.chestStealerEnabled; save(); });
+            sDesc(g, "Leert Kisten automatisch in dein Inventar.");
         }
 
         // ── Render ───────────────────────────────────────────────────────────
@@ -535,6 +594,17 @@ public class VisionConfigScreen extends Screen {
             int bx = sX + sW - 42;
             drawBtn(g, bx,    y + 2, 18, 14, "§c−", sMX, sMY); hit(bx,    y + 2, 18, 14, dec);
             drawBtn(g, bx+20, y + 2, 18, 14, "§a+", sMX, sMY); hit(bx+20, y + 2, 18, 14, inc);
+        }
+        sCY += S_ROW;
+    }
+
+    private void sPriority(GuiGraphics g, String label, String val, Runnable dec, Runnable inc) {
+        int y = sCY;
+        if (vis(y, S_ROW, sY, sH)) {
+            g.drawString(font, label + ": §f" + val, sX + 5, y + 5, C_DIM, false);
+            int bx = sX + sW - 42;
+            drawBtn(g, bx,    y + 2, 18, 14, "§c←", sMX, sMY); hit(bx,    y + 2, 18, 14, dec);
+            drawBtn(g, bx+20, y + 2, 18, 14, "§a→", sMX, sMY); hit(bx+20, y + 2, 18, 14, inc);
         }
         sCY += S_ROW;
     }
@@ -781,10 +851,16 @@ public class VisionConfigScreen extends Screen {
             case "jesus"       -> c.jesusEnabled;
             case "noSlow"      -> c.noSlowEnabled;
             case "scaffold"    -> c.scaffoldEnabled;
+            case "surround"    -> c.surroundEnabled;
+            case "safeWalk"    -> c.safeWalkEnabled;
+            case "invMove"     -> c.invMoveEnabled;
+            case "autoLog"     -> c.autoLogEnabled;
             case "autoEat"     -> c.autoEatEnabled;
             case "antiHunger"  -> c.antiHungerEnabled;
             case "antiPoison"  -> c.antiPoisonEnabled;
             case "antiAfk"     -> c.antiAfkEnabled;
+            case "autoRespawn" -> c.autoRespawnEnabled;
+            case "chestStealer"-> c.chestStealerEnabled;
             case "fullbright"  -> c.fullbrightEnabled;
             case "tracers"     -> c.globalLinesEnabled;
             case "boxFill"     -> c.fillBoxes;

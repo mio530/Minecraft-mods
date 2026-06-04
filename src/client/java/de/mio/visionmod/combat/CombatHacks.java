@@ -8,9 +8,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Comparator;
+import java.util.List;
 
 public final class CombatHacks {
     private CombatHacks() {}
@@ -25,6 +27,7 @@ public final class CombatHacks {
         tickKillAura(mc, cfg);
         tickAutoClicker(mc, cfg);
         tickAutoTotem(mc, cfg);
+        tickAutoLog(mc, cfg);
     }
 
     // ── Kill Aura ──────────────────────────────────────────────────────────────
@@ -37,7 +40,7 @@ public final class CombatHacks {
         if (atkStrength < 0.9f) return;
 
         double range = cfg.killAuraRange;
-        LivingEntity target = mc.level.getEntitiesOfClass(LivingEntity.class,
+        List<LivingEntity> candidates = mc.level.getEntitiesOfClass(LivingEntity.class,
                 mc.player.getBoundingBox().inflate(range),
                 e -> {
                     if (e == mc.player || !e.isAlive()) return false;
@@ -45,9 +48,40 @@ public final class CombatHacks {
                     if (e instanceof Player) return cfg.killAuraPlayers;
                     return cfg.killAuraMobs;
                 }
-        ).stream().min(Comparator.comparingDouble(mc.player::distanceTo)).orElse(null);
+        );
+
+        // FOV filter
+        if (cfg.killAuraFov < 360f) {
+            Vec3 lookVec = mc.player.getLookAngle();
+            float halfFov = cfg.killAuraFov / 2f;
+            candidates = candidates.stream().filter(e -> {
+                Vec3 toTarget = e.position().subtract(mc.player.position()).normalize();
+                double dot = lookVec.dot(toTarget);
+                double angle = Math.toDegrees(Math.acos(Math.max(-1.0, Math.min(1.0, dot))));
+                return angle <= halfFov;
+            }).toList();
+        }
+
+        // Priority selection
+        LivingEntity target = switch (cfg.killAuraPriority) {
+            case "LowestHP"  -> candidates.stream()
+                    .min(Comparator.comparingDouble(LivingEntity::getHealth)).orElse(null);
+            case "HighestHP" -> candidates.stream()
+                    .max(Comparator.comparingDouble(LivingEntity::getHealth)).orElse(null);
+            default          -> candidates.stream()  // "Nearest"
+                    .min(Comparator.comparingDouble(mc.player::distanceTo)).orElse(null);
+        };
 
         if (target != null) {
+            // Rotation
+            if (cfg.killAuraRotate) {
+                Vec3 delta = target.getEyePosition().subtract(mc.player.getEyePosition());
+                double yaw = Math.toDegrees(Math.atan2(-delta.x, delta.z));
+                double horiz = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+                double pitch = Math.toDegrees(-Math.atan2(delta.y, horiz));
+                mc.player.setYRot((float) yaw);
+                mc.player.setXRot((float) pitch);
+            }
             mc.gameMode.attack(mc.player, target);
             killAuraCooldown = Math.max(1, 20 / Math.max(1, cfg.killAuraCps));
         }
@@ -92,5 +126,16 @@ public final class CombatHacks {
             autoTotemCooldown = 10;
             break;
         }
+    }
+
+    // ── AutoLog ───────────────────────────────────────────────────────────────
+
+    private static void tickAutoLog(Minecraft mc, VisionConfig cfg) {
+        if (!cfg.autoLogEnabled) return;
+        if (mc.player == null) return;
+        if (mc.player.getHealth() > cfg.autoLogHp) return;
+        if (mc.getConnection() == null) return;
+        mc.getConnection().getConnection().disconnect(
+                net.minecraft.network.chat.Component.literal("AutoLog"));
     }
 }

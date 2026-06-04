@@ -2,18 +2,24 @@ package de.mio.visionmod.player;
 
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
 public final class PlayerHacks {
     private PlayerHacks() {}
 
-    private static int afkTimer    = 0;
-    private static boolean eating  = false;
+    private static int afkTimer          = 0;
+    private static boolean eating        = false;
+    private static int chestStealerCooldown = 0;
 
     public static void resetOnDisconnect(Minecraft mc) {
         afkTimer = 0;
+        chestStealerCooldown = 0;
         if (eating) {
             mc.options.keyUse.setDown(false);
             eating = false;
@@ -23,6 +29,12 @@ public final class PlayerHacks {
     public static void tick(Minecraft mc) {
         if (mc.player == null) return;
         VisionConfig cfg = VisionConfig.get();
+
+        // ── AutoRespawn (runs even when dead) ─────────────────────────────────
+        if (cfg.autoRespawnEnabled && mc.player.isDeadOrDying()) {
+            mc.player.connection.send(new ServerboundClientCommandPacket(
+                    ServerboundClientCommandPacket.Action.PERFORM_RESPAWN));
+        }
 
         // ── AntiBlind ─────────────────────────────────────────────────────────
         if (cfg.antiBlindEnabled) {
@@ -48,6 +60,25 @@ public final class PlayerHacks {
             if (afkTimer >= interval)     { mc.player.turn(-1.0, 0.0); afkTimer = 0; }
         } else {
             afkTimer = 0;
+        }
+
+        // ── ChestStealer ──────────────────────────────────────────────────────
+        if (cfg.chestStealerEnabled && mc.screen instanceof AbstractContainerScreen<?> containerScreen) {
+            if (chestStealerCooldown > 0) {
+                chestStealerCooldown--;
+            } else {
+                AbstractContainerMenu menu = containerScreen.getMenu();
+                int containerSlots = menu.slots.size() - 36;
+                for (int i = 0; i < containerSlots; i++) {
+                    ItemStack stack = menu.slots.get(i).getItem();
+                    if (!stack.isEmpty()) {
+                        mc.gameMode.handleInventoryMouseClick(
+                                menu.containerId, i, 0, ClickType.QUICK_MOVE, mc.player);
+                        chestStealerCooldown = 2;
+                        break;
+                    }
+                }
+            }
         }
 
         if (mc.screen != null) return;

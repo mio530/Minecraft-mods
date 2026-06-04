@@ -83,13 +83,20 @@ public class VisionConfig {
     public boolean killAuraPlayers    = true;
     public boolean killAuraMobs       = true;
     public int     killAuraCps        = 12;
+    public boolean killAuraRotate     = true;
+    public String  killAuraPriority   = "Nearest"; // Nearest, LowestHP, HighestHP
+    public float   killAuraFov        = 360f;
     public boolean criticalsEnabled   = false;
     public boolean autoClickerEnabled = false;
     public int     autoClickerCps     = 12;
     public boolean velocityEnabled    = false;
+    public float   velocityXZ         = 0.0f;  // 0=cancel, 1=normal horizontal
+    public float   velocityY          = 0.0f;  // 0=cancel, 1=normal vertical
     public boolean autoTotemEnabled   = false;
     public float   autoTotemHpThresh  = 8.0f;
     public boolean noHurtCamEnabled   = false;
+    public boolean autoLogEnabled     = false;
+    public float   autoLogHp          = 6.0f;
 
     // === MOVEMENT ===
     public boolean sprintEnabled      = false;
@@ -103,6 +110,9 @@ public class VisionConfig {
     public boolean jesusEnabled       = false;
     public boolean noSlowEnabled      = false;
     public boolean scaffoldEnabled    = false;
+    public boolean surroundEnabled    = false;
+    public boolean safeWalkEnabled    = false;
+    public boolean invMoveEnabled     = false;
 
     // === PLAYER ===
     public boolean autoEatEnabled     = false;
@@ -111,6 +121,8 @@ public class VisionConfig {
     public boolean antiPoisonEnabled  = false;
     public boolean antiAfkEnabled     = false;
     public int     antiAfkInterval    = 200;
+    public boolean autoRespawnEnabled = false;
+    public boolean chestStealerEnabled = false;
 
     // === RENDER EXTRAS ===
     public int     keyZoom            = 0;
@@ -328,15 +340,21 @@ public class VisionConfig {
         jesusEnabled       = false;
         noSlowEnabled      = false;
         scaffoldEnabled    = false;
+        surroundEnabled    = false;
+        safeWalkEnabled    = false;
+        invMoveEnabled     = false;
         autoEatEnabled     = false;
         antiHungerEnabled  = false;
         antiPoisonEnabled  = false;
         antiAfkEnabled     = false;
+        autoRespawnEnabled = false;
+        chestStealerEnabled = false;
         noFogEnabled       = false;
         noWeatherEnabled   = false;
         antiBlindEnabled   = false;
         nukerEnabled       = false;
         coordsHudEnabled   = false;
+        autoLogEnabled     = false;
     }
 
     /** Parse "#AARRGGBB" or "#RRGGBB" to packed ARGB int. */
