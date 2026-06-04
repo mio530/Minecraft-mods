@@ -48,7 +48,7 @@ public class EntityMotionMixin {
         // new = orig + delta * multiplier, where vanilla delta = (x/2-nx*s - x, y/2+s - y, z/2-nz*s - z)
         // Easier: directly compute vanilla then lerp
         double vanillaX = vec.x / 2.0 - nx * s;
-        double vanillaY = self.isOnGround() ? Math.min(0.4, vec.y / 2.0 + s) : vec.y;
+        double vanillaY = self.onGround() ? Math.min(0.4, vec.y / 2.0 + s) : vec.y;
         double vanillaZ = vec.z / 2.0 - nz * s;
 
         double finalX = vanillaX * xzMult + vec.x * (1f - xzMult);
@@ -56,6 +56,5 @@ public class EntityMotionMixin {
         double finalZ = vanillaZ * xzMult + vec.z * (1f - xzMult);
 
         self.setDeltaMovement(finalX, finalY, finalZ);
-        self.hasImpulse = true;
     }
 }
