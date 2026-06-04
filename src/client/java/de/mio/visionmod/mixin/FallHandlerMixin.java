@@ -1,5 +1,6 @@
 package de.mio.visionmod.mixin;
 
+import de.mio.visionmod.combat.CombatHacks;
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,7 +14,7 @@ public class FallHandlerMixin {
 
     @Inject(method = "aiStep", at = @At("HEAD"), require = 0)
     private void visionmod_noFall(CallbackInfo ci) {
-        if (VisionConfig.get().noFallEnabled) {
+        if (VisionConfig.get().noFallEnabled && !CombatHacks.maceDmgLaunched) {
             ((LocalPlayer)(Object)this).fallDistance = 0f;
         }
     }

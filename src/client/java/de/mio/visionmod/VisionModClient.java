@@ -74,10 +74,23 @@ public class VisionModClient implements ClientModInitializer {
             boolean f_bright  = justPressed(win, cfg.keyFullbright);
             boolean f_item    = cfg.keyItemEsp > 0 && justPressed(win, cfg.keyItemEsp);
             boolean f_storage = cfg.keyStorageEsp > 0 && justPressed(win, cfg.keyStorageEsp);
+            boolean f_panic   = cfg.keyPanic   > 0 && justPressed(win, cfg.keyPanic);
 
             // Zoom: hold-key (no toggle)
             RenderHacks.zoomActive = cfg.keyZoom > 0
                 && GLFW.glfwGetKey(win, cfg.keyZoom) == GLFW.GLFW_PRESS;
+
+            // Panic: runs regardless of screen state — disable all, disconnect, exit
+            if (f_panic) {
+                cfg.resetFeatureToggles();
+                VisionConfig.save();
+                if (mc.getConnection() != null) {
+                    mc.getConnection().getConnection().disconnect(
+                            net.minecraft.network.chat.Component.translatable("menu.disconnect"));
+                }
+                mc.stop();
+                return;
+            }
 
             if (mc.screen == null) {
                 if (f_entity)  { cfg.entityEspEnabled   = !cfg.entityEspEnabled;   VisionConfig.save(); }

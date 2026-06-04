@@ -78,6 +78,7 @@ public class VisionConfig {
     public int keyStorageEsp  = 0;   // unbound
 
     // === COMBAT ===
+    public boolean maceDmgEnabled     = false;
     public boolean killAuraEnabled    = false;
     public float   killAuraRange      = 4.5f;
     public boolean killAuraPlayers    = true;
@@ -125,6 +126,7 @@ public class VisionConfig {
     public boolean chestStealerEnabled = false;
 
     // === RENDER EXTRAS ===
+    public int     keyPanic           = 0;   // unbound – disable all + disconnect + exit
     public int     keyZoom            = 0;
     public float   zoomFov            = 15f;
     public boolean noFogEnabled       = false;
@@ -326,6 +328,7 @@ public class VisionConfig {
         storageEspEnabled  = false;
         susChunksEnabled   = false;
         showAllChunkBorders = false;
+        maceDmgEnabled     = false;
         killAuraEnabled    = false;
         criticalsEnabled   = false;
         autoClickerEnabled = false;

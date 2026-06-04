@@ -17,17 +17,55 @@ import java.util.List;
 public final class CombatHacks {
     private CombatHacks() {}
 
-    private static int killAuraCooldown  = 0;
-    private static int autoClickCooldown = 0;
-    private static int autoTotemCooldown = 0;
+    private static int     killAuraCooldown  = 0;
+    private static int     autoClickCooldown = 0;
+    private static int     autoTotemCooldown = 0;
+    public  static boolean maceDmgLaunched   = false; // read by FallHandlerMixin
 
     public static void tick(Minecraft mc) {
         if (mc.player == null || mc.level == null) return;
         VisionConfig cfg = VisionConfig.get();
+        tickMaceDmg(mc, cfg);
         tickKillAura(mc, cfg);
         tickAutoClicker(mc, cfg);
         tickAutoTotem(mc, cfg);
         tickAutoLog(mc, cfg);
+    }
+
+    // ── Mace Damage ───────────────────────────────────────────────────────────
+
+    private static void tickMaceDmg(Minecraft mc, VisionConfig cfg) {
+        if (!cfg.maceDmgEnabled || mc.screen != null || mc.gameMode == null) {
+            maceDmgLaunched = false;
+            return;
+        }
+        if (!mc.player.getMainHandItem().is(Items.MACE)) {
+            maceDmgLaunched = false;
+            return;
+        }
+        Vec3 motion = mc.player.getDeltaMovement();
+        if (!maceDmgLaunched && mc.player.onGround()) {
+            mc.player.setDeltaMovement(motion.x, 2.8, motion.z);
+            maceDmgLaunched = true;
+            return;
+        }
+        if (maceDmgLaunched) {
+            if (motion.y < -0.5) {
+                double range = cfg.killAuraRange;
+                List<LivingEntity> cands = mc.level.getEntitiesOfClass(LivingEntity.class,
+                        mc.player.getBoundingBox().inflate(range),
+                        e -> e != mc.player && e.isAlive()
+                                && mc.player.distanceTo(e) <= range
+                                && (e instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs));
+                cands.stream().min(Comparator.comparingDouble(mc.player::distanceTo))
+                        .ifPresent(t -> {
+                            mc.gameMode.attack(mc.player, t);
+                            maceDmgLaunched = false;
+                        });
+            } else if (mc.player.onGround()) {
+                maceDmgLaunched = false;
+            }
+        }
     }
 
     // ── Kill Aura ──────────────────────────────────────────────────────────────

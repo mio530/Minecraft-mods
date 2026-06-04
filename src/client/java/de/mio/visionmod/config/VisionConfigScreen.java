@@ -49,7 +49,7 @@ public class VisionConfigScreen extends Screen {
     private record ModDef(String id, String name, String desc, String cat) {}
 
     private static final List<String>  CATS = List.of(
-            "ESP", "Combat", "Movement", "Player", "Render", "World", "Tasten");
+            "ESP", "Combat", "Movement", "Player", "Render", "World", "Session", "Tasten");
 
     private static final List<ModDef>  MODS = List.of(
         // ESP
@@ -67,6 +67,7 @@ public class VisionConfigScreen extends Screen {
         new ModDef("autoTotem",   "Totem Handler",      "Totem automatisch anlegen",   "Combat"),
         new ModDef("noHurtCam",   "Camera Stabilizer",  "Kamera-Stabilisierung",       "Combat"),
         new ModDef("autoLog",     "Auto Disconnect",    "Trennt bei niedrigem HP",     "Combat"),
+        new ModDef("maceDmg",    "Mace Boost",         "Fallschaden-Angriff mit Keule","Combat"),
         // Movement
         new ModDef("sprint",      "Sprint Assist",      "Lauf-Optimierung",            "Movement"),
         new ModDef("fly",         "Flight Mode",        "Flug-Modus",                  "Movement"),
@@ -432,6 +433,12 @@ public class VisionConfigScreen extends Screen {
                 () -> { c.autoLogHp = Math.max(1f,  c.autoLogHp - 1f); save(); },
                 () -> { c.autoLogHp = Math.min(20f, c.autoLogHp + 1f); save(); });
         }
+        case "maceDmg"    -> {
+            sToggle(g, "Mace Boost",       c.maceDmgEnabled,     () -> { c.maceDmgEnabled     = !c.maceDmgEnabled;     save(); });
+            sDesc(g, "Springt hoch und greift beim Fallen an.");
+            sDesc(g, "Mace muss in der Hand gehalten werden.");
+            sDesc(g, "NoFall wird während des Sprungs deaktiviert.");
+        }
 
         // ── Player ───────────────────────────────────────────────────────────
         case "autoEat"    -> {
@@ -549,6 +556,7 @@ public class VisionConfigScreen extends Screen {
             sKeybindRow(g, "Item ESP",      "itemEsp",    c.keyItemEsp,    c);
             sKeybindRow(g, "Container ESP", "storageEsp", c.keyStorageEsp, c);
             sKeybindRow(g, "Zoom",          "zoom",       c.keyZoom,       c);
+            sKeybindRow(g, "Panic",         "panic",      c.keyPanic,      c);
             sCY += 6;
             sDesc(g, "§8Nicht im MC-Keybinds-Menü sichtbar.");
         }
@@ -801,6 +809,7 @@ public class VisionConfigScreen extends Screen {
                     case "itemEsp"    -> c.keyItemEsp     = keyCode;
                     case "storageEsp" -> c.keyStorageEsp  = keyCode;
                     case "zoom"       -> c.keyZoom        = keyCode;
+                    case "panic"      -> c.keyPanic       = keyCode;
                 }
                 VisionConfig.save();
             }
@@ -855,6 +864,7 @@ public class VisionConfigScreen extends Screen {
             case "safeWalk"    -> c.safeWalkEnabled;
             case "invMove"     -> c.invMoveEnabled;
             case "autoLog"     -> c.autoLogEnabled;
+            case "maceDmg"     -> c.maceDmgEnabled;
             case "autoEat"     -> c.autoEatEnabled;
             case "antiHunger"  -> c.antiHungerEnabled;
             case "antiPoison"  -> c.antiPoisonEnabled;
