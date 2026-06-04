@@ -67,7 +67,8 @@ public class VisionConfigScreen extends Screen {
         new ModDef("autoTotem",   "Totem Handler",      "Totem automatisch anlegen",   "Combat"),
         new ModDef("noHurtCam",   "Camera Stabilizer",  "Kamera-Stabilisierung",       "Combat"),
         new ModDef("autoLog",     "Auto Disconnect",    "Trennt bei niedrigem HP",     "Combat"),
-        new ModDef("maceDmg",    "Mace Boost",         "Fallschaden-Angriff mit Keule","Combat"),
+        new ModDef("maceDmg",        "Mace Boost",        "Auto-Sprung + Mace-Angriff",  "Combat"),
+        new ModDef("maceDmgClassic", "Mace Classic",      "Mace-Angriff beim Fallen",    "Combat"),
         // Movement
         new ModDef("sprint",      "Sprint Assist",      "Lauf-Optimierung",            "Movement"),
         new ModDef("fly",         "Flight Mode",        "Flug-Modus",                  "Movement"),
@@ -434,10 +435,15 @@ public class VisionConfigScreen extends Screen {
                 () -> { c.autoLogHp = Math.min(20f, c.autoLogHp + 1f); save(); });
         }
         case "maceDmg"    -> {
-            sToggle(g, "Mace Boost",       c.maceDmgEnabled,     () -> { c.maceDmgEnabled     = !c.maceDmgEnabled;     save(); });
-            sDesc(g, "Springt hoch und greift beim Fallen an.");
-            sDesc(g, "Mace muss in der Hand gehalten werden.");
-            sDesc(g, "NoFall wird während des Sprungs deaktiviert.");
+            sToggle(g, "Mace Boost",       c.maceDmgEnabled,         () -> { c.maceDmgEnabled         = !c.maceDmgEnabled;         save(); });
+            sDesc(g, "Springt automatisch hoch, greift beim Fallen.");
+            sDesc(g, "Mace in der Hand erforderlich.");
+        }
+        case "maceDmgClassic" -> {
+            sToggle(g, "Mace Classic",     c.maceDmgClassicEnabled,  () -> { c.maceDmgClassicEnabled  = !c.maceDmgClassicEnabled;  save(); });
+            sDesc(g, "Greift automatisch beim Fallen mit Mace an.");
+            sDesc(g, "Kein Auto-Sprung — Positionierung manuell");
+            sDesc(g, "oder per Wind Burst Enchantment.");
         }
 
         // ── Player ───────────────────────────────────────────────────────────
@@ -545,20 +551,20 @@ public class VisionConfigScreen extends Screen {
 
         // ── Tasten ───────────────────────────────────────────────────────────
         case "keybinds"   -> {
-            sSep(g, "Tastenbelegung");
-            sDesc(g, "[Ändern] klicken, dann Taste drücken.");
-            sCY += 4;
-            sKeybindRow(g, "Entity ESP",    "entityEsp",  c.keyEntityEsp,  c);
-            sKeybindRow(g, "Ore ESP",       "oreEsp",     c.keyOreEsp,     c);
+            sDesc(g, "[Ändern] klicken, dann Taste drücken. §8Nicht im MC-Menü.");
+            sCY += 2;
+            // Special keys (not toggles)
+            sSep(g, "Spezial");
             sKeybindRow(g, "Config öffnen", "openConfig", c.keyOpenConfig, c);
-            sKeybindRow(g, "Sus Chunks",    "susChunks",  c.keySusChunks,  c);
-            sKeybindRow(g, "Fullbright",    "fullbright", c.keyFullbright, c);
-            sKeybindRow(g, "Item ESP",      "itemEsp",    c.keyItemEsp,    c);
-            sKeybindRow(g, "Container ESP", "storageEsp", c.keyStorageEsp, c);
-            sKeybindRow(g, "Zoom",          "zoom",       c.keyZoom,       c);
+            sKeybindRow(g, "Zoom (halten)", "zoom",       c.keyZoom,       c);
             sKeybindRow(g, "Panic",         "panic",      c.keyPanic,      c);
-            sCY += 6;
-            sDesc(g, "§8Nicht im MC-Keybinds-Menü sichtbar.");
+            // Per-module keys grouped by category
+            String lastCat = "";
+            for (ModDef m : MODS) {
+                if (!VisionConfig.TOGGLEABLE_MODULES.contains(m.id())) continue;
+                if (!m.cat().equals(lastCat)) { sSep(g, m.cat()); lastCat = m.cat(); }
+                sKeybindRow(g, m.name(), m.id(), c.moduleKeys.getOrDefault(m.id(), 0), c);
+            }
         }
         }
     }
@@ -800,16 +806,12 @@ public class VisionConfigScreen extends Screen {
             int keyCode = event.key();
             if (keyCode != GLFW.GLFW_KEY_ESCAPE) {
                 VisionConfig c = VisionConfig.get();
-                switch (rebindingKey) {
-                    case "entityEsp"  -> c.keyEntityEsp   = keyCode;
-                    case "oreEsp"     -> c.keyOreEsp      = keyCode;
-                    case "openConfig" -> c.keyOpenConfig  = keyCode;
-                    case "susChunks"  -> c.keySusChunks   = keyCode;
-                    case "fullbright" -> c.keyFullbright  = keyCode;
-                    case "itemEsp"    -> c.keyItemEsp     = keyCode;
-                    case "storageEsp" -> c.keyStorageEsp  = keyCode;
-                    case "zoom"       -> c.keyZoom        = keyCode;
-                    case "panic"      -> c.keyPanic       = keyCode;
+                if (c.moduleKeys.containsKey(rebindingKey)) {
+                    c.moduleKeys.put(rebindingKey, keyCode);
+                } else switch (rebindingKey) {
+                    case "openConfig" -> c.keyOpenConfig = keyCode;
+                    case "zoom"       -> c.keyZoom       = keyCode;
+                    case "panic"      -> c.keyPanic      = keyCode;
                 }
                 VisionConfig.save();
             }
@@ -864,7 +866,8 @@ public class VisionConfigScreen extends Screen {
             case "safeWalk"    -> c.safeWalkEnabled;
             case "invMove"     -> c.invMoveEnabled;
             case "autoLog"     -> c.autoLogEnabled;
-            case "maceDmg"     -> c.maceDmgEnabled;
+            case "maceDmg"         -> c.maceDmgEnabled;
+            case "maceDmgClassic"  -> c.maceDmgClassicEnabled;
             case "autoEat"     -> c.autoEatEnabled;
             case "antiHunger"  -> c.antiHungerEnabled;
             case "antiPoison"  -> c.antiPoisonEnabled;

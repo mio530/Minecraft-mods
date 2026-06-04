@@ -14,7 +14,7 @@ public class FallHandlerMixin {
 
     @Inject(method = "aiStep", at = @At("HEAD"), require = 0)
     private void visionmod_noFall(CallbackInfo ci) {
-        if (VisionConfig.get().noFallEnabled && !CombatHacks.maceDmgLaunched) {
+        if (VisionConfig.get().noFallEnabled && !CombatHacks.suppressNoFall) {
             ((LocalPlayer)(Object)this).fallDistance = 0f;
         }
     }

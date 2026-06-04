@@ -20,12 +20,16 @@ public final class CombatHacks {
     private static int     killAuraCooldown  = 0;
     private static int     autoClickCooldown = 0;
     private static int     autoTotemCooldown = 0;
-    public  static boolean maceDmgLaunched   = false; // read by FallHandlerMixin
+    private static boolean maceDmgLaunched   = false;
+    /** True while a mace-fall is in progress; FallHandlerMixin reads this to skip noFall. */
+    public  static boolean suppressNoFall    = false;
 
     public static void tick(Minecraft mc) {
         if (mc.player == null || mc.level == null) return;
         VisionConfig cfg = VisionConfig.get();
+        suppressNoFall = false; // each mace method sets it if needed this tick
         tickMaceDmg(mc, cfg);
+        tickMaceDmgClassic(mc, cfg);
         tickKillAura(mc, cfg);
         tickAutoClicker(mc, cfg);
         tickAutoTotem(mc, cfg);
@@ -50,6 +54,7 @@ public final class CombatHacks {
             return;
         }
         if (maceDmgLaunched) {
+            suppressNoFall = true;
             if (motion.y < -0.5) {
                 double range = cfg.killAuraRange;
                 List<LivingEntity> cands = mc.level.getEntitiesOfClass(LivingEntity.class,
@@ -66,6 +71,25 @@ public final class CombatHacks {
                 maceDmgLaunched = false;
             }
         }
+    }
+
+    // ── Classic Mace Damage ────────────────────────────────────────────────────
+    // No auto-jump — player positions manually (or via Wind Burst). Auto-attacks
+    // whenever falling with the mace in hand. Works with Wind Burst bounce combo.
+
+    private static void tickMaceDmgClassic(Minecraft mc, VisionConfig cfg) {
+        if (!cfg.maceDmgClassicEnabled || mc.screen != null || mc.gameMode == null) return;
+        if (!mc.player.getMainHandItem().is(Items.MACE)) return;
+        if (mc.player.getDeltaMovement().y >= -0.3) return;
+        suppressNoFall = true; // let server accumulate fallDistance
+        double range = cfg.killAuraRange;
+        mc.level.getEntitiesOfClass(LivingEntity.class,
+                mc.player.getBoundingBox().inflate(range),
+                e -> e != mc.player && e.isAlive()
+                        && mc.player.distanceTo(e) <= range
+                        && (e instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs))
+                .stream().min(Comparator.comparingDouble(mc.player::distanceTo))
+                .ifPresent(t -> mc.gameMode.attack(mc.player, t));
     }
 
     // ── Kill Aura ──────────────────────────────────────────────────────────────

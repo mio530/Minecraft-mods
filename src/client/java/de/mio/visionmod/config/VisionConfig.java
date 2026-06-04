@@ -78,8 +78,9 @@ public class VisionConfig {
     public int keyStorageEsp  = 0;   // unbound
 
     // === COMBAT ===
-    public boolean maceDmgEnabled     = false;
-    public boolean killAuraEnabled    = false;
+    public boolean maceDmgEnabled         = false;
+    public boolean maceDmgClassicEnabled  = false;
+    public boolean killAuraEnabled        = false;
     public float   killAuraRange      = 4.5f;
     public boolean killAuraPlayers    = true;
     public boolean killAuraMobs       = true;
@@ -126,8 +127,22 @@ public class VisionConfig {
     public boolean chestStealerEnabled = false;
 
     // === RENDER EXTRAS ===
-    public int     keyPanic           = 0;   // unbound – disable all + disconnect + exit
+    public int     keyPanic           = 0;   // unbound – disable all + disconnect + halt
     public int     keyZoom            = 0;
+
+    // Per-module toggle keybinds: module-id → GLFW key code (0 = unbound)
+    public Map<String, Integer> moduleKeys = new LinkedHashMap<>();
+
+    public static final List<String> TOGGLEABLE_MODULES = Arrays.asList(
+        "entityEsp", "entityGlow", "healthBar", "oreEsp", "itemEsp", "storageEsp",
+        "killAura", "maceDmg", "maceDmgClassic", "criticals", "autoClicker",
+        "velocity", "autoTotem", "noHurtCam", "autoLog",
+        "sprint", "fly", "speed", "noFall", "step", "jesus", "noSlow",
+        "scaffold", "surround", "safeWalk", "invMove",
+        "autoEat", "antiHunger", "antiPoison", "antiAfk", "autoRespawn", "chestStealer",
+        "fullbright", "noFog", "noWeather", "antiBlind", "coords",
+        "susChunks", "nuker"
+    );
     public float   zoomFov            = 15f;
     public boolean noFogEnabled       = false;
     public boolean noWeatherEnabled   = false;
@@ -258,6 +273,13 @@ public class VisionConfig {
         entityLinesEnabled.addAll(Arrays.asList("minecraft:player", "minecraft:zombie", "minecraft:skeleton",
                 "minecraft:creeper", "minecraft:spider", "minecraft:enderman"));
 
+        for (String id : TOGGLEABLE_MODULES) moduleKeys.put(id, 0);
+        // Default hotkeys matching old dedicated fields
+        moduleKeys.put("entityEsp",  295); // F6
+        moduleKeys.put("oreEsp",     296); // F7
+        moduleKeys.put("susChunks",  298); // F9
+        moduleKeys.put("fullbright", 299); // F10
+
         oreBoxColors.putAll(DEFAULT_ORE_BOX);
         for (String id : DEFAULT_ORE_BOX.keySet()) {
             oreLineColors.put(id, DEFAULT_ORE_BOX.get(id));
@@ -293,6 +315,15 @@ public class VisionConfig {
                     loaded.oreBoxColors.putIfAbsent(id, DEFAULT_ORE_BOX.get(id));
                     loaded.oreLineColors.putIfAbsent(id, DEFAULT_ORE_BOX.get(id));
                 }
+                // Migrate old dedicated key fields into moduleKeys (one-time upgrade)
+                if (loaded.keyEntityEsp  > 0) loaded.moduleKeys.putIfAbsent("entityEsp",  loaded.keyEntityEsp);
+                if (loaded.keyOreEsp     > 0) loaded.moduleKeys.putIfAbsent("oreEsp",     loaded.keyOreEsp);
+                if (loaded.keySusChunks  > 0) loaded.moduleKeys.putIfAbsent("susChunks",  loaded.keySusChunks);
+                if (loaded.keyFullbright > 0) loaded.moduleKeys.putIfAbsent("fullbright", loaded.keyFullbright);
+                if (loaded.keyItemEsp    > 0) loaded.moduleKeys.putIfAbsent("itemEsp",    loaded.keyItemEsp);
+                if (loaded.keyStorageEsp > 0) loaded.moduleKeys.putIfAbsent("storageEsp", loaded.keyStorageEsp);
+                // Ensure all module IDs exist
+                for (String id : TOGGLEABLE_MODULES) loaded.moduleKeys.putIfAbsent(id, 0);
                 INSTANCE = loaded;
                 if (loaded.resetOnRestart) loaded.resetFeatureToggles();
             }
@@ -328,8 +359,9 @@ public class VisionConfig {
         storageEspEnabled  = false;
         susChunksEnabled   = false;
         showAllChunkBorders = false;
-        maceDmgEnabled     = false;
-        killAuraEnabled    = false;
+        maceDmgEnabled         = false;
+        maceDmgClassicEnabled  = false;
+        killAuraEnabled        = false;
         criticalsEnabled   = false;
         autoClickerEnabled = false;
         velocityEnabled    = false;

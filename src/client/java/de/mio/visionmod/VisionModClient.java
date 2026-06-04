@@ -26,6 +26,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class VisionModClient implements ClientModInitializer {
 
@@ -66,21 +67,21 @@ public class VisionModClient implements ClientModInitializer {
                 postJoinTicks = 0;
             }
 
-            // Always poll to track state — prevents false triggers after screen closes
-            boolean f_entity  = justPressed(win, cfg.keyEntityEsp);
-            boolean f_ore     = justPressed(win, cfg.keyOreEsp);
-            boolean f_config  = justPressed(win, cfg.keyOpenConfig);
-            boolean f_sus     = justPressed(win, cfg.keySusChunks);
-            boolean f_bright  = justPressed(win, cfg.keyFullbright);
-            boolean f_item    = cfg.keyItemEsp > 0 && justPressed(win, cfg.keyItemEsp);
-            boolean f_storage = cfg.keyStorageEsp > 0 && justPressed(win, cfg.keyStorageEsp);
-            boolean f_panic   = cfg.keyPanic   > 0 && justPressed(win, cfg.keyPanic);
-
             // Zoom: hold-key (no toggle)
             RenderHacks.zoomActive = cfg.keyZoom > 0
                 && GLFW.glfwGetKey(win, cfg.keyZoom) == GLFW.GLFW_PRESS;
 
-            // Panic: runs regardless of screen state — disable all, disconnect, exit
+            // Always poll all module keys to track state — prevents false triggers after screen closes.
+            // Module toggles are only applied when no screen is open.
+            boolean f_config = justPressed(win, cfg.keyOpenConfig);
+            boolean f_panic  = cfg.keyPanic > 0 && justPressed(win, cfg.keyPanic);
+            for (Entry<String, Integer> e : cfg.moduleKeys.entrySet()) {
+                int k = e.getValue();
+                boolean fired = k > 0 && justPressed(win, k);
+                if (fired && mc.screen == null) toggleModule(cfg, e.getKey());
+            }
+
+            // Panic: runs regardless of screen state — disable all, disconnect, hard exit
             if (f_panic) {
                 cfg.resetFeatureToggles();
                 VisionConfig.save();
@@ -88,19 +89,11 @@ public class VisionModClient implements ClientModInitializer {
                     mc.getConnection().getConnection().disconnect(
                             net.minecraft.network.chat.Component.translatable("menu.disconnect"));
                 }
-                mc.stop();
+                Runtime.getRuntime().halt(1);
                 return;
             }
 
-            if (mc.screen == null) {
-                if (f_entity)  { cfg.entityEspEnabled   = !cfg.entityEspEnabled;   VisionConfig.save(); }
-                if (f_ore)     { cfg.oreEspEnabled       = !cfg.oreEspEnabled;       VisionConfig.save(); }
-                if (f_config)  { mc.setScreen(new VisionConfigScreen(null)); }
-                if (f_sus)     { cfg.susChunksEnabled    = !cfg.susChunksEnabled;    VisionConfig.save(); }
-                if (f_bright)  { cfg.fullbrightEnabled   = !cfg.fullbrightEnabled;   VisionConfig.save(); }
-                if (f_item)    { cfg.itemEspEnabled      = !cfg.itemEspEnabled;      VisionConfig.save(); }
-                if (f_storage) { cfg.storageEspEnabled   = !cfg.storageEspEnabled;   VisionConfig.save(); }
-            }
+            if (mc.screen == null && f_config) mc.setScreen(new VisionConfigScreen(null));
 
             // ESP ticks are read-only and guard themselves internally
             EntityESP.tick(mc);
@@ -155,5 +148,51 @@ public class VisionModClient implements ClientModInitializer {
         boolean prev = prevKey.getOrDefault(key, false);
         prevKey.put(key, now);
         return now && !prev;
+    }
+
+    private static void toggleModule(VisionConfig c, String id) {
+        switch (id) {
+            case "entityEsp"     -> c.entityEspEnabled      = !c.entityEspEnabled;
+            case "entityGlow"    -> c.entityGlowEnabled     = !c.entityGlowEnabled;
+            case "healthBar"     -> c.healthBarEnabled      = !c.healthBarEnabled;
+            case "oreEsp"        -> c.oreEspEnabled         = !c.oreEspEnabled;
+            case "itemEsp"       -> c.itemEspEnabled        = !c.itemEspEnabled;
+            case "storageEsp"    -> c.storageEspEnabled     = !c.storageEspEnabled;
+            case "killAura"      -> c.killAuraEnabled       = !c.killAuraEnabled;
+            case "maceDmg"       -> c.maceDmgEnabled        = !c.maceDmgEnabled;
+            case "maceDmgClassic"-> c.maceDmgClassicEnabled = !c.maceDmgClassicEnabled;
+            case "criticals"     -> c.criticalsEnabled      = !c.criticalsEnabled;
+            case "autoClicker"   -> c.autoClickerEnabled    = !c.autoClickerEnabled;
+            case "velocity"      -> c.velocityEnabled       = !c.velocityEnabled;
+            case "autoTotem"     -> c.autoTotemEnabled      = !c.autoTotemEnabled;
+            case "noHurtCam"     -> c.noHurtCamEnabled      = !c.noHurtCamEnabled;
+            case "autoLog"       -> c.autoLogEnabled        = !c.autoLogEnabled;
+            case "sprint"        -> c.sprintEnabled         = !c.sprintEnabled;
+            case "fly"           -> c.flyEnabled            = !c.flyEnabled;
+            case "speed"         -> c.speedEnabled          = !c.speedEnabled;
+            case "noFall"        -> c.noFallEnabled         = !c.noFallEnabled;
+            case "step"          -> c.stepEnabled           = !c.stepEnabled;
+            case "jesus"         -> c.jesusEnabled          = !c.jesusEnabled;
+            case "noSlow"        -> c.noSlowEnabled         = !c.noSlowEnabled;
+            case "scaffold"      -> c.scaffoldEnabled       = !c.scaffoldEnabled;
+            case "surround"      -> c.surroundEnabled       = !c.surroundEnabled;
+            case "safeWalk"      -> c.safeWalkEnabled       = !c.safeWalkEnabled;
+            case "invMove"       -> c.invMoveEnabled        = !c.invMoveEnabled;
+            case "autoEat"       -> c.autoEatEnabled        = !c.autoEatEnabled;
+            case "antiHunger"    -> c.antiHungerEnabled     = !c.antiHungerEnabled;
+            case "antiPoison"    -> c.antiPoisonEnabled     = !c.antiPoisonEnabled;
+            case "antiAfk"       -> c.antiAfkEnabled        = !c.antiAfkEnabled;
+            case "autoRespawn"   -> c.autoRespawnEnabled    = !c.autoRespawnEnabled;
+            case "chestStealer"  -> c.chestStealerEnabled   = !c.chestStealerEnabled;
+            case "fullbright"    -> c.fullbrightEnabled     = !c.fullbrightEnabled;
+            case "noFog"         -> c.noFogEnabled          = !c.noFogEnabled;
+            case "noWeather"     -> c.noWeatherEnabled      = !c.noWeatherEnabled;
+            case "antiBlind"     -> c.antiBlindEnabled      = !c.antiBlindEnabled;
+            case "coords"        -> c.coordsHudEnabled      = !c.coordsHudEnabled;
+            case "susChunks"     -> c.susChunksEnabled      = !c.susChunksEnabled;
+            case "nuker"         -> c.nukerEnabled          = !c.nukerEnabled;
+            default -> { return; }
+        }
+        VisionConfig.save();
     }
 }
