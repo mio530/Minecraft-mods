@@ -42,7 +42,8 @@ processResources {
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
-    withSourcesJar()
+    // No sources jar: the release should contain only the runnable mod jar so
+    // users can't accidentally download the (non-functional) -sources.jar.
 }
 
 jar {
