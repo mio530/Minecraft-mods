@@ -44,8 +44,14 @@ public class CameraSetupMixin {
         }
     }
 
-    /** Layer 2: intercept Camera.entity() so it never returns null. */
-    @Inject(method = "entity", at = @At("RETURN"), cancellable = true, require = 0)
+    /**
+     * Layer 2: intercept the Camera entity getter so it never returns null.
+     * The getter's Mojang name differs across builds (record-style "entity" vs.
+     * legacy "getEntity"); we target both so at least one binds regardless of the
+     * mapping in this exact MC version. require=0 keeps the build alive if neither
+     * matches, in which case Layer 1 still covers us.
+     */
+    @Inject(method = {"entity", "getEntity"}, at = @At("RETURN"), cancellable = true, require = 0)
     private void visionmod_safeEntityGetter(CallbackInfoReturnable<Entity> cir) {
         if (cir.getReturnValue() != null) return;
         Entity fallback = visionmod_lastEntity;
