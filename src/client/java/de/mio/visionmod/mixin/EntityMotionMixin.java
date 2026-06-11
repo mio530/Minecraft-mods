@@ -55,6 +55,12 @@ public class EntityMotionMixin {
         double finalY = vanillaY * yMult  + vec.y * (1f - yMult);
         double finalZ = vanillaZ * xzMult + vec.z * (1f - xzMult);
 
+        // Never feed non-finite motion to the player: a NaN/Inf delta propagates
+        // into the position packet and the server kicks with "Invalid player data".
+        if (!Double.isFinite(finalX) || !Double.isFinite(finalY) || !Double.isFinite(finalZ)) {
+            return;
+        }
+
         self.setDeltaMovement(finalX, finalY, finalZ);
     }
 }

@@ -20,7 +20,13 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import org.lwjgl.glfw.GLFW;
@@ -130,6 +136,20 @@ public class VisionModClient implements ClientModInitializer {
 
         WorldRenderEvents.END_MAIN.register(ctx -> OverlayWindow.INSTANCE.onRenderEnd(ctx));
         HudRenderCallback.EVENT.register(HudOverlay::onHudRender);
+
+        // Add a button to the title screen and pause menu so the config GUI can be
+        // opened without being in a world — needed because the in-game keybind is
+        // unreachable if the player can't join (e.g. a crash on connect).
+        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+            if (screen instanceof TitleScreen || screen instanceof PauseScreen) {
+                Button btn = Button.builder(
+                        Component.literal("AppleskinV2"),
+                        b -> client.setScreen(new VisionConfigScreen(screen)))
+                        .bounds(scaledWidth - 84, 6, 78, 20)
+                        .build();
+                Screens.getButtons(screen).add(btn);
+            }
+        });
         ClientLifecycleEvents.CLIENT_STARTED.register(mc -> OverlayWindow.INSTANCE.init(mc));
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> OverlayWindow.INSTANCE.destroy());
 

@@ -31,6 +31,11 @@ public final class MovementHacks {
         surroundCooldown = 0;
     }
 
+    private static float clamp(float v, float min, float max) {
+        if (Float.isNaN(v)) return min;
+        return v < min ? min : (v > max ? max : v);
+    }
+
     public static void tick(Minecraft mc) {
         if (mc.player == null) return;
         VisionConfig cfg = VisionConfig.get();
@@ -61,7 +66,10 @@ public final class MovementHacks {
             if (speedAttr != null) {
                 speedAttr.removeModifier(SPEED_ID);
                 if (cfg.speedEnabled) {
-                    double bonus = 0.1 * (cfg.speedMultiplier - 1.0);
+                    // Clamp the multiplier: anything past ~3x gets flagged as
+                    // "moved too quickly" by the (integrated) server and kicks.
+                    float mult = clamp(cfg.speedMultiplier, 1.0f, 3.0f);
+                    double bonus = 0.1 * (mult - 1.0);
                     speedAttr.addOrUpdateTransientModifier(
                         new AttributeModifier(SPEED_ID, bonus, AttributeModifier.Operation.ADD_VALUE));
                 }
@@ -83,7 +91,7 @@ public final class MovementHacks {
                 p.getAbilities().mayfly = true;
                 if (mc.getConnection() != null) p.onUpdateAbilities();
             }
-            p.getAbilities().flyingSpeed = 0.05f * cfg.flySpeed;
+            p.getAbilities().flyingSpeed = 0.05f * clamp(cfg.flySpeed, 0.5f, 5.0f);
             flyWasActive = true;
         } else if (flyWasActive) {
             p.getAbilities().mayfly = false;
@@ -97,7 +105,9 @@ public final class MovementHacks {
         if (stepAttr != null) {
             stepAttr.removeModifier(STEP_ID);
             if (cfg.stepEnabled) {
-                double bonus = cfg.stepHeight - 0.6;
+                // Step >2.5 blocks looks like teleporting to the server and trips
+                // movement validation; keep the bonus within a safe range.
+                double bonus = clamp(cfg.stepHeight, 0.6f, 2.5f) - 0.6;
                 stepAttr.addOrUpdateTransientModifier(
                     new AttributeModifier(STEP_ID, bonus, AttributeModifier.Operation.ADD_VALUE));
             }
