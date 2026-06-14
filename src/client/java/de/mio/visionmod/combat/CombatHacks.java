@@ -4,6 +4,7 @@ import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.AxeItem;
@@ -20,6 +21,7 @@ public final class CombatHacks {
 
     private static int     killAuraCooldown    = 0;
     private static int     autoClickCooldown   = 0;
+    private static int     triggerBotCooldown  = 0;
     private static int     autoTotemCooldown   = 0;
     private static int     stunSlamCooldown    = 0;
     private static int     stunSlamRestoreSlot = -1;
@@ -37,8 +39,24 @@ public final class CombatHacks {
         tickStunSlam(mc, cfg);
         tickKillAura(mc, cfg);
         tickAutoClicker(mc, cfg);
+        tickTriggerBot(mc, cfg);
         tickAutoTotem(mc, cfg);
         tickAutoLog(mc, cfg);
+    }
+
+    // ── TriggerBot ──────────────────────────────────────────────────────────────
+    // Attacks whatever living entity is under the crosshair, no mouse button needed.
+
+    private static void tickTriggerBot(Minecraft mc, VisionConfig cfg) {
+        if (!cfg.triggerBotEnabled || mc.screen != null || mc.gameMode == null) return;
+        if (triggerBotCooldown > 0) { triggerBotCooldown--; return; }
+        if (mc.player.getAttackStrengthScale(0f) < 0.9f) return;
+        Entity crosshair = mc.crosshairPickEntity;
+        if (crosshair instanceof LivingEntity le && le.isAlive() && le != mc.player) {
+            mc.gameMode.attack(mc.player, crosshair);
+            mc.player.swing(InteractionHand.MAIN_HAND);
+            triggerBotCooldown = Math.max(1, 20 / Math.max(1, cfg.triggerBotCps));
+        }
     }
 
     // ── Mace Damage ───────────────────────────────────────────────────────────

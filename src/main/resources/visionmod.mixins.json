@@ -15,7 +15,8 @@
     "FoodDataMixin",
     "MovementSpeedMixin",
     "EffectHandlerMixin",
-    "FallHandlerMixin"
+    "FallHandlerMixin",
+    "BetterTabMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -241,6 +241,8 @@ public class VisionModClient implements ClientModInitializer {
             case "killAura"      -> c.killAuraEnabled       = !c.killAuraEnabled;
             case "maceDmg"       -> c.maceDmgEnabled        = !c.maceDmgEnabled;
             case "maceDmgClassic"-> c.maceDmgClassicEnabled = !c.maceDmgClassicEnabled;
+            case "reach"         -> c.reachEnabled          = !c.reachEnabled;
+            case "triggerBot"    -> c.triggerBotEnabled     = !c.triggerBotEnabled;
             case "criticals"     -> c.criticalsEnabled      = !c.criticalsEnabled;
             case "autoClicker"   -> c.autoClickerEnabled    = !c.autoClickerEnabled;
             case "velocity"      -> c.velocityEnabled       = !c.velocityEnabled;
@@ -258,6 +260,12 @@ public class VisionModClient implements ClientModInitializer {
             case "surround"      -> c.surroundEnabled       = !c.surroundEnabled;
             case "safeWalk"      -> c.safeWalkEnabled       = !c.safeWalkEnabled;
             case "invMove"       -> c.invMoveEnabled        = !c.invMoveEnabled;
+            case "spider"        -> c.spiderEnabled         = !c.spiderEnabled;
+            case "antiVoid"      -> c.antiVoidEnabled       = !c.antiVoidEnabled;
+            case "autoWalk"      -> c.autoWalkEnabled       = !c.autoWalkEnabled;
+            case "glide"         -> c.glideEnabled          = !c.glideEnabled;
+            case "fastLadder"    -> c.fastLadderEnabled     = !c.fastLadderEnabled;
+            case "autoTool"      -> c.autoToolEnabled       = !c.autoToolEnabled;
             case "autoEat"       -> c.autoEatEnabled        = !c.autoEatEnabled;
             case "antiHunger"    -> c.antiHungerEnabled     = !c.antiHungerEnabled;
             case "antiPoison"    -> c.antiPoisonEnabled     = !c.antiPoisonEnabled;
@@ -272,6 +280,7 @@ public class VisionModClient implements ClientModInitializer {
             case "susChunks"     -> c.susChunksEnabled      = !c.susChunksEnabled;
             case "nuker"         -> c.nukerEnabled          = !c.nukerEnabled;
             case "stunSlam"      -> c.stunSlamEnabled       = !c.stunSlamEnabled;
+            case "betterTab"     -> c.betterTabEnabled      = !c.betterTabEnabled;
             default -> { return; }
         }
         VisionConfig.save();

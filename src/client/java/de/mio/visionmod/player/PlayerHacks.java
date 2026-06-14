@@ -7,6 +7,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
@@ -82,6 +83,21 @@ public final class PlayerHacks {
         }
 
         if (mc.screen != null) return;
+
+        // ── AutoTool (switch to the fastest tool while mining) ────────────────
+        if (cfg.autoToolEnabled && mc.options.keyAttack.isDown()
+                && mc.hitResult instanceof BlockHitResult bhr && mc.level != null) {
+            var state = mc.level.getBlockState(bhr.getBlockPos());
+            if (!state.isAir()) {
+                int best = -1;
+                float bestSpeed = 1.0f;
+                for (int i = 0; i < 9; i++) {
+                    float sp = mc.player.getInventory().getItem(i).getDestroySpeed(state);
+                    if (sp > bestSpeed) { bestSpeed = sp; best = i; }
+                }
+                if (best >= 0) mc.player.getInventory().selected = best;
+            }
+        }
 
         // ── AutoEat ───────────────────────────────────────────────────────────
         if (cfg.autoEatEnabled) {

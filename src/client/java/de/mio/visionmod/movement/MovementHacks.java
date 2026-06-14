@@ -21,12 +21,15 @@ public final class MovementHacks {
 
     private static final Identifier SPEED_ID    = Identifier.fromNamespaceAndPath("visionmod", "speed");
     private static final Identifier STEP_ID     = Identifier.fromNamespaceAndPath("visionmod", "step");
+    private static final Identifier REACH_ID    = Identifier.fromNamespaceAndPath("visionmod", "reach");
     private static int scaffoldCooldown = 0;
     private static int surroundCooldown = 0;
     private static boolean flyWasActive = false;
+    private static boolean autoWalkActive = false;
 
     public static void resetOnDisconnect() {
         flyWasActive     = false;
+        autoWalkActive   = false;
         scaffoldCooldown = 0;
         surroundCooldown = 0;
     }
@@ -80,6 +83,26 @@ public final class MovementHacks {
             if (speedAttr != null) speedAttr.removeModifier(SPEED_ID);
         }
 
+        // ── Reach (entity interaction range) ──────────────────────────────────
+        AttributeInstance reachAttr = p.getAttribute(Attributes.ENTITY_INTERACTION_RANGE);
+        if (reachAttr != null) {
+            reachAttr.removeModifier(REACH_ID);
+            if (cfg.reachEnabled) {
+                double bonus = clamp(cfg.reachDistance, 3.0f, 6.0f) - 3.0;
+                reachAttr.addOrUpdateTransientModifier(
+                    new AttributeModifier(REACH_ID, bonus, AttributeModifier.Operation.ADD_VALUE));
+            }
+        }
+
+        // ── AutoWalk (hold forward) ───────────────────────────────────────────
+        if (cfg.autoWalkEnabled && mc.screen == null) {
+            mc.options.keyUp.setDown(true);
+            autoWalkActive = true;
+        } else if (autoWalkActive) {
+            mc.options.keyUp.setDown(false);
+            autoWalkActive = false;
+        }
+
         if (mc.screen != null) {
             // Only speed/sprint allowed with invMove when screen is open, rest skipped
             return;
@@ -117,6 +140,30 @@ public final class MovementHacks {
         if (cfg.jesusEnabled && p.isInWater()) {
             Vec3 vel = p.getDeltaMovement();
             if (vel.y < 0) p.setDeltaMovement(vel.x, 0.1, vel.z);
+        }
+
+        // ── Spider (climb walls) ──────────────────────────────────────────────
+        if (cfg.spiderEnabled && p.horizontalCollision && !p.onGround()) {
+            Vec3 vel = p.getDeltaMovement();
+            p.setDeltaMovement(vel.x, 0.2, vel.z);
+        }
+
+        // ── FastLadder (climb faster) ─────────────────────────────────────────
+        if (cfg.fastLadderEnabled && p.onClimbable()) {
+            Vec3 vel = p.getDeltaMovement();
+            if (vel.y > 0) p.setDeltaMovement(vel.x, 0.234, vel.z);
+        }
+
+        // ── Glide (slow descent) ──────────────────────────────────────────────
+        if (cfg.glideEnabled && !p.onGround()) {
+            Vec3 vel = p.getDeltaMovement();
+            if (vel.y < -0.1) p.setDeltaMovement(vel.x, -0.1, vel.z);
+        }
+
+        // ── AntiVoid (hover above the void) ───────────────────────────────────
+        if (cfg.antiVoidEnabled && p.getY() < -70 && p.getDeltaMovement().y < 0) {
+            Vec3 vel = p.getDeltaMovement();
+            p.setDeltaMovement(vel.x, 0.0, vel.z);
         }
 
         // ── Scaffold ──────────────────────────────────────────────────────────

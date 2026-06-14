@@ -37,6 +37,7 @@ public class VisionConfigScreen extends Screen {
     private static final int MOD_H   = 21;
     private static final int S_ROW   = 19;
     private static final int E_ROW   = 17;
+    private static final int SEARCH_H = 16;
 
     private static final int[] PALETTE = {
         0xFFFF3333, 0xFFFF8800, 0xFFFFDD00, 0xFF33FF44,
@@ -70,6 +71,8 @@ public class VisionConfigScreen extends Screen {
         new ModDef("maceDmg",        "Mace Boost",        "Auto-Sprung + Mace-Angriff",  "Combat"),
         new ModDef("maceDmgClassic", "Mace Classic",      "Mace-Angriff beim Fallen",    "Combat"),
         new ModDef("stunSlam",       "StunSlam",          "Shield-Stun beim Fallen",     "Combat"),
+        new ModDef("reach",          "Reach Extend",      "Erhöhte Interaktions-Reichweite","Combat"),
+        new ModDef("triggerBot",     "Trigger Assist",    "Auto-Angriff am Fadenkreuz",  "Combat"),
         // Movement
         new ModDef("sprint",      "Sprint Assist",      "Lauf-Optimierung",            "Movement"),
         new ModDef("fly",         "Flight Mode",        "Flug-Modus",                  "Movement"),
@@ -82,6 +85,11 @@ public class VisionConfigScreen extends Screen {
         new ModDef("surround",    "Block Surround",     "Blöcke um den Spieler",       "Movement"),
         new ModDef("safeWalk",    "Edge Protection",    "Nicht von Kanten fallen",     "Movement"),
         new ModDef("invMove",     "Inventory Move",     "Bewegung im Inventar",        "Movement"),
+        new ModDef("spider",      "Wall Climb",         "Wände hochklettern",          "Movement"),
+        new ModDef("antiVoid",    "Void Protection",    "Schweben über der Leere",     "Movement"),
+        new ModDef("autoWalk",    "Auto Walk",          "Automatisch vorwärts laufen", "Movement"),
+        new ModDef("glide",       "Slow Descent",       "Langsames Fallen",            "Movement"),
+        new ModDef("fastLadder",  "Fast Climb",         "Schneller Leitern hoch",      "Movement"),
         // Player
         new ModDef("autoEat",     "Nutrition Assist",   "Automatische Nahrung",        "Player"),
         new ModDef("antiHunger",  "Saturation Keep",    "Hunger-Stabilisierung",       "Player"),
@@ -89,6 +97,7 @@ public class VisionConfigScreen extends Screen {
         new ModDef("antiAfk",     "Idle Prevention",    "Inaktivitäts-Schutz",         "Player"),
         new ModDef("autoRespawn", "Auto Respawn",       "Automatisch respawnen",       "Player"),
         new ModDef("chestStealer","Item Transfer",      "Kisten automatisch leeren",   "Player"),
+        new ModDef("autoTool",    "Tool Switch",        "Bestes Werkzeug beim Abbau",  "Player"),
         // Render
         new ModDef("fullbright",  "Light Boost",        "Maximale Sichtweite",         "Render"),
         new ModDef("tracers",     "Path Display",       "Linien zu Zielen",            "Render"),
@@ -98,6 +107,7 @@ public class VisionConfigScreen extends Screen {
         new ModDef("noWeather",   "Weather Control",    "Wetter ausblenden",           "Render"),
         new ModDef("antiBlind",   "Vision Clarity",     "Sicht-Optimierung",           "Render"),
         new ModDef("coords",      "Koordinaten",        "XYZ auf dem HUD",             "Render"),
+        new ModDef("betterTab",   "Better Tab",         "Alle Spieler in der Tab-Liste","Render"),
         // World
         new ModDef("susChunks",   "Chunk Analyzer",     "Chunk-Analyse",               "World"),
         new ModDef("nuker",       "Area Mining",        "Bereichs-Abbau",              "World"),
@@ -117,6 +127,8 @@ public class VisionConfigScreen extends Screen {
     private int    maxRScroll  = 0;
     private String rebindingKey = null;
     private boolean hoverLeft  = false;
+    private String searchQuery = "";
+    private EditBox searchBox;
 
     private final List<int[]>    hits       = new ArrayList<>();
     private final List<Runnable> hitActions = new ArrayList<>();
@@ -136,6 +148,16 @@ public class VisionConfigScreen extends Screen {
         ph = Math.min(height - 16, 284);
         px = (width  - pw) / 2;
         py = (height - ph) / 2;
+
+        // Search box at the top of the left module list.
+        searchBox = new EditBox(font, px + 3, py + HDR_H + 2, LEFT_W - 6, 12, Component.empty());
+        searchBox.setBordered(false);
+        searchBox.setMaxLength(48);
+        searchBox.setTextColor(C_TEXT);
+        searchBox.setHint(Component.literal("§8Suchen..."));
+        searchBox.setValue(searchQuery);
+        searchBox.setResponder(v -> searchQuery = v == null ? "" : v.toLowerCase(java.util.Locale.ROOT));
+        addRenderableWidget(searchBox);
 
         if ("entityEsp".equals(selMod)) {
             int ex = px + LEFT_W + 5;
@@ -170,6 +192,14 @@ public class VisionConfigScreen extends Screen {
         g.fill(px, py, px + pw, py + HDR_H, C_HDR);
         g.fill(px, py + HDR_H - 1, px + pw, py + HDR_H, C_IND_ON);
         g.drawString(font, "§l§2VISUAL §l§7IMPROVEMENT", px + 7, py + 6, C_ACCENT, false);
+        int active = countActive();
+        g.drawString(font, "§8[§a" + active + "§8]",
+                px + 14 + font.width("VISUAL IMPROVEMENT"), py + 6, C_DIM, false);
+        // PANIC quick button: disables every module instantly.
+        int pbW = 46;
+        int pbX = px + pw - 38 - pbW;
+        drawBtn(g, pbX, py + 3, pbW, 14, "§c§lPANIC", mx, my);
+        hit(pbX, py + 3, pbW, 14, () -> { VisionConfig.get().resetFeatureToggles(); VisionConfig.save(); });
         g.drawString(font, "§8ESC", px + pw - font.width("ESC") - 8, py + 6, C_DIM, false);
         hit(px + pw - 36, py, 36, HDR_H, () -> { VisionConfig.save(); onClose(); });
 
@@ -196,31 +226,53 @@ public class VisionConfigScreen extends Screen {
     // ══════════════════════════════════════ LEFT PANEL ════════════════════════
 
     private void renderLeft(GuiGraphics g, int mx, int my, int lx, int ly, int lw, int lh) {
-        int y = ly - leftScroll;
+        int top = ly + SEARCH_H;
+        int vh  = lh - SEARCH_H;
+        int y = top - leftScroll;
         for (String cat : CATS) {
-            if (vis(y, CAT_H, ly, lh)) {
+            List<ModDef> catMods = new ArrayList<>();
+            for (ModDef m : MODS) if (m.cat().equals(cat) && matchesSearch(m)) catMods.add(m);
+            if (catMods.isEmpty()) continue;
+
+            if (vis(y, CAT_H, top, vh)) {
                 g.fill(lx, y, lx + lw, y + CAT_H, C_CAT_HDR);
                 g.drawString(font, cat, lx + 6, y + 3, C_DIM, false);
             }
             y += CAT_H;
-            for (ModDef m : MODS) {
-                if (!m.cat().equals(cat)) continue;
-                if (vis(y, MOD_H, ly, lh)) {
+            for (ModDef m : catMods) {
+                if (vis(y, MOD_H, top, vh)) {
                     boolean sel   = m.id().equals(selMod);
-                    boolean hover = inRect(mx, my, lx, y, lw, MOD_H);
+                    boolean hover = inRect(mx, my, lx, Math.max(y, top), lw, MOD_H);
                     boolean on    = isOn(m.id());
                     if (sel)        g.fill(lx, y, lx + lw, y + MOD_H, C_SEL_BG);
                     else if (hover) g.fill(lx, y, lx + lw, y + MOD_H, 0x18FFFFFF);
                     g.fill(lx, y + 4, lx + 3, y + MOD_H - 4, on ? C_IND_ON : C_IND_OFF);
                     g.drawString(font, m.name(), lx + 8, y + 7, on ? C_TEXT : C_DIM, false);
                     final String mid = m.id();
-                    final int    fy  = y;
-                    hit(lx, fy, lw, MOD_H, () -> selMod(mid));
+                    final int hy = Math.max(y, top);            // clamp click area below search bar
+                    hit(lx, hy, lw, y + MOD_H - hy, () -> selMod(mid));
                 }
                 y += MOD_H;
             }
             y += 3;
         }
+
+        // Search-bar background, drawn last so scrolled rows are masked beneath it.
+        g.fill(lx, ly, lx + lw, ly + SEARCH_H, C_LEFT_BG);
+        g.fill(lx, ly + SEARCH_H - 1, lx + lw, ly + SEARCH_H, C_DIVIDER);
+    }
+
+    private int countActive() {
+        int n = 0;
+        for (String id : VisionConfig.TOGGLEABLE_MODULES) if (isOn(id)) n++;
+        return n;
+    }
+
+    private boolean matchesSearch(ModDef m) {
+        if (searchQuery == null || searchQuery.isEmpty()) return true;
+        return m.name().toLowerCase(java.util.Locale.ROOT).contains(searchQuery)
+            || m.id().toLowerCase(java.util.Locale.ROOT).contains(searchQuery)
+            || m.cat().toLowerCase(java.util.Locale.ROOT).contains(searchQuery);
     }
 
     // ══════════════════════════════════════ RIGHT PANEL ═══════════════════════
@@ -429,6 +481,26 @@ public class VisionConfigScreen extends Screen {
             sToggle(g, "Inventory Move",   c.invMoveEnabled,     () -> { c.invMoveEnabled     = !c.invMoveEnabled;     save(); });
             sDesc(g, "Erlaubt Bewegung während Inventar geöffnet ist.");
         }
+        case "spider"     -> {
+            sToggle(g, "Wall Climb",       c.spiderEnabled,      () -> { c.spiderEnabled      = !c.spiderEnabled;      save(); });
+            sDesc(g, "Klettert an Wänden hoch wie eine Spinne.");
+        }
+        case "antiVoid"   -> {
+            sToggle(g, "Void Protection",  c.antiVoidEnabled,    () -> { c.antiVoidEnabled    = !c.antiVoidEnabled;    save(); });
+            sDesc(g, "Stoppt den Fall knapp über der Leere.");
+        }
+        case "autoWalk"   -> {
+            sToggle(g, "Auto Walk",        c.autoWalkEnabled,    () -> { c.autoWalkEnabled    = !c.autoWalkEnabled;    save(); });
+            sDesc(g, "Hält die Vorwärts-Taste automatisch.");
+        }
+        case "glide"      -> {
+            sToggle(g, "Slow Descent",     c.glideEnabled,       () -> { c.glideEnabled       = !c.glideEnabled;       save(); });
+            sDesc(g, "Verlangsamt das Fallen (wie Elytra-Gleiten).");
+        }
+        case "fastLadder" -> {
+            sToggle(g, "Fast Climb",       c.fastLadderEnabled,  () -> { c.fastLadderEnabled  = !c.fastLadderEnabled;  save(); });
+            sDesc(g, "Klettert schneller an Leitern/Ranken hoch.");
+        }
         case "autoLog"    -> {
             sToggle(g, "Auto Disconnect",  c.autoLogEnabled,     () -> { c.autoLogEnabled     = !c.autoLogEnabled;     save(); });
             sFloat(g, "HP Schwelle",       c.autoLogHp,
@@ -453,6 +525,21 @@ public class VisionConfigScreen extends Screen {
             sDesc(g, "Stunnt Schild wenn vom Angriff aus der Luft.");
             sDesc(g, "Wechselt automatisch zur Axt im Hotbar.");
             sDesc(g, "Danach wird vorheriger Slot wiederhergestellt.");
+        }
+        case "reach"      -> {
+            sToggle(g, "Reach Extend",     c.reachEnabled,       () -> { c.reachEnabled       = !c.reachEnabled;       save(); });
+            sFloat(g, "Reichweite",        c.reachDistance,
+                () -> { c.reachDistance = Math.max(3.0f, c.reachDistance - 0.25f); save(); },
+                () -> { c.reachDistance = Math.min(6.0f, c.reachDistance + 0.25f); save(); });
+            sDesc(g, "Erhöht die Interaktions-Reichweite.");
+            sDesc(g, "Vanilla = 3.0. Server kann begrenzen.");
+        }
+        case "triggerBot" -> {
+            sToggle(g, "Trigger Assist",   c.triggerBotEnabled,  () -> { c.triggerBotEnabled  = !c.triggerBotEnabled;  save(); });
+            sInt(g, "CPS", c.triggerBotCps, "", 1, 20,
+                () -> { c.triggerBotCps = Math.max(1,  c.triggerBotCps - 1); save(); },
+                () -> { c.triggerBotCps = Math.min(20, c.triggerBotCps + 1); save(); });
+            sDesc(g, "Greift Ziel am Fadenkreuz automatisch an.");
         }
 
         // ── Player ───────────────────────────────────────────────────────────
@@ -486,6 +573,11 @@ public class VisionConfigScreen extends Screen {
         case "chestStealer" -> {
             sToggle(g, "Item Transfer",    c.chestStealerEnabled,() -> { c.chestStealerEnabled = !c.chestStealerEnabled; save(); });
             sDesc(g, "Leert Kisten automatisch in dein Inventar.");
+        }
+        case "autoTool"   -> {
+            sToggle(g, "Tool Switch",      c.autoToolEnabled,    () -> { c.autoToolEnabled    = !c.autoToolEnabled;    save(); });
+            sDesc(g, "Wählt beim Abbau das schnellste Werkzeug.");
+            sDesc(g, "Nur während du angreifst/abbaust.");
         }
 
         // ── Render ───────────────────────────────────────────────────────────
@@ -527,6 +619,11 @@ public class VisionConfigScreen extends Screen {
         case "coords"     -> {
             sToggle(g, "Koordinaten",      c.coordsHudEnabled,   () -> { c.coordsHudEnabled   = !c.coordsHudEnabled;   save(); });
             sDesc(g, "Zeigt XYZ + Himmelsrichtung auf HUD.");
+        }
+        case "betterTab"  -> {
+            sToggle(g, "Better Tab",       c.betterTabEnabled,   () -> { c.betterTabEnabled   = !c.betterTabEnabled;   save(); });
+            sDesc(g, "Zeigt ALLE Spieler in der Tab-Liste.");
+            sDesc(g, "Hebt das Vanilla-Limit von 80 auf.");
         }
 
         // ── World ────────────────────────────────────────────────────────────
@@ -860,6 +957,8 @@ public class VisionConfigScreen extends Screen {
             case "itemEsp"     -> c.itemEspEnabled;
             case "storageEsp"  -> c.storageEspEnabled;
             case "killAura"    -> c.killAuraEnabled;
+            case "reach"       -> c.reachEnabled;
+            case "triggerBot"  -> c.triggerBotEnabled;
             case "criticals"   -> c.criticalsEnabled;
             case "autoClicker" -> c.autoClickerEnabled;
             case "velocity"    -> c.velocityEnabled;
@@ -876,6 +975,12 @@ public class VisionConfigScreen extends Screen {
             case "surround"    -> c.surroundEnabled;
             case "safeWalk"    -> c.safeWalkEnabled;
             case "invMove"     -> c.invMoveEnabled;
+            case "spider"      -> c.spiderEnabled;
+            case "antiVoid"    -> c.antiVoidEnabled;
+            case "autoWalk"    -> c.autoWalkEnabled;
+            case "glide"       -> c.glideEnabled;
+            case "fastLadder"  -> c.fastLadderEnabled;
+            case "autoTool"    -> c.autoToolEnabled;
             case "autoLog"     -> c.autoLogEnabled;
             case "maceDmg"         -> c.maceDmgEnabled;
             case "maceDmgClassic"  -> c.maceDmgClassicEnabled;
@@ -894,6 +999,7 @@ public class VisionConfigScreen extends Screen {
             case "noWeather"   -> c.noWeatherEnabled;
             case "antiBlind"   -> c.antiBlindEnabled;
             case "coords"      -> c.coordsHudEnabled;
+            case "betterTab"   -> c.betterTabEnabled;
             case "susChunks"   -> c.susChunksEnabled;
             case "nuker"       -> c.nukerEnabled;
             case "session"     -> c.resetOnRelog || c.resetOnRestart;

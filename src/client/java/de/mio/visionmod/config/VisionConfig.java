@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.*;
@@ -101,6 +102,10 @@ public class VisionConfig {
     public float   autoLogHp          = 6.0f;
     public boolean stunSlamEnabled    = false;
     public float   stunSlamMinFall    = 3.0f;  // min fallDistance blocks to trigger
+    public boolean reachEnabled       = false;
+    public float   reachDistance      = 3.5f;  // entity interaction range (vanilla 3.0)
+    public boolean triggerBotEnabled  = false;
+    public int     triggerBotCps      = 10;
 
     // === MOVEMENT ===
     public boolean sprintEnabled      = false;
@@ -117,6 +122,11 @@ public class VisionConfig {
     public boolean surroundEnabled    = false;
     public boolean safeWalkEnabled    = false;
     public boolean invMoveEnabled     = false;
+    public boolean spiderEnabled      = false;
+    public boolean antiVoidEnabled    = false;
+    public boolean autoWalkEnabled    = false;
+    public boolean glideEnabled       = false;
+    public boolean fastLadderEnabled  = false;
 
     // === PLAYER ===
     public boolean autoEatEnabled     = false;
@@ -127,6 +137,7 @@ public class VisionConfig {
     public int     antiAfkInterval    = 200;
     public boolean autoRespawnEnabled = false;
     public boolean chestStealerEnabled = false;
+    public boolean autoToolEnabled    = false;
 
     // === RENDER EXTRAS ===
     public int     keyPanic           = 0;   // disable all + disconnect + fake crash + halt(1)
@@ -138,20 +149,23 @@ public class VisionConfig {
 
     public static final List<String> TOGGLEABLE_MODULES = Arrays.asList(
         "entityEsp", "entityGlow", "healthBar", "oreEsp", "itemEsp", "storageEsp",
-        "killAura", "maceDmg", "maceDmgClassic", "criticals", "autoClicker",
+        "killAura", "maceDmg", "maceDmgClassic", "stunSlam", "reach", "triggerBot",
+        "criticals", "autoClicker",
         "velocity", "autoTotem", "noHurtCam", "autoLog",
         "sprint", "fly", "speed", "noFall", "step", "jesus", "noSlow",
         "scaffold", "surround", "safeWalk", "invMove",
+        "spider", "antiVoid", "autoWalk", "glide", "fastLadder",
         "autoEat", "antiHunger", "antiPoison", "antiAfk", "autoRespawn", "chestStealer",
-        "fullbright", "noFog", "noWeather", "antiBlind", "coords",
-        "susChunks", "nuker",
-        "stunSlam"
+        "autoTool",
+        "fullbright", "noFog", "noWeather", "antiBlind", "coords", "betterTab",
+        "susChunks", "nuker"
     );
     public float   zoomFov            = 15f;
     public boolean noFogEnabled       = false;
     public boolean noWeatherEnabled   = false;
     public boolean antiBlindEnabled   = false;
     public boolean coordsHudEnabled   = false;
+    public boolean betterTabEnabled   = false;  // Meteor-style Better Tab: show all players (no 80 cap)
 
     // === WORLD ===
     public boolean nukerEnabled       = false;
@@ -353,48 +367,23 @@ public class VisionConfig {
         return FabricLoader.getInstance().getConfigDir().resolve("visionmod.json");
     }
 
-    /** Sets every feature toggle to false (keeps settings like colors, radii, keybinds intact). */
+    // Display preferences (not "hacks") that the panic button must NOT touch.
+    private static final Set<String> RESET_SKIP = Set.of("globalLinesEnabled");
+
+    /**
+     * Sets every feature toggle to false (keeps settings like colors, radii, keybinds intact).
+     * Reflection-driven: every public {@code boolean *Enabled} field is cleared, so any newly
+     * added module is automatically covered by both panic buttons without extra wiring.
+     */
     public void resetFeatureToggles() {
-        entityEspEnabled   = false;
-        entityGlowEnabled  = false;
-        oreEspEnabled      = false;
-        fullbrightEnabled  = false;
-        itemEspEnabled     = false;
-        storageEspEnabled  = false;
-        susChunksEnabled   = false;
+        for (Field f : getClass().getFields()) {
+            if (f.getType() == boolean.class
+                    && f.getName().endsWith("Enabled")
+                    && !RESET_SKIP.contains(f.getName())) {
+                try { f.setBoolean(this, false); } catch (IllegalAccessException ignored) {}
+            }
+        }
         showAllChunkBorders = false;
-        maceDmgEnabled         = false;
-        maceDmgClassicEnabled  = false;
-        stunSlamEnabled        = false;
-        killAuraEnabled        = false;
-        criticalsEnabled   = false;
-        autoClickerEnabled = false;
-        velocityEnabled    = false;
-        autoTotemEnabled   = false;
-        noHurtCamEnabled   = false;
-        sprintEnabled      = false;
-        flyEnabled         = false;
-        speedEnabled       = false;
-        noFallEnabled      = false;
-        stepEnabled        = false;
-        jesusEnabled       = false;
-        noSlowEnabled      = false;
-        scaffoldEnabled    = false;
-        surroundEnabled    = false;
-        safeWalkEnabled    = false;
-        invMoveEnabled     = false;
-        autoEatEnabled     = false;
-        antiHungerEnabled  = false;
-        antiPoisonEnabled  = false;
-        antiAfkEnabled     = false;
-        autoRespawnEnabled = false;
-        chestStealerEnabled = false;
-        noFogEnabled       = false;
-        noWeatherEnabled   = false;
-        antiBlindEnabled   = false;
-        nukerEnabled       = false;
-        coordsHudEnabled   = false;
-        autoLogEnabled     = false;
     }
 
     /** Parse "#AARRGGBB" or "#RRGGBB" to packed ARGB int. */
