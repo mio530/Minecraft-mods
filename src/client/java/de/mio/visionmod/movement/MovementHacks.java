@@ -29,9 +29,13 @@ public final class MovementHacks {
 
     public static void resetOnDisconnect() {
         flyWasActive     = false;
-        autoWalkActive   = false;
         scaffoldCooldown = 0;
         surroundCooldown = 0;
+        // Release the forward key if AutoWalk was holding it, else it stays stuck.
+        if (autoWalkActive) {
+            try { Minecraft.getInstance().options.keyUp.setDown(false); } catch (Exception ignored) {}
+            autoWalkActive = false;
+        }
     }
 
     private static float clamp(float v, float min, float max) {

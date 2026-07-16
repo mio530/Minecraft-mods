@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -32,6 +33,22 @@ public class CameraSetupMixin {
 
     @Unique
     private static Entity visionmod_lastEntity = null;
+
+    /**
+     * Layer 0 (setup HEAD, name-independent): if setup() is called with a null
+     * focus entity, substitute the last known one (or the player) before the field
+     * is ever assigned. This targets the stable "setup" name and the Entity argument,
+     * so it works regardless of what the entity getter is called in this mapping.
+     */
+    @ModifyVariable(method = "setup", at = @At("HEAD"), argsOnly = true, require = 0)
+    private Entity visionmod_nonNullFocus(Entity focused) {
+        if (focused != null) return focused;
+        Entity fb = visionmod_lastEntity;
+        if (fb == null) {
+            try { fb = Minecraft.getInstance().player; } catch (Exception ignored) {}
+        }
+        return fb != null ? fb : focused;
+    }
 
     /** Layer 1: track the last valid entity from Camera.setup(). */
     @Inject(method = "setup", at = @At("TAIL"), require = 0)
