@@ -6,6 +6,7 @@ import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.AxeItem;
@@ -59,6 +60,7 @@ public final class CombatHacks {
         suppressNoFall = false; // each mace method sets it if needed this tick
         tickMaceDmg(mc, cfg);
         tickMaceDmgClassic(mc, cfg);
+        tickAutoMace(mc, cfg);
         tickStunSlam(mc, cfg);
         tickKillAura(mc, cfg);
         tickAutoClicker(mc, cfg);
@@ -137,6 +139,40 @@ public final class CombatHacks {
                         && (e instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs))
                 .stream().min(Comparator.comparingDouble(mc.player::distanceTo))
                 .ifPresent(t -> mc.gameMode.attack(mc.player, t));
+    }
+
+    // ── Auto Mace (smooth aim) ──────────────────────────────────────────────────
+    // While holding a mace, smoothly rotates the view toward the nearest target so
+    // the mace slam lands. Turns at most autoMaceSpeed degrees per tick (no snap).
+
+    private static void tickAutoMace(Minecraft mc, VisionConfig cfg) {
+        if (!cfg.autoMaceEnabled || mc.screen != null || mc.player == null || mc.level == null) return;
+        if (!mc.player.getMainHandItem().is(Items.MACE)) return;
+
+        double range = cfg.autoMaceRange;
+        LivingEntity target = mc.level.getEntitiesOfClass(LivingEntity.class,
+                mc.player.getBoundingBox().inflate(range),
+                e -> e != mc.player && e.isAlive()
+                        && mc.player.distanceTo(e) <= range
+                        && (e instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs))
+                .stream().min(Comparator.comparingDouble(mc.player::distanceTo)).orElse(null);
+        if (target == null) return;
+
+        Vec3 delta = target.getEyePosition().subtract(mc.player.getEyePosition());
+        double horiz = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+        float wantYaw   = (float) Math.toDegrees(Math.atan2(-delta.x, delta.z));
+        float wantPitch = (float) Math.toDegrees(-Math.atan2(delta.y, horiz));
+
+        float step = Math.max(1f, cfg.autoMaceSpeed);
+        mc.player.setYRot(approachAngle(mc.player.getYRot(), wantYaw, step));
+        mc.player.setXRot(Mth.clamp(approachAngle(mc.player.getXRot(), wantPitch, step), -90f, 90f));
+    }
+
+    /** Moves cur toward target by at most maxStep degrees, on the shortest path. */
+    private static float approachAngle(float cur, float target, float maxStep) {
+        float diff = Mth.wrapDegrees(target - cur);
+        diff = Mth.clamp(diff, -maxStep, maxStep);
+        return cur + diff;
     }
 
     // ── StunSlam ──────────────────────────────────────────────────────────────

@@ -71,6 +71,7 @@ public class VisionConfigScreen extends Screen {
         new ModDef("maceDmg",        "Mace Boost",        "Auto-Sprung + Mace-Angriff",  "Combat"),
         new ModDef("maceDmgClassic", "Mace Classic",      "Mace-Angriff beim Fallen",    "Combat"),
         new ModDef("stunSlam",       "StunSlam",          "Shield-Stun beim Fallen",     "Combat"),
+        new ModDef("autoMace",       "Auto Mace",         "Sanftes Anvisieren mit Mace", "Combat"),
         new ModDef("reach",          "Reach Extend",      "Erhöhte Interaktions-Reichweite","Combat"),
         new ModDef("triggerBot",     "Trigger Assist",    "Auto-Angriff am Fadenkreuz",  "Combat"),
         // Movement
@@ -526,6 +527,17 @@ public class VisionConfigScreen extends Screen {
             sDesc(g, "Wechselt automatisch zur Axt im Hotbar.");
             sDesc(g, "Danach wird vorheriger Slot wiederhergestellt.");
         }
+        case "autoMace"   -> {
+            sToggle(g, "Auto Mace",        c.autoMaceEnabled,    () -> { c.autoMaceEnabled    = !c.autoMaceEnabled;    save(); });
+            sFloat(g, "Reichweite",        c.autoMaceRange,
+                () -> { c.autoMaceRange = Math.max(2.0f, c.autoMaceRange - 0.5f); save(); },
+                () -> { c.autoMaceRange = Math.min(8.0f, c.autoMaceRange + 0.5f); save(); });
+            sFloat(g, "Dreh-Speed °/Tick", c.autoMaceSpeed,
+                () -> { c.autoMaceSpeed = Math.max(5f,  c.autoMaceSpeed - 5f); save(); },
+                () -> { c.autoMaceSpeed = Math.min(90f, c.autoMaceSpeed + 5f); save(); });
+            sDesc(g, "Dreht sanft zum nächsten Gegner (nur mit Mace).");
+            sDesc(g, "Niedriger = weicher/natürlicher.");
+        }
         case "reach"      -> {
             sToggle(g, "Reach Extend",     c.reachEnabled,       () -> { c.reachEnabled       = !c.reachEnabled;       save(); });
             sFloat(g, "Reichweite",        c.reachDistance,
@@ -957,6 +969,7 @@ public class VisionConfigScreen extends Screen {
             case "itemEsp"     -> c.itemEspEnabled;
             case "storageEsp"  -> c.storageEspEnabled;
             case "killAura"    -> c.killAuraEnabled;
+            case "autoMace"    -> c.autoMaceEnabled;
             case "reach"       -> c.reachEnabled;
             case "triggerBot"  -> c.triggerBotEnabled;
             case "criticals"   -> c.criticalsEnabled;

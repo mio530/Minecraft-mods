@@ -102,6 +102,9 @@ public class VisionConfig {
     public float   autoLogHp          = 6.0f;
     public boolean stunSlamEnabled    = false;
     public float   stunSlamMinFall    = 3.0f;  // min fallDistance blocks to trigger
+    public boolean autoMaceEnabled    = false;
+    public float   autoMaceRange      = 5.0f;
+    public float   autoMaceSpeed      = 25.0f; // max degrees turned per tick (lower = smoother)
     public boolean reachEnabled       = false;
     public float   reachDistance      = 3.5f;  // entity interaction range (vanilla 3.0)
     public boolean triggerBotEnabled  = false;
@@ -149,7 +152,7 @@ public class VisionConfig {
 
     public static final List<String> TOGGLEABLE_MODULES = Arrays.asList(
         "entityEsp", "entityGlow", "healthBar", "oreEsp", "itemEsp", "storageEsp",
-        "killAura", "maceDmg", "maceDmgClassic", "stunSlam", "reach", "triggerBot",
+        "killAura", "maceDmg", "maceDmgClassic", "stunSlam", "autoMace", "reach", "triggerBot",
         "criticals", "autoClicker",
         "velocity", "autoTotem", "noHurtCam", "autoLog",
         "sprint", "fly", "speed", "noFall", "step", "jesus", "noSlow",

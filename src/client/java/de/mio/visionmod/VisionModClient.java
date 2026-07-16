@@ -243,6 +243,7 @@ public class VisionModClient implements ClientModInitializer {
             case "killAura"      -> c.killAuraEnabled       = !c.killAuraEnabled;
             case "maceDmg"       -> c.maceDmgEnabled        = !c.maceDmgEnabled;
             case "maceDmgClassic"-> c.maceDmgClassicEnabled = !c.maceDmgClassicEnabled;
+            case "autoMace"      -> c.autoMaceEnabled       = !c.autoMaceEnabled;
             case "reach"         -> c.reachEnabled          = !c.reachEnabled;
             case "triggerBot"    -> c.triggerBotEnabled     = !c.triggerBotEnabled;
             case "criticals"     -> c.criticalsEnabled      = !c.criticalsEnabled;
