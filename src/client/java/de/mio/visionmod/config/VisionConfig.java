@@ -130,6 +130,8 @@ public class VisionConfig {
     public boolean autoWalkEnabled    = false;
     public boolean glideEnabled       = false;
     public boolean fastLadderEnabled  = false;
+    public boolean autoJumpEnabled    = false;
+    public boolean autoSneakEnabled   = false;
 
     // === PLAYER ===
     public boolean autoEatEnabled     = false;
@@ -141,6 +143,9 @@ public class VisionConfig {
     public boolean autoRespawnEnabled = false;
     public boolean chestStealerEnabled = false;
     public boolean autoToolEnabled    = false;
+    public boolean autoWeaponEnabled  = false;
+    public boolean autoArmorEnabled   = false;
+    public boolean noBobEnabled       = false;
 
     // === RENDER EXTRAS ===
     public int     keyPanic           = 0;   // disable all + disconnect + fake crash + halt(1)
@@ -157,10 +162,10 @@ public class VisionConfig {
         "velocity", "autoTotem", "noHurtCam", "autoLog",
         "sprint", "fly", "speed", "noFall", "step", "jesus", "noSlow",
         "scaffold", "surround", "safeWalk", "invMove",
-        "spider", "antiVoid", "autoWalk", "glide", "fastLadder",
+        "spider", "antiVoid", "autoWalk", "glide", "fastLadder", "autoJump", "autoSneak",
         "autoEat", "antiHunger", "antiPoison", "antiAfk", "autoRespawn", "chestStealer",
-        "autoTool",
-        "fullbright", "noFog", "noWeather", "antiBlind", "coords", "betterTab",
+        "autoTool", "autoWeapon", "autoArmor",
+        "fullbright", "noBob", "noFog", "noWeather", "antiBlind", "coords", "betterTab",
         "susChunks", "nuker"
     );
     public float   zoomFov            = 15f;

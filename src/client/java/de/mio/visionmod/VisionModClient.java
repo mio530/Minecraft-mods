@@ -268,7 +268,12 @@ public class VisionModClient implements ClientModInitializer {
             case "autoWalk"      -> c.autoWalkEnabled       = !c.autoWalkEnabled;
             case "glide"         -> c.glideEnabled          = !c.glideEnabled;
             case "fastLadder"    -> c.fastLadderEnabled     = !c.fastLadderEnabled;
+            case "autoJump"      -> c.autoJumpEnabled       = !c.autoJumpEnabled;
+            case "autoSneak"     -> c.autoSneakEnabled      = !c.autoSneakEnabled;
             case "autoTool"      -> c.autoToolEnabled       = !c.autoToolEnabled;
+            case "autoWeapon"    -> c.autoWeaponEnabled     = !c.autoWeaponEnabled;
+            case "autoArmor"     -> c.autoArmorEnabled      = !c.autoArmorEnabled;
+            case "noBob"         -> c.noBobEnabled          = !c.noBobEnabled;
             case "autoEat"       -> c.autoEatEnabled        = !c.autoEatEnabled;
             case "antiHunger"    -> c.antiHungerEnabled     = !c.antiHungerEnabled;
             case "antiPoison"    -> c.antiPoisonEnabled     = !c.antiPoisonEnabled;

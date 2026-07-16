@@ -12,6 +12,7 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
@@ -65,6 +66,7 @@ public final class CombatHacks {
         tickKillAura(mc, cfg);
         tickAutoClicker(mc, cfg);
         tickTriggerBot(mc, cfg);
+        tickAutoWeapon(mc, cfg);
         tickAutoTotem(mc, cfg);
         tickAutoLog(mc, cfg);
     }
@@ -301,6 +303,27 @@ public final class CombatHacks {
                 mc.gameMode.attack(mc.player, crosshair);
             }
             autoClickCooldown = Math.max(1, 20 / Math.max(1, cfg.autoClickerCps));
+        }
+    }
+
+    // ── AutoWeapon ──────────────────────────────────────────────────────────────
+    // While attacking a living entity, switch to the best melee weapon in the hotbar
+    // (sword preferred, then axe).
+
+    private static void tickAutoWeapon(Minecraft mc, VisionConfig cfg) {
+        if (!cfg.autoWeaponEnabled || mc.screen != null || mc.gameMode == null) return;
+        if (!mc.options.keyAttack.isDown()) return;
+        if (!(mc.crosshairPickEntity instanceof LivingEntity)) return;
+
+        int sword = -1, axe = -1;
+        for (int i = 0; i < 9; i++) {
+            var item = mc.player.getInventory().getItem(i).getItem();
+            if (item instanceof SwordItem) { sword = i; break; }
+            if (item instanceof AxeItem && axe < 0) axe = i;
+        }
+        int best = sword >= 0 ? sword : axe;
+        if (best >= 0 && best != mc.player.getInventory().selected) {
+            mc.player.getInventory().selected = best;
         }
     }
 

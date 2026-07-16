@@ -74,6 +74,7 @@ public class VisionConfigScreen extends Screen {
         new ModDef("autoMace",       "Auto Mace",         "Sanftes Anvisieren mit Mace", "Combat"),
         new ModDef("reach",          "Reach Extend",      "Erhöhte Interaktions-Reichweite","Combat"),
         new ModDef("triggerBot",     "Trigger Assist",    "Auto-Angriff am Fadenkreuz",  "Combat"),
+        new ModDef("autoWeapon",     "Weapon Switch",     "Beste Waffe beim Angriff",    "Combat"),
         // Movement
         new ModDef("sprint",      "Sprint Assist",      "Lauf-Optimierung",            "Movement"),
         new ModDef("fly",         "Flight Mode",        "Flug-Modus",                  "Movement"),
@@ -91,6 +92,8 @@ public class VisionConfigScreen extends Screen {
         new ModDef("autoWalk",    "Auto Walk",          "Automatisch vorwärts laufen", "Movement"),
         new ModDef("glide",       "Slow Descent",       "Langsames Fallen",            "Movement"),
         new ModDef("fastLadder",  "Fast Climb",         "Schneller Leitern hoch",      "Movement"),
+        new ModDef("autoJump",    "Auto Jump",          "Automatisch springen",        "Movement"),
+        new ModDef("autoSneak",   "Auto Sneak",         "Dauerhaft schleichen",        "Movement"),
         // Player
         new ModDef("autoEat",     "Nutrition Assist",   "Automatische Nahrung",        "Player"),
         new ModDef("antiHunger",  "Saturation Keep",    "Hunger-Stabilisierung",       "Player"),
@@ -99,8 +102,10 @@ public class VisionConfigScreen extends Screen {
         new ModDef("autoRespawn", "Auto Respawn",       "Automatisch respawnen",       "Player"),
         new ModDef("chestStealer","Item Transfer",      "Kisten automatisch leeren",   "Player"),
         new ModDef("autoTool",    "Tool Switch",        "Bestes Werkzeug beim Abbau",  "Player"),
+        new ModDef("autoArmor",   "Armor Equip",        "Rüstung automatisch anlegen", "Player"),
         // Render
         new ModDef("fullbright",  "Light Boost",        "Maximale Sichtweite",         "Render"),
+        new ModDef("noBob",       "Steady View",        "Kein Kamera-Wackeln",         "Render"),
         new ModDef("tracers",     "Path Display",       "Linien zu Zielen",            "Render"),
         new ModDef("boxFill",     "Box Display",        "Box-Darstellung",             "Render"),
         new ModDef("zoom",        "Zoom",               "Zoom (Taste halten)",         "Render"),
@@ -502,6 +507,14 @@ public class VisionConfigScreen extends Screen {
             sToggle(g, "Fast Climb",       c.fastLadderEnabled,  () -> { c.fastLadderEnabled  = !c.fastLadderEnabled;  save(); });
             sDesc(g, "Klettert schneller an Leitern/Ranken hoch.");
         }
+        case "autoJump"   -> {
+            sToggle(g, "Auto Jump",        c.autoJumpEnabled,    () -> { c.autoJumpEnabled    = !c.autoJumpEnabled;    save(); });
+            sDesc(g, "Springt automatisch beim Vorwärtslaufen.");
+        }
+        case "autoSneak"  -> {
+            sToggle(g, "Auto Sneak",       c.autoSneakEnabled,   () -> { c.autoSneakEnabled   = !c.autoSneakEnabled;   save(); });
+            sDesc(g, "Hält die Schleichen-Taste dauerhaft.");
+        }
         case "autoLog"    -> {
             sToggle(g, "Auto Disconnect",  c.autoLogEnabled,     () -> { c.autoLogEnabled     = !c.autoLogEnabled;     save(); });
             sFloat(g, "HP Schwelle",       c.autoLogHp,
@@ -553,6 +566,11 @@ public class VisionConfigScreen extends Screen {
                 () -> { c.triggerBotCps = Math.min(20, c.triggerBotCps + 1); save(); });
             sDesc(g, "Greift Ziel am Fadenkreuz automatisch an.");
         }
+        case "autoWeapon" -> {
+            sToggle(g, "Weapon Switch",    c.autoWeaponEnabled,  () -> { c.autoWeaponEnabled  = !c.autoWeaponEnabled;  save(); });
+            sDesc(g, "Wechselt beim Angriff zur besten Waffe.");
+            sDesc(g, "Schwert bevorzugt, sonst Axt.");
+        }
 
         // ── Player ───────────────────────────────────────────────────────────
         case "autoEat"    -> {
@@ -591,6 +609,11 @@ public class VisionConfigScreen extends Screen {
             sDesc(g, "Wählt beim Abbau das schnellste Werkzeug.");
             sDesc(g, "Nur während du angreifst/abbaust.");
         }
+        case "autoArmor"  -> {
+            sToggle(g, "Armor Equip",      c.autoArmorEnabled,   () -> { c.autoArmorEnabled   = !c.autoArmorEnabled;   save(); });
+            sDesc(g, "Legt beste Rüstung aus dem Inventar an.");
+            sDesc(g, "Nur leere Rüstungs-Slots werden gefüllt.");
+        }
 
         // ── Render ───────────────────────────────────────────────────────────
         case "fullbright" -> {
@@ -598,6 +621,10 @@ public class VisionConfigScreen extends Screen {
             sDesc(g, "Versteckter Night-Vision-Effekt.");
             sSep(g, "Taste");
             sKeybindRow(g, "Fullbright", "fullbright", c.keyFullbright, c);
+        }
+        case "noBob"      -> {
+            sToggle(g, "Steady View",      c.noBobEnabled,       () -> { c.noBobEnabled       = !c.noBobEnabled;       save(); });
+            sDesc(g, "Entfernt das Auf-/Ab-Wackeln beim Laufen.");
         }
         case "tracers"    -> {
             sToggle(g, "Tracer Lines",     c.globalLinesEnabled, () -> { c.globalLinesEnabled = !c.globalLinesEnabled; save(); });
@@ -972,6 +999,7 @@ public class VisionConfigScreen extends Screen {
             case "autoMace"    -> c.autoMaceEnabled;
             case "reach"       -> c.reachEnabled;
             case "triggerBot"  -> c.triggerBotEnabled;
+            case "autoWeapon"  -> c.autoWeaponEnabled;
             case "criticals"   -> c.criticalsEnabled;
             case "autoClicker" -> c.autoClickerEnabled;
             case "velocity"    -> c.velocityEnabled;
@@ -993,7 +1021,11 @@ public class VisionConfigScreen extends Screen {
             case "autoWalk"    -> c.autoWalkEnabled;
             case "glide"       -> c.glideEnabled;
             case "fastLadder"  -> c.fastLadderEnabled;
+            case "autoJump"    -> c.autoJumpEnabled;
+            case "autoSneak"   -> c.autoSneakEnabled;
             case "autoTool"    -> c.autoToolEnabled;
+            case "autoArmor"   -> c.autoArmorEnabled;
+            case "noBob"       -> c.noBobEnabled;
             case "autoLog"     -> c.autoLogEnabled;
             case "maceDmg"         -> c.maceDmgEnabled;
             case "maceDmgClassic"  -> c.maceDmgClassicEnabled;

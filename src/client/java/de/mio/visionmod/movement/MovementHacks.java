@@ -26,6 +26,7 @@ public final class MovementHacks {
     private static int surroundCooldown = 0;
     private static boolean flyWasActive = false;
     private static boolean autoWalkActive = false;
+    private static boolean autoSneakActive = false;
 
     public static void resetOnDisconnect() {
         flyWasActive     = false;
@@ -35,6 +36,10 @@ public final class MovementHacks {
         if (autoWalkActive) {
             try { Minecraft.getInstance().options.keyUp.setDown(false); } catch (Exception ignored) {}
             autoWalkActive = false;
+        }
+        if (autoSneakActive) {
+            try { Minecraft.getInstance().options.keyShift.setDown(false); } catch (Exception ignored) {}
+            autoSneakActive = false;
         }
     }
 
@@ -107,6 +112,15 @@ public final class MovementHacks {
             autoWalkActive = false;
         }
 
+        // ── AutoSneak (hold sneak) ────────────────────────────────────────────
+        if (cfg.autoSneakEnabled && mc.screen == null) {
+            mc.options.keyShift.setDown(true);
+            autoSneakActive = true;
+        } else if (autoSneakActive) {
+            mc.options.keyShift.setDown(false);
+            autoSneakActive = false;
+        }
+
         if (mc.screen != null) {
             // Only speed/sprint allowed with invMove when screen is open, rest skipped
             return;
@@ -150,6 +164,11 @@ public final class MovementHacks {
         if (cfg.spiderEnabled && p.horizontalCollision && !p.onGround()) {
             Vec3 vel = p.getDeltaMovement();
             p.setDeltaMovement(vel.x, 0.2, vel.z);
+        }
+
+        // ── AutoJump (bunny-hop while moving) ─────────────────────────────────
+        if (cfg.autoJumpEnabled && p.onGround() && p.zza != 0f && !p.isShiftKeyDown()) {
+            p.setJumping(true);
         }
 
         // ── FastLadder (climb faster) ─────────────────────────────────────────

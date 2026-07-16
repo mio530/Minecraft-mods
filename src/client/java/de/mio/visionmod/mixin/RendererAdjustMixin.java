@@ -28,4 +28,10 @@ public class RendererAdjustMixin {
     private void visionmod_noHurtCam(PoseStack ps, float partialTick, CallbackInfo ci) {
         if (VisionConfig.get().noHurtCamEnabled) ci.cancel();
     }
+
+    /** NoBob: suppress the walking view-bob. */
+    @Inject(method = "bobView", at = @At("HEAD"), cancellable = true, require = 0)
+    private void visionmod_noBob(PoseStack ps, float partialTick, CallbackInfo ci) {
+        if (VisionConfig.get().noBobEnabled) ci.cancel();
+    }
 }

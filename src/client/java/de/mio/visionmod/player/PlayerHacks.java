@@ -5,9 +5,11 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -18,6 +20,7 @@ public final class PlayerHacks {
     private static int afkTimer          = 0;
     private static boolean eating        = false;
     private static int chestStealerCooldown = 0;
+    private static int autoArmorCooldown = 0;
 
     public static void resetOnDisconnect(Minecraft mc) {
         afkTimer = 0;
@@ -93,6 +96,30 @@ public final class PlayerHacks {
         }
 
         if (mc.screen != null) return;
+
+        // ── AutoArmor (equip the best unworn armor into empty slots) ──────────
+        if (cfg.autoArmorEnabled) {
+            if (autoArmorCooldown > 0) {
+                autoArmorCooldown--;
+            } else {
+                int cid = mc.player.inventoryMenu.containerId;
+                for (int i = 0; i < 36; i++) {
+                    ItemStack st = mc.player.getInventory().getItem(i);
+                    if (st.isEmpty()) continue;
+                    Equippable eq = st.get(DataComponents.EQUIPPABLE);
+                    if (eq == null) continue;
+                    EquipmentSlot slot = eq.slot();
+                    if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
+                            && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;
+                    if (!mc.player.getItemBySlot(slot).isEmpty()) continue;   // slot already filled
+                    // Inventory index → inventory-menu slot: hotbar 0-8 → 36-44, main 9-35 → 9-35
+                    int menuSlot = i < 9 ? i + 36 : i;
+                    mc.gameMode.handleInventoryMouseClick(cid, menuSlot, 0, ClickType.QUICK_MOVE, mc.player);
+                    autoArmorCooldown = 4;
+                    break;
+                }
+            }
+        }
 
         // ── AutoTool (switch to the fastest tool while mining) ────────────────
         if (cfg.autoToolEnabled && mc.options.keyAttack.isDown()
