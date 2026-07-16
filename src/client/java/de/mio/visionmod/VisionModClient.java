@@ -165,9 +165,11 @@ public class VisionModClient implements ClientModInitializer {
             OreESP.resetOnDisconnect();
             StorageESP.resetOnDisconnect();
             SusChunks.resetOnDisconnect();
+            CombatHacks.resetOnDisconnect();
             MovementHacks.resetOnDisconnect();
             PlayerHacks.resetOnDisconnect(mc);
             Nuker.resetOnDisconnect();
+            de.mio.visionmod.render.CameraState.lastEntity = null;
         });
     }
 

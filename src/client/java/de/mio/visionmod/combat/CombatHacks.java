@@ -2,6 +2,7 @@ package de.mio.visionmod.combat;
 
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.InteractionHand;
@@ -30,6 +31,28 @@ public final class CombatHacks {
     /** True while a mace-fall is in progress; FallHandlerMixin reads this to skip noFall. */
     public  static boolean suppressNoFall    = false;
 
+    /** Clears leftover combat state so it doesn't misfire on the next join. */
+    public static void resetOnDisconnect() {
+        killAuraCooldown    = 0;
+        autoClickCooldown   = 0;
+        triggerBotCooldown  = 0;
+        autoTotemCooldown   = 0;
+        stunSlamCooldown    = 0;
+        stunSlamRestoreSlot = -1;
+        stunSlamRestoreTick = 0;
+        maceDmgLaunched     = false;
+        suppressNoFall      = false;
+    }
+
+    /** Switches the held hotbar slot AND tells the server, so it doesn't desync. */
+    private static void selectSlot(Minecraft mc, int slot) {
+        if (slot < 0 || slot > 8 || mc.player.getInventory().selected == slot) return;
+        mc.player.getInventory().selected = slot;
+        if (mc.player.connection != null) {
+            mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
+        }
+    }
+
     public static void tick(Minecraft mc) {
         if (mc.player == null || mc.level == null) return;
         VisionConfig cfg = VisionConfig.get();
@@ -52,7 +75,8 @@ public final class CombatHacks {
         if (triggerBotCooldown > 0) { triggerBotCooldown--; return; }
         if (mc.player.getAttackStrengthScale(0f) < 0.9f) return;
         Entity crosshair = mc.crosshairPickEntity;
-        if (crosshair instanceof LivingEntity le && le.isAlive() && le != mc.player) {
+        if (crosshair instanceof LivingEntity le && le.isAlive() && le != mc.player
+                && (le instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs)) {
             mc.gameMode.attack(mc.player, crosshair);
             mc.player.swing(InteractionHand.MAIN_HAND);
             triggerBotCooldown = Math.max(1, 20 / Math.max(1, cfg.triggerBotCps));
@@ -123,7 +147,7 @@ public final class CombatHacks {
     private static void tickStunSlam(Minecraft mc, VisionConfig cfg) {
         if (!cfg.stunSlamEnabled || mc.screen != null || mc.gameMode == null) {
             if (stunSlamRestoreSlot >= 0) {
-                mc.player.getInventory().selected = stunSlamRestoreSlot;
+                selectSlot(mc, stunSlamRestoreSlot);
                 stunSlamRestoreSlot = -1;
             }
             return;
@@ -131,7 +155,7 @@ public final class CombatHacks {
         // Restore slot after attack
         if (stunSlamRestoreSlot >= 0) {
             if (--stunSlamRestoreTick <= 0) {
-                mc.player.getInventory().selected = stunSlamRestoreSlot;
+                selectSlot(mc, stunSlamRestoreSlot);
                 stunSlamRestoreSlot = -1;
             }
             return;
@@ -164,7 +188,7 @@ public final class CombatHacks {
         if (axeSlot != cur) {
             stunSlamRestoreSlot = cur;
             stunSlamRestoreTick = 3;
-            mc.player.getInventory().selected = axeSlot;
+            selectSlot(mc, axeSlot);
         }
         mc.player.setSprinting(true);
         mc.gameMode.attack(mc.player, target);
@@ -250,6 +274,10 @@ public final class CombatHacks {
         if (!cfg.autoTotemEnabled || mc.gameMode == null) return;
         if (autoTotemCooldown > 0) { autoTotemCooldown--; return; }
         if (mc.player.getHealth() > cfg.autoTotemHpThresh) return;
+        // Slot math below only holds for the player's own inventory menu. If a chest
+        // or other container is open, containerMenu is that container and the clicks
+        // would land on wrong slots — skip until it's closed.
+        if (mc.player.containerMenu != mc.player.inventoryMenu) return;
 
         ItemStack offhand = mc.player.getOffhandItem();
         if (offhand.getItem() == Items.TOTEM_OF_UNDYING) return;

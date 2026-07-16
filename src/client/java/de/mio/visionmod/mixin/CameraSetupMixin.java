@@ -1,10 +1,10 @@
 package de.mio.visionmod.mixin;
 
+import de.mio.visionmod.render.CameraState;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * known one so the field is never null after a valid frame.
  *
  * Layer 2 (entity() RETURN): directly intercepts the Camera.entity() getter.
- * If it would return null we return visionmod_lastEntity, or mc.player as a
+ * If it would return null we return CameraState.lastEntity, or mc.player as a
  * last resort. This fires on every call from vanilla outline code, catching
  * races and the very first frame where lastEntity hasn't been set yet.
  *
@@ -31,9 +31,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Camera.class)
 public class CameraSetupMixin {
 
-    @Unique
-    private static Entity visionmod_lastEntity = null;
-
     /**
      * Layer 0 (setup HEAD, name-independent): if setup() is called with a null
      * focus entity, substitute the last known one (or the player) before the field
@@ -43,7 +40,7 @@ public class CameraSetupMixin {
     @ModifyVariable(method = "setup", at = @At("HEAD"), argsOnly = true, require = 0)
     private Entity visionmod_nonNullFocus(Entity focused) {
         if (focused != null) return focused;
-        Entity fb = visionmod_lastEntity;
+        Entity fb = CameraState.lastEntity;
         if (fb == null) {
             try { fb = Minecraft.getInstance().player; } catch (Exception ignored) {}
         }
@@ -55,9 +52,9 @@ public class CameraSetupMixin {
     private void visionmod_trackEntity(CallbackInfo ci) {
         Entity current = ((CameraAccessor) this).visionmod_getCameraEntity();
         if (current != null) {
-            visionmod_lastEntity = current;
-        } else if (visionmod_lastEntity != null) {
-            ((CameraAccessor) this).visionmod_setCameraEntity(visionmod_lastEntity);
+            CameraState.lastEntity = current;
+        } else if (CameraState.lastEntity != null) {
+            ((CameraAccessor) this).visionmod_setCameraEntity(CameraState.lastEntity);
         }
     }
 
@@ -71,7 +68,7 @@ public class CameraSetupMixin {
     @Inject(method = {"entity", "getEntity"}, at = @At("RETURN"), cancellable = true, require = 0)
     private void visionmod_safeEntityGetter(CallbackInfoReturnable<Entity> cir) {
         if (cir.getReturnValue() != null) return;
-        Entity fallback = visionmod_lastEntity;
+        Entity fallback = CameraState.lastEntity;
         if (fallback == null) {
             try { fallback = Minecraft.getInstance().player; } catch (Exception ignored) {}
         }

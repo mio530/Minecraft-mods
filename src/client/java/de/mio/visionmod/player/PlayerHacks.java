@@ -3,6 +3,7 @@ package de.mio.visionmod.player;
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.protocol.game.ServerboundClientCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
@@ -24,6 +25,15 @@ public final class PlayerHacks {
         if (eating) {
             mc.options.keyUse.setDown(false);
             eating = false;
+        }
+    }
+
+    /** Switches the held hotbar slot AND notifies the server to avoid desync. */
+    private static void selectSlot(Minecraft mc, int slot) {
+        if (slot < 0 || slot > 8 || mc.player.getInventory().selected == slot) return;
+        mc.player.getInventory().selected = slot;
+        if (mc.player.connection != null) {
+            mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
         }
     }
 
@@ -95,7 +105,7 @@ public final class PlayerHacks {
                     float sp = mc.player.getInventory().getItem(i).getDestroySpeed(state);
                     if (sp > bestSpeed) { bestSpeed = sp; best = i; }
                 }
-                if (best >= 0) mc.player.getInventory().selected = best;
+                if (best >= 0) selectSlot(mc, best);
             }
         }
 
@@ -107,7 +117,7 @@ public final class PlayerHacks {
                 for (int i = 0; i < 9; i++) {
                     ItemStack stack = mc.player.getInventory().getItem(i);
                     if (!stack.isEmpty() && stack.has(DataComponents.FOOD)) {
-                        mc.player.getInventory().selected = i;
+                        selectSlot(mc, i);
                         mc.options.keyUse.setDown(true);
                         eating = true;
                         foundFood = true;

@@ -171,7 +171,7 @@ public final class MovementHacks {
         }
 
         // ── Scaffold ──────────────────────────────────────────────────────────
-        if (cfg.scaffoldEnabled && mc.level != null) {
+        if (cfg.scaffoldEnabled && mc.level != null && mc.gameMode != null) {
             if (scaffoldCooldown > 0) { scaffoldCooldown--; }
             else {
                 BlockPos below   = p.blockPosition().below();
