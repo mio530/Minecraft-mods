@@ -43,11 +43,13 @@ public final class OverlayWindow {
         // Use the actual render camera the pose was built from — NOT the player's
         // eye at partial-tick 1.0. The eye position causes boxes to swim/jitter by
         // up to one tick of velocity in first person, and to be offset by the whole
-        // ~4-block camera distance in third person (F5). ctx.camera() is already
-        // interpolated for this exact frame.
-        net.minecraft.client.Camera camera = ctx.camera();
+        // ~4-block camera distance in third person (F5). The camera's position field
+        // is already interpolated for this exact frame; read it via the accessor to
+        // avoid the record-style getter name mismatch in 1.21.11.
+        net.minecraft.client.Camera camera = mc.gameRenderer.getMainCamera();
         if (camera == null) return;
-        Vec3 cam = camera.getPosition();
+        Vec3 cam = ((de.mio.visionmod.mixin.CameraAccessor) camera).visionmod_getCameraPosition();
+        if (cam == null) return;
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
         VisionConfig cfg = VisionConfig.get();
 
