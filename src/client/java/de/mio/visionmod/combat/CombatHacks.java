@@ -6,13 +6,13 @@ import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
@@ -317,9 +317,9 @@ public final class CombatHacks {
 
         int sword = -1, axe = -1;
         for (int i = 0; i < 9; i++) {
-            var item = mc.player.getInventory().getItem(i).getItem();
-            if (item instanceof SwordItem) { sword = i; break; }
-            if (item instanceof AxeItem && axe < 0) axe = i;
+            ItemStack s = mc.player.getInventory().getItem(i);
+            if (s.is(ItemTags.SWORDS)) { sword = i; break; }
+            if (s.is(ItemTags.AXES) && axe < 0) axe = i;
         }
         int best = sword >= 0 ? sword : axe;
         if (best >= 0 && best != mc.player.getInventory().selected) {
