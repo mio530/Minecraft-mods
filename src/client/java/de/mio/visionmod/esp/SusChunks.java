@@ -73,6 +73,7 @@ public final class SusChunks {
         ChunkPos center = mc.player.chunkPosition();
         int radius = Math.max(1, Math.min(cfg.susChunksRadius, 8));
         List<ChunkData> next = new ArrayList<>();
+        BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos();
 
         for (int cx = center.x - radius; cx <= center.x + radius; cx++) {
             for (int cz = center.z - radius; cz <= center.z + radius; cz++) {
@@ -93,7 +94,8 @@ public final class SusChunks {
                     for (int x = cx * 16; x < cx * 16 + 16; x++) {
                         for (int z = cz * 16; z < cz * 16 + 16; z++) {
                             for (int y = minY; y <= maxY; y++) {
-                                Block block = mc.level.getBlockState(new BlockPos(x, y, z)).getBlock();
+                                mpos.set(x, y, z);
+                                Block block = mc.level.getBlockState(mpos).getBlock();
                                 if (cfg.susDetectChests && CHEST_BLOCKS.contains(block)) {
                                     suspicious = true;
                                     break outer;

@@ -35,12 +35,19 @@ public final class OverlayWindow {
 
     private void onRenderEndInner(WorldRenderContext ctx) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
+        if (mc.player == null || mc.level == null) return;
 
         PoseStack ps = ctx.matrices();
         if (ps == null) return;
 
-        Vec3 cam = mc.player.getEyePosition(1.0f);
+        // Use the actual render camera the pose was built from — NOT the player's
+        // eye at partial-tick 1.0. The eye position causes boxes to swim/jitter by
+        // up to one tick of velocity in first person, and to be offset by the whole
+        // ~4-block camera distance in third person (F5). ctx.camera() is already
+        // interpolated for this exact frame.
+        net.minecraft.client.Camera camera = ctx.camera();
+        if (camera == null) return;
+        Vec3 cam = camera.getPosition();
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
         VisionConfig cfg = VisionConfig.get();
 

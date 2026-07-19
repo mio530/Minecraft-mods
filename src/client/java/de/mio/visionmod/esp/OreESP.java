@@ -20,6 +20,9 @@ public final class OreESP {
             boolean showLine
     ) {}
 
+    /** Per-ore render params + scan bounds, resolved once per scan. */
+    private record OreParams(int boxColor, int lineColor, boolean showLine, int minY, int maxY) {}
+
     public static volatile List<OreData> snapshot = Collections.emptyList();
 
     private static int tickCounter = 0;
@@ -64,39 +67,51 @@ public final class OreESP {
         tickCounter++;
         if (tickCounter % 20 != 0) return;
 
+        // Resolve every enabled ore ONCE into a block→params map, and compute the
+        // union Y-range. This lets us read each position's block state a single
+        // time and test set membership, instead of re-scanning the whole column
+        // once per enabled ore (which was O(ores) block lookups per position).
+        int dimMinY = mc.level.dimensionType().minY();
+        int dimMaxY = dimMinY + mc.level.dimensionType().height() - 1;
+        Map<Block, OreParams> targets = new HashMap<>();
+        int unionMin = Integer.MAX_VALUE, unionMax = Integer.MIN_VALUE;
+        for (String oreId : cfg.enabledOres) {
+            Identifier blockKey = Identifier.tryParse(oreId);
+            if (blockKey == null) continue;
+            Block targetBlock = BuiltInRegistries.BLOCK.getOptional(blockKey).orElse(null);
+            if (targetBlock == null || targetBlock == Blocks.AIR) continue;
+
+            int[] yRange = Y_RANGES.getOrDefault(oreId, new int[]{-64, 320});
+            int minY = Math.max(yRange[0], dimMinY);
+            int maxY = Math.min(yRange[1], dimMaxY);
+            int boxColor  = VisionConfig.parseColor(cfg.oreBoxColors.getOrDefault(oreId, "#FFFFFFFF"));
+            int lineColor = VisionConfig.parseColor(cfg.oreLineColors.getOrDefault(oreId, "#FFFFFFFF"));
+            boolean showLine = cfg.globalLinesEnabled && cfg.oreLinesEnabled.contains(oreId);
+            targets.put(targetBlock, new OreParams(boxColor, lineColor, showLine, minY, maxY));
+            unionMin = Math.min(unionMin, minY);
+            unionMax = Math.max(unionMax, maxY);
+        }
+        if (targets.isEmpty()) { snapshot = Collections.emptyList(); return; }
+
         ChunkPos center = mc.player.chunkPosition();
         int radius = Math.max(1, Math.min(cfg.oreEspRadius, 8));
         List<OreData> next = new ArrayList<>();
+        BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos();
 
         for (int cx = center.x - radius; cx <= center.x + radius; cx++) {
             for (int cz = center.z - radius; cz <= center.z + radius; cz++) {
                 if (!mc.level.hasChunk(cx, cz)) continue;
 
-                for (String oreId : cfg.enabledOres) {
-                    Identifier blockKey = Identifier.tryParse(oreId);
-                    if (blockKey == null) continue;
-                    Block targetBlock = BuiltInRegistries.BLOCK.getOptional(blockKey).orElse(null);
-                    if (targetBlock == null || targetBlock == Blocks.AIR) continue;
-
-                    int[] yRange = Y_RANGES.getOrDefault(oreId, new int[]{-64, 320});
-                    int dimMinY = mc.level.dimensionType().minY();
-                    int minY = Math.max(yRange[0], dimMinY);
-                    int maxY = Math.min(yRange[1], dimMinY + mc.level.dimensionType().height() - 1);
-
-                    int boxColor  = VisionConfig.parseColor(cfg.oreBoxColors.getOrDefault(oreId, "#FFFFFFFF"));
-                    int lineColor = VisionConfig.parseColor(cfg.oreLineColors.getOrDefault(oreId, "#FFFFFFFF"));
-                    boolean showLine = cfg.globalLinesEnabled && cfg.oreLinesEnabled.contains(oreId);
-
-                    for (int x = cx * 16; x < cx * 16 + 16; x++) {
-                        for (int z = cz * 16; z < cz * 16 + 16; z++) {
-                            for (int y = minY; y <= maxY; y++) {
-                                BlockPos pos = new BlockPos(x, y, z);
-                                if (mc.level.getBlockState(pos).is(targetBlock)) {
-                                    next.add(new OreData(
-                                            x + 0.5, y + 0.5, z + 0.5,
-                                            boxColor, lineColor, showLine
-                                    ));
-                                }
+                for (int x = cx * 16; x < cx * 16 + 16; x++) {
+                    for (int z = cz * 16; z < cz * 16 + 16; z++) {
+                        for (int y = unionMin; y <= unionMax; y++) {
+                            mpos.set(x, y, z);
+                            OreParams p = targets.get(mc.level.getBlockState(mpos).getBlock());
+                            if (p != null && y >= p.minY() && y <= p.maxY()) {
+                                next.add(new OreData(
+                                        x + 0.5, y + 0.5, z + 0.5,
+                                        p.boxColor(), p.lineColor(), p.showLine()
+                                ));
                             }
                         }
                     }
