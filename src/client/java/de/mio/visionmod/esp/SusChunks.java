@@ -2,10 +2,18 @@ package de.mio.visionmod.esp;
 
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.entity.EnderChestBlockEntity;
+import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
+import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
+import net.minecraft.world.level.block.entity.TrialSpawnerBlockEntity;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 
 import java.util.*;
 
@@ -22,28 +30,8 @@ public final class SusChunks {
         snapshot = Collections.emptyList();
     }
 
-    // All block types that count as "sus" per category
-    private static final Set<Block> CHEST_BLOCKS = new HashSet<>(Arrays.asList(
-            Blocks.CHEST,
-            Blocks.TRAPPED_CHEST,
-            Blocks.ENDER_CHEST,
-            Blocks.BARREL,
-            Blocks.WHITE_SHULKER_BOX,   Blocks.ORANGE_SHULKER_BOX,
-            Blocks.MAGENTA_SHULKER_BOX, Blocks.LIGHT_BLUE_SHULKER_BOX,
-            Blocks.YELLOW_SHULKER_BOX,  Blocks.LIME_SHULKER_BOX,
-            Blocks.PINK_SHULKER_BOX,    Blocks.GRAY_SHULKER_BOX,
-            Blocks.LIGHT_GRAY_SHULKER_BOX, Blocks.CYAN_SHULKER_BOX,
-            Blocks.PURPLE_SHULKER_BOX,  Blocks.BLUE_SHULKER_BOX,
-            Blocks.BROWN_SHULKER_BOX,   Blocks.GREEN_SHULKER_BOX,
-            Blocks.RED_SHULKER_BOX,     Blocks.BLACK_SHULKER_BOX,
-            Blocks.SHULKER_BOX
-    ));
-
-    private static final Set<Block> SPAWNER_BLOCKS = new HashSet<>(Arrays.asList(
-            Blocks.SPAWNER,
-            Blocks.TRIAL_SPAWNER
-    ));
-
+    // Chests/barrels/shulkers/ender-chests and spawners are detected via block entities
+    // (see isSuspicious); only these plain redstone blocks need a block scan.
     private static final Set<Block> REDSTONE_BLOCKS = new HashSet<>(Arrays.asList(
             Blocks.REPEATER,
             Blocks.COMPARATOR,
@@ -73,46 +61,16 @@ public final class SusChunks {
         ChunkPos center = mc.player.chunkPosition();
         int radius = Math.max(1, Math.min(cfg.susChunksRadius, 8));
         List<ChunkData> next = new ArrayList<>();
-        BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos();
 
         for (int cx = center.x - radius; cx <= center.x + radius; cx++) {
             for (int cz = center.z - radius; cz <= center.z + radius; cz++) {
-                if (!mc.level.hasChunk(cx, cz)) {
-                    if (cfg.showAllChunkBorders) {
-                        next.add(new ChunkData(cx, cz, false));
-                    }
+                LevelChunk chunk = mc.level.getChunkSource().getChunkNow(cx, cz);
+                if (chunk == null) {
+                    if (cfg.showAllChunkBorders) next.add(new ChunkData(cx, cz, false));
                     continue;
                 }
 
-                boolean suspicious = false;
-
-                if (cfg.susChunksEnabled) {
-                    int minY = mc.level.dimensionType().minY();
-                    int maxY = mc.level.dimensionType().minY() + mc.level.dimensionType().height() - 1;
-
-                    outer:
-                    for (int x = cx * 16; x < cx * 16 + 16; x++) {
-                        for (int z = cz * 16; z < cz * 16 + 16; z++) {
-                            for (int y = minY; y <= maxY; y++) {
-                                mpos.set(x, y, z);
-                                Block block = mc.level.getBlockState(mpos).getBlock();
-                                if (cfg.susDetectChests && CHEST_BLOCKS.contains(block)) {
-                                    suspicious = true;
-                                    break outer;
-                                }
-                                if (cfg.susDetectSpawners && SPAWNER_BLOCKS.contains(block)) {
-                                    suspicious = true;
-                                    break outer;
-                                }
-                                if (cfg.susDetectRedstone && REDSTONE_BLOCKS.contains(block)) {
-                                    suspicious = true;
-                                    break outer;
-                                }
-                            }
-                        }
-                    }
-                }
-
+                boolean suspicious = cfg.susChunksEnabled && isSuspicious(chunk, cfg, mc);
                 if (suspicious || cfg.showAllChunkBorders) {
                     next.add(new ChunkData(cx, cz, suspicious));
                 }
@@ -120,5 +78,41 @@ public final class SusChunks {
         }
 
         snapshot = Collections.unmodifiableList(next);
+    }
+
+    private static boolean isSuspicious(LevelChunk chunk, VisionConfig cfg, Minecraft mc) {
+        // Fast path: chests, barrels, shulkers, ender chests and spawners are ALL block
+        // entities, so a chunk's getBlockEntities() covers every chest/spawner indicator
+        // in O(#block-entities) with no block scan at all.
+        for (BlockEntity be : chunk.getBlockEntities().values()) {
+            if (cfg.susDetectChests && (be instanceof ChestBlockEntity
+                    || be instanceof BarrelBlockEntity
+                    || be instanceof ShulkerBoxBlockEntity
+                    || be instanceof EnderChestBlockEntity)) {
+                return true;
+            }
+            if (cfg.susDetectSpawners && (be instanceof SpawnerBlockEntity
+                    || be instanceof TrialSpawnerBlockEntity)) {
+                return true;
+            }
+        }
+
+        // Redstone components (repeaters, pistons, hoppers, …) are plain blocks, so they
+        // need a block scan — but we skip every all-air 16³ section, which is the vast
+        // majority of a column, and read straight from the section palette.
+        if (!cfg.susDetectRedstone) return false;
+        LevelChunkSection[] sections = chunk.getSections();
+        for (LevelChunkSection sec : sections) {
+            if (sec == null || sec.hasOnlyAir()) continue;
+            for (int y = 0; y < 16; y++) {
+                for (int x = 0; x < 16; x++) {
+                    for (int z = 0; z < 16; z++) {
+                        Block block = sec.getBlockState(x, y, z).getBlock();
+                        if (REDSTONE_BLOCKS.contains(block)) return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

@@ -2,12 +2,13 @@ package de.mio.visionmod.esp;
 
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 
 import java.util.*;
 
@@ -96,22 +97,36 @@ public final class OreESP {
         ChunkPos center = mc.player.chunkPosition();
         int radius = Math.max(1, Math.min(cfg.oreEspRadius, 8));
         List<OreData> next = new ArrayList<>();
-        BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos();
+        int worldMinY = mc.level.dimensionType().minY();
 
         for (int cx = center.x - radius; cx <= center.x + radius; cx++) {
             for (int cz = center.z - radius; cz <= center.z + radius; cz++) {
-                if (!mc.level.hasChunk(cx, cz)) continue;
+                LevelChunk chunk = mc.level.getChunkSource().getChunkNow(cx, cz);
+                if (chunk == null) continue;
 
-                for (int x = cx * 16; x < cx * 16 + 16; x++) {
-                    for (int z = cz * 16; z < cz * 16 + 16; z++) {
-                        for (int y = unionMin; y <= unionMax; y++) {
-                            mpos.set(x, y, z);
-                            OreParams p = targets.get(mc.level.getBlockState(mpos).getBlock());
-                            if (p != null && y >= p.minY() && y <= p.maxY()) {
-                                next.add(new OreData(
-                                        x + 0.5, y + 0.5, z + 0.5,
-                                        p.boxColor(), p.lineColor(), p.showLine()
-                                ));
+                // Iterate by 16³ section and skip all-air sections entirely — most of a
+                // column is air, so this reads only the sections that can hold ores and
+                // pulls block states straight from the section palette (no BlockPos, no
+                // level.getBlockState indirection).
+                LevelChunkSection[] sections = chunk.getSections();
+                for (int si = 0; si < sections.length; si++) {
+                    LevelChunkSection sec = sections[si];
+                    if (sec == null || sec.hasOnlyAir()) continue;
+                    int baseY = worldMinY + si * 16;
+                    if (baseY > unionMax || baseY + 15 < unionMin) continue;
+
+                    for (int ly = 0; ly < 16; ly++) {
+                        int y = baseY + ly;
+                        if (y < unionMin || y > unionMax) continue;
+                        for (int lx = 0; lx < 16; lx++) {
+                            for (int lz = 0; lz < 16; lz++) {
+                                OreParams p = targets.get(sec.getBlockState(lx, ly, lz).getBlock());
+                                if (p != null && y >= p.minY() && y <= p.maxY()) {
+                                    next.add(new OreData(
+                                            cx * 16 + lx + 0.5, y + 0.5, cz * 16 + lz + 0.5,
+                                            p.boxColor(), p.lineColor(), p.showLine()
+                                    ));
+                                }
                             }
                         }
                     }
