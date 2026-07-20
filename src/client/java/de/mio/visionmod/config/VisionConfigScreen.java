@@ -131,6 +131,7 @@ public class VisionConfigScreen extends Screen {
     private int    leftScroll  = 0;
     private int    rightScroll = 0;
     private int    maxRScroll  = 0;
+    private int    maxLScroll  = 0;
     private String rebindingKey = null;
     private boolean hoverLeft  = false;
     private String searchQuery = "";
@@ -262,6 +263,9 @@ public class VisionConfigScreen extends Screen {
             }
             y += 3;
         }
+
+        // Clamp bound for the left list so it can't be scrolled into empty space.
+        maxLScroll = Math.max(0, y + leftScroll - (ly + lh));
 
         // Search-bar background, drawn last so scrolled rows are masked beneath it.
         g.fill(lx, ly, lx + lw, ly + SEARCH_H, C_LEFT_BG);
@@ -889,7 +893,7 @@ public class VisionConfigScreen extends Screen {
         if (vis(y, S_ROW, sY, sH)) {
             boolean waiting = bindId.equals(rebindingKey);
             g.drawString(font, label, sX + 5, y + 5, C_TEXT, false);
-            String keyStr = waiting ? "§e< Taste drücken... >"
+            String keyStr = waiting ? "§e< Taste... §8Entf=Keine §e>"
                     : (keyCode > 0 ? "§a" + keyName(keyCode) : "§8Keine");
             int kw = font.width(keyStr.replaceAll("§.", ""));
             g.drawString(font, keyStr, sX + sW - kw - 52, y + 5, C_TEXT, false);
@@ -941,7 +945,7 @@ public class VisionConfigScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
         int delta = (int)(-sy * 14);
-        if (hoverLeft) leftScroll  = Math.max(0, leftScroll + delta);
+        if (hoverLeft) leftScroll  = Math.max(0, Math.min(maxLScroll, leftScroll + delta));
         else           rightScroll = Math.max(0, Math.min(maxRScroll + 40, rightScroll + delta));
         return true;
     }
@@ -950,6 +954,8 @@ public class VisionConfigScreen extends Screen {
     public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
         if (rebindingKey != null) {
             int keyCode = event.key();
+            // Delete/Backspace clears the bind (→ "Keine"); Escape cancels without change.
+            if (keyCode == GLFW.GLFW_KEY_DELETE || keyCode == GLFW.GLFW_KEY_BACKSPACE) keyCode = 0;
             if (keyCode != GLFW.GLFW_KEY_ESCAPE) {
                 VisionConfig c = VisionConfig.get();
                 if (c.moduleKeys.containsKey(rebindingKey)) {
