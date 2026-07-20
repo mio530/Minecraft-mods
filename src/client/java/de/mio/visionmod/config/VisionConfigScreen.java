@@ -620,7 +620,7 @@ public class VisionConfigScreen extends Screen {
             sToggle(g, "Fullbright",       c.fullbrightEnabled,  () -> { c.fullbrightEnabled  = !c.fullbrightEnabled;  save(); });
             sDesc(g, "Versteckter Night-Vision-Effekt.");
             sSep(g, "Taste");
-            sKeybindRow(g, "Fullbright", "fullbright", c.keyFullbright, c);
+            sKeybindRow(g, "Fullbright", "fullbright", c.moduleKeys.getOrDefault("fullbright", 0), c);
         }
         case "noBob"      -> {
             sToggle(g, "Steady View",      c.noBobEnabled,       () -> { c.noBobEnabled       = !c.noBobEnabled;       save(); });

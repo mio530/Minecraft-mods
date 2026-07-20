@@ -99,10 +99,12 @@ public final class OverlayWindow {
                 drawBox(ps, vc, cam,
                         it.minX(), it.minY(), it.minZ(),
                         it.maxX(), it.maxY(), it.maxZ(), it.color());
-                double cx = (it.minX() + it.maxX()) * 0.5;
-                double cy = (it.minY() + it.maxY()) * 0.5;
-                double cz = (it.minZ() + it.maxZ()) * 0.5;
-                drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, it.color());
+                if (cfg.globalLinesEnabled) {
+                    double cx = (it.minX() + it.maxX()) * 0.5;
+                    double cy = (it.minY() + it.maxY()) * 0.5;
+                    double cz = (it.minZ() + it.maxZ()) * 0.5;
+                    drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, it.color());
+                }
             }
         }
 

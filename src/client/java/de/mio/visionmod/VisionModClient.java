@@ -78,25 +78,38 @@ public class VisionModClient implements ClientModInitializer {
             RenderHacks.zoomActive = cfg.keyZoom > 0
                 && GLFW.glfwGetKey(win, cfg.keyZoom) == GLFW.GLFW_PRESS;
 
-            // Always poll all module keys to track state — prevents false triggers after screen closes.
-            // Module toggles are only applied when no screen is open.
-            boolean f_config  = justPressed(win, cfg.keyOpenConfig);
-            boolean f_panic   = cfg.keyPanic  > 0 && justPressed(win, cfg.keyPanic);
-            boolean f_panic2  = cfg.keyPanic2 > 0 && justPressed(win, cfg.keyPanic2);
+            // Compute each distinct bound key's rising edge exactly ONCE this tick.
+            // justPressed() mutates prevKey, so calling it twice for the same code made
+            // only the first caller see the press — a key bound to several actions would
+            // silently fire just one of them. Cache edges here and read them below.
+            Map<Integer, Boolean> edges = new HashMap<>();
+            edgeOf(edges, win, cfg.keyOpenConfig);
+            edgeOf(edges, win, cfg.keyPanic);
+            edgeOf(edges, win, cfg.keyPanic2);
+            for (int k : cfg.moduleKeys.values()) edgeOf(edges, win, k);
+
+            boolean f_config = cfg.keyOpenConfig > 0 && edges.getOrDefault(cfg.keyOpenConfig, false);
+            boolean f_panic  = cfg.keyPanic  > 0 && edges.getOrDefault(cfg.keyPanic, false);
+            boolean f_panic2 = cfg.keyPanic2 > 0 && edges.getOrDefault(cfg.keyPanic2, false);
             for (Entry<String, Integer> e : cfg.moduleKeys.entrySet()) {
                 int k = e.getValue();
-                boolean fired = k > 0 && justPressed(win, k);
-                if (fired && mc.screen == null) toggleModule(cfg, e.getKey());
+                if (k > 0 && edges.getOrDefault(k, false) && mc.screen == null) toggleModule(cfg, e.getKey());
             }
 
+            // Don't let panic fire while the user is typing (chat / config search box),
+            // otherwise a panic key bound to a letter triggers mid-word.
+            boolean typing = mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen
+                    || (mc.screen != null
+                        && mc.screen.getFocused() instanceof net.minecraft.client.gui.components.EditBox);
+
             // Panic 2: silent — just disable all hacks, no disconnect, no exit
-            if (f_panic2) {
+            if (f_panic2 && !typing) {
                 cfg.resetFeatureToggles();
                 VisionConfig.save();
             }
 
             // Panic 1: disable all, disconnect, write fake crash report, hard JVM exit
-            if (f_panic) {
+            if (f_panic && !typing) {
                 cfg.resetFeatureToggles();
                 VisionConfig.save();
                 if (mc.getConnection() != null) {
@@ -179,6 +192,12 @@ public class VisionModClient implements ClientModInitializer {
         boolean prev = prevKey.getOrDefault(key, false);
         prevKey.put(key, now);
         return now && !prev;
+    }
+
+    /** Records the rising edge of a key code exactly once (justPressed mutates prevKey). */
+    private static void edgeOf(Map<Integer, Boolean> edges, long window, int key) {
+        if (key <= 0 || edges.containsKey(key)) return;
+        edges.put(key, justPressed(window, key));
     }
 
     private static void writeFakeCrash(Minecraft mc) {

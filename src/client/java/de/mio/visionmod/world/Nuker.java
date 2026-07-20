@@ -6,22 +6,36 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
 public final class Nuker {
     private Nuker() {}
 
     private static BlockPos currentTarget = null;
     private static int stuckTimer = 0;
     private static int delay = 0;
+    /** Positions we gave up on → remaining cooldown ticks, so we skip them and mine other blocks. */
+    private static final Map<BlockPos, Integer> blacklist = new HashMap<>();
 
     public static void resetOnDisconnect() {
         currentTarget = null;
         stuckTimer    = 0;
         delay         = 0;
+        blacklist.clear();
     }
 
     public static void tick(Minecraft mc) {
         VisionConfig cfg = VisionConfig.get();
         if (!cfg.nukerEnabled || mc.player == null || mc.level == null || mc.screen != null) return;
+
+        // Age out blacklist entries so given-up blocks become eligible again later.
+        for (Iterator<Map.Entry<BlockPos, Integer>> it = blacklist.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<BlockPos, Integer> e = it.next();
+            if (e.getValue() <= 1) it.remove();
+            else e.setValue(e.getValue() - 1);
+        }
 
         if (delay > 0) { delay--; return; }
 
@@ -41,10 +55,11 @@ public final class Nuker {
                     BlockState state = mc.level.getBlockState(pos);
                     if (state.isAir()) continue;
                     if (state.getDestroySpeed(mc.level, pos) < 0) continue; // bedrock etc.
+                    if (blacklist.containsKey(pos.immutable())) continue;   // gave up recently
 
                     double d = mc.player.position()
                         .distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                    if (d < bestDist) { bestDist = d; best = pos; }
+                    if (d < bestDist) { bestDist = d; best = pos.immutable(); }
                 }
             }
         }
@@ -57,8 +72,9 @@ public final class Nuker {
         if (best.equals(currentTarget)) {
             mc.gameMode.continueDestroyBlock(best, Direction.UP);
             stuckTimer++;
-            if (stuckTimer > 40) { // give up after 2 seconds on same block
+            if (stuckTimer > 40) { // give up after 2 seconds; blacklist so we move to another block
                 mc.gameMode.stopDestroyBlock();
+                blacklist.put(best, 100); // ~5 s cooldown before retrying this position
                 currentTarget = null;
                 stuckTimer = 0;
             }

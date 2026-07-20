@@ -82,7 +82,10 @@ public final class PlayerHacks {
                 chestStealerCooldown--;
             } else {
                 AbstractContainerMenu menu = containerScreen.getMenu();
-                int containerSlots = menu.slots.size() - 36;
+                // containerId 0 is the player's own inventory (E). Its first "slots.size()-36"
+                // slots are the crafting grid + armor, so stealing from it would shift-click
+                // worn armor off. Only steal from real external containers.
+                int containerSlots = menu.containerId == 0 ? 0 : menu.slots.size() - 36;
                 for (int i = 0; i < containerSlots; i++) {
                     ItemStack stack = menu.slots.get(i).getItem();
                     if (!stack.isEmpty()) {

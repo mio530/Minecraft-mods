@@ -135,9 +135,16 @@ public final class MovementHacks {
             p.getAbilities().flyingSpeed = 0.05f * clamp(cfg.flySpeed, 0.5f, 5.0f);
             flyWasActive = true;
         } else if (flyWasActive) {
-            p.getAbilities().mayfly = false;
-            p.getAbilities().flying = false;
-            if (mc.getConnection() != null) p.onUpdateAbilities();
+            // Only revoke flight the hack granted — don't strip legitimate flight from
+            // creative/spectator, which grant mayfly by gamemode.
+            net.minecraft.world.level.GameType gt = mc.gameMode != null ? mc.gameMode.getPlayerMode() : null;
+            boolean gamemodeGrantsFlight = gt == net.minecraft.world.level.GameType.CREATIVE
+                                        || gt == net.minecraft.world.level.GameType.SPECTATOR;
+            if (!gamemodeGrantsFlight) {
+                p.getAbilities().mayfly = false;
+                p.getAbilities().flying = false;
+                if (mc.getConnection() != null) p.onUpdateAbilities();
+            }
             flyWasActive = false;
         }
 

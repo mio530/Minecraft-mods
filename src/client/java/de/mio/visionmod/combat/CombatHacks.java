@@ -228,7 +228,14 @@ public final class CombatHacks {
             stunSlamRestoreTick = 3;
             selectSlot(mc, axeSlot);
         }
+        // Tell the server we're sprinting BEFORE the attack packet, otherwise the
+        // sprint-state command is only sent on the player's next tick and the server
+        // processes this slam as a non-sprint hit (losing the sprint knockback).
         mc.player.setSprinting(true);
+        if (mc.player.connection != null) {
+            mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket(
+                    mc.player, net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket.Action.START_SPRINTING));
+        }
         mc.gameMode.attack(mc.player, target);
         stunSlamCooldown = 20;
     }
