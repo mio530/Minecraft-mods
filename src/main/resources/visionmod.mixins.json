@@ -16,7 +16,8 @@
     "MovementSpeedMixin",
     "EffectHandlerMixin",
     "FallHandlerMixin",
-    "BetterTabMixin"
+    "BetterTabMixin",
+    "GammaMixin"
   ],
   "injectors": {
     "defaultRequire": 1

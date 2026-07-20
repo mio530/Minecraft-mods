@@ -105,6 +105,7 @@ public class VisionConfigScreen extends Screen {
         new ModDef("autoArmor",   "Armor Equip",        "Rüstung automatisch anlegen", "Player"),
         // Render
         new ModDef("fullbright",  "Light Boost",        "Maximale Sichtweite",         "Render"),
+        new ModDef("gammaBoost",  "Brightness Boost",   "Gamma-Vollhell (Regler)",     "Render"),
         new ModDef("noBob",       "Steady View",        "Kein Kamera-Wackeln",         "Render"),
         new ModDef("tracers",     "Path Display",       "Linien zu Zielen",            "Render"),
         new ModDef("boxFill",     "Box Display",        "Box-Darstellung",             "Render"),
@@ -626,6 +627,16 @@ public class VisionConfigScreen extends Screen {
             sSep(g, "Taste");
             sKeybindRow(g, "Fullbright", "fullbright", c.moduleKeys.getOrDefault("fullbright", 0), c);
         }
+        case "gammaBoost" -> {
+            sToggle(g, "Brightness Boost", c.gammaBoostEnabled,  () -> { c.gammaBoostEnabled = !c.gammaBoostEnabled; save(); });
+            sFloat(g, "Gamma",             c.gammaValue,
+                () -> { c.gammaValue = Math.max(1.0f,  c.gammaValue - 1.0f); save(); },
+                () -> { c.gammaValue = Math.min(16.0f, c.gammaValue + 1.0f); save(); });
+            sDesc(g, "Echtes Vollhell über Gamma — heller als Night Vision.");
+            sDesc(g, "Hellt Terrain UND Entities auf. 1 = Vanilla-Max.");
+            sSep(g, "Taste");
+            sKeybindRow(g, "Brightness", "gammaBoost", c.moduleKeys.getOrDefault("gammaBoost", 0), c);
+        }
         case "noBob"      -> {
             sToggle(g, "Steady View",      c.noBobEnabled,       () -> { c.noBobEnabled       = !c.noBobEnabled;       save(); });
             sDesc(g, "Entfernt das Auf-/Ab-Wackeln beim Laufen.");
@@ -1043,6 +1054,7 @@ public class VisionConfigScreen extends Screen {
             case "autoRespawn" -> c.autoRespawnEnabled;
             case "chestStealer"-> c.chestStealerEnabled;
             case "fullbright"  -> c.fullbrightEnabled;
+            case "gammaBoost"  -> c.gammaBoostEnabled;
             case "tracers"     -> c.globalLinesEnabled;
             case "boxFill"     -> c.fillBoxes;
             case "zoom"        -> c.keyZoom > 0;

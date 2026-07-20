@@ -165,7 +165,7 @@ public class VisionConfig {
         "spider", "antiVoid", "autoWalk", "glide", "fastLadder", "autoJump", "autoSneak",
         "autoEat", "antiHunger", "antiPoison", "antiAfk", "autoRespawn", "chestStealer",
         "autoTool", "autoWeapon", "autoArmor",
-        "fullbright", "noBob", "noFog", "noWeather", "antiBlind", "coords", "betterTab",
+        "fullbright", "gammaBoost", "noBob", "noFog", "noWeather", "antiBlind", "coords", "betterTab",
         "susChunks", "nuker"
     );
     public float   zoomFov            = 15f;
@@ -174,6 +174,8 @@ public class VisionConfig {
     public boolean antiBlindEnabled   = false;
     public boolean coordsHudEnabled   = false;
     public boolean betterTabEnabled   = false;  // Meteor-style Better Tab: show all players (no 80 cap)
+    public boolean gammaBoostEnabled  = false;  // true fullbright via gamma override
+    public float   gammaValue         = 5.0f;   // gamma level while boost is on (1 = vanilla max)
 
     // === WORLD ===
     public boolean nukerEnabled       = false;

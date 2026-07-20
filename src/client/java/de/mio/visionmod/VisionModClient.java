@@ -300,6 +300,7 @@ public class VisionModClient implements ClientModInitializer {
             case "autoRespawn"   -> c.autoRespawnEnabled    = !c.autoRespawnEnabled;
             case "chestStealer"  -> c.chestStealerEnabled   = !c.chestStealerEnabled;
             case "fullbright"    -> c.fullbrightEnabled     = !c.fullbrightEnabled;
+            case "gammaBoost"    -> c.gammaBoostEnabled     = !c.gammaBoostEnabled;
             case "noFog"         -> c.noFogEnabled          = !c.noFogEnabled;
             case "noWeather"     -> c.noWeatherEnabled      = !c.noWeatherEnabled;
             case "antiBlind"     -> c.antiBlindEnabled      = !c.antiBlindEnabled;
