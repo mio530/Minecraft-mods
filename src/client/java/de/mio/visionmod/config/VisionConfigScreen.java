@@ -337,6 +337,7 @@ public class VisionConfigScreen extends Screen {
             sRadius(g, "Radius",       c.entityEspRadius,  1, 16,
                 () -> { c.entityEspRadius = Math.max(1,  c.entityEspRadius-1); save(); },
                 () -> { c.entityEspRadius = Math.min(16, c.entityEspRadius+1); save(); });
+            sToggle(g, "Info-Text (Name/Koord)", c.espLabels, () -> { c.espLabels = !c.espLabels; save(); });
             sSep(g, "Entity-Farben");
             for (String eid : VisionConfig.ALL_ENTITY_TYPES) sEntityRow(g, eid, c);
         }
@@ -355,6 +356,7 @@ public class VisionConfigScreen extends Screen {
             sRadius(g, "Radius",       c.oreEspRadius,     1,  8,
                 () -> { c.oreEspRadius = Math.max(1, c.oreEspRadius-1); save(); },
                 () -> { c.oreEspRadius = Math.min(8, c.oreEspRadius+1); save(); });
+            sToggle(g, "Info-Text (Koord)", c.espLabels, () -> { c.espLabels = !c.espLabels; save(); });
             sSep(g, "Erz-Farben");
             for (String oid : VisionConfig.ALL_ORES) sOreRow(g, oid, c);
         }

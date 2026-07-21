@@ -11,9 +11,12 @@ import de.mio.visionmod.esp.SusChunks;
 import de.mio.visionmod.util.ProjectionUtil;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 public final class OverlayWindow {
@@ -50,8 +53,11 @@ public final class OverlayWindow {
         if (camera == null) return;
         Vec3 cam = ((de.mio.visionmod.mixin.CameraAccessor) camera).visionmod_getCameraPosition();
         if (cam == null) return;
+        Quaternionf camRot = ((de.mio.visionmod.mixin.CameraAccessor) camera).visionmod_getCameraRotation();
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
         VisionConfig cfg = VisionConfig.get();
+        Vec3 self = mc.player.position();
+        boolean labels = cfg.espLabels && camRot != null;
 
         // Cache matrices for HudOverlay projection this frame
         ProjectionUtil.cachedMv   = new Matrix4f(ps.last().pose());
@@ -69,12 +75,28 @@ public final class OverlayWindow {
                         e.minX(), e.minY(), e.minZ(),
                         e.maxX(), e.maxY(), e.maxZ(), e.boxColor());
 
+                double cx = (e.minX() + e.maxX()) * 0.5;
+                double cy = (e.minY() + e.maxY()) * 0.5;
+                double cz = (e.minZ() + e.maxZ()) * 0.5;
+
                 // Tracer line: camera → entity centre
                 if (e.showLine()) {
-                    double cx = (e.minX() + e.maxX()) * 0.5;
-                    double cy = (e.minY() + e.maxY()) * 0.5;
-                    double cz = (e.minZ() + e.maxZ()) * 0.5;
                     drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, e.lineColor());
+                }
+
+                // Name + coords + distance above the box
+                if (labels) {
+                    double dist = self.distanceTo(new Vec3(cx, cy, cz));
+                    if (dist <= 64) {
+                        String hp = e.health() >= 0
+                                ? "  §c" + (int) Math.ceil(e.health()) + "§7hp" : "";
+                        String[] lines = {
+                            "§f" + e.label() + hp,
+                            "§7" + Mth.floor(cx) + " " + Mth.floor(cy) + " " + Mth.floor(cz)
+                                    + "  §8" + (int) dist + "m"
+                        };
+                        drawLabel(ps, buf, cam, camRot, cx, e.maxY() + 0.35, cz, lines, e.boxColor());
+                    }
                 }
             }
         }
@@ -89,6 +111,18 @@ public final class OverlayWindow {
 
                 if (o.showLine()) {
                     drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, o.lineColor());
+                }
+
+                // Coords + distance label (nearby ores only, to avoid clutter/cost)
+                if (labels) {
+                    double dist = self.distanceTo(new Vec3(cx, cy, cz));
+                    if (dist <= 48) {
+                        String[] lines = {
+                            "§7" + Mth.floor(cx) + " " + Mth.floor(cy) + " " + Mth.floor(cz)
+                                    + "  §8" + (int) dist + "m"
+                        };
+                        drawLabel(ps, buf, cam, camRot, cx, cy + 0.6, cz, lines, o.boxColor());
+                    }
                 }
             }
         }
@@ -130,10 +164,30 @@ public final class OverlayWindow {
             }
         }
 
-        buf.endBatch(RenderTypes.lines());
+        buf.endBatch(); // flush lines AND the text batched by drawLabel
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
+
+    /** Billboarded, see-through text at a world position (nametag-style), camera-relative. */
+    private static void drawLabel(PoseStack ps, MultiBufferSource buf, Vec3 cam, Quaternionf camRot,
+                                  double wx, double wy, double wz, String[] lines, int color) {
+        Font font = Minecraft.getInstance().font;
+        int argb = 0xFF000000 | (color & 0xFFFFFF);
+        ps.pushPose();
+        ps.translate((float) (wx - cam.x), (float) (wy - cam.y), (float) (wz - cam.z));
+        ps.mulPose(camRot);                    // face the viewer
+        ps.scale(-0.025f, -0.025f, 0.025f);    // MC nametag scale (text is drawn flipped)
+        Matrix4f m = ps.last().pose();
+        float y = 0f;
+        for (String line : lines) {
+            float x = -font.width(line) / 2f;
+            font.drawInBatch(line, x, y, argb, false, m, buf,
+                    Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
+            y += 10f;
+        }
+        ps.popPose();
+    }
 
     private static void drawBox(PoseStack ps, VertexConsumer vc, Vec3 cam,
                                  double minX, double minY, double minZ,

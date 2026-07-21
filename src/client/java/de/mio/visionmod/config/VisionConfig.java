@@ -22,6 +22,7 @@ public class VisionConfig {
     public boolean entityGlowEnabled = false;
     public boolean oreEspEnabled    = false;
     public boolean globalLinesEnabled = true;
+    public boolean espLabels          = true;  // show name/coords/distance text on entity & ore ESP
 
     // --- Entity config ---
     public Set<String> enabledEntityTypes = new LinkedHashSet<>(Arrays.asList(
