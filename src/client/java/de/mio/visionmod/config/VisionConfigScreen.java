@@ -135,6 +135,7 @@ public class VisionConfigScreen extends Screen {
     private int    maxLScroll  = 0;
     private String rebindingKey = null;
     private boolean hoverLeft  = false;
+    private boolean settingsClip = false;
     private String searchQuery = "";
     private EditBox searchBox;
 
@@ -164,7 +165,10 @@ public class VisionConfigScreen extends Screen {
         searchBox.setTextColor(C_TEXT);
         searchBox.setHint(Component.literal("§8Suchen..."));
         searchBox.setValue(searchQuery);
-        searchBox.setResponder(v -> searchQuery = v == null ? "" : v.toLowerCase(java.util.Locale.ROOT));
+        searchBox.setResponder(v -> {
+            searchQuery = v == null ? "" : v.toLowerCase(java.util.Locale.ROOT);
+            leftScroll = 0; // filtered results should start at the top, not off-screen
+        });
         addRenderableWidget(searchBox);
 
         if ("entityEsp".equals(selMod)) {
@@ -309,8 +313,12 @@ public class VisionConfigScreen extends Screen {
         g.enableScissor(rx, cy, rx + rw, cy + ch);
         sX = rx; sY = cy; sW = rw; sH = ch; sMX = mx; sMY = my;
         sCY = cy - rightScroll;
+        settingsClip = true;   // clamp settings-row hit rects to [sY, sY+sH] while drawing them
         drawSettings(g, m.id(), VisionConfig.get());
-        maxRScroll = Math.max(0, sCY - (cy + ch));
+        settingsClip = false;
+        // Add rightScroll back (sCY was started at cy - rightScroll), else the bound
+        // shrinks as you scroll and the bottom of long panels becomes unreachable.
+        maxRScroll = Math.max(0, sCY + rightScroll - (cy + ch));
         g.disableScissor();
 
         if (reserve > 0) {
@@ -957,7 +965,7 @@ public class VisionConfigScreen extends Screen {
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
         int delta = (int)(-sy * 14);
         if (hoverLeft) leftScroll  = Math.max(0, Math.min(maxLScroll, leftScroll + delta));
-        else           rightScroll = Math.max(0, Math.min(maxRScroll + 40, rightScroll + delta));
+        else           rightScroll = Math.max(0, Math.min(maxRScroll, rightScroll + delta));
         return true;
     }
 
@@ -999,6 +1007,15 @@ public class VisionConfigScreen extends Screen {
     }
 
     private void hit(int x, int y, int w, int h, Runnable action) {
+        if (settingsClip) {
+            // Clip settings-row click zones to the scrolled viewport so a row that is
+            // scrolled just off the top/bottom can't be clicked via the title bar or
+            // the entityEsp filter strip (scissor clips drawing, not hit-testing).
+            int ny = Math.max(y, sY);
+            int nb = Math.min(y + h, sY + sH);
+            if (nb <= ny) return;
+            y = ny; h = nb - ny;
+        }
         hits.add(new int[]{x, y, w, h});
         hitActions.add(action);
     }
