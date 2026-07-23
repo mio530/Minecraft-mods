@@ -75,28 +75,12 @@ public final class OverlayWindow {
                         e.minX(), e.minY(), e.minZ(),
                         e.maxX(), e.maxY(), e.maxZ(), e.boxColor());
 
-                double cx = (e.minX() + e.maxX()) * 0.5;
-                double cy = (e.minY() + e.maxY()) * 0.5;
-                double cz = (e.minZ() + e.maxZ()) * 0.5;
-
                 // Tracer line: camera → entity centre
                 if (e.showLine()) {
+                    double cx = (e.minX() + e.maxX()) * 0.5;
+                    double cy = (e.minY() + e.maxY()) * 0.5;
+                    double cz = (e.minZ() + e.maxZ()) * 0.5;
                     drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, e.lineColor());
-                }
-
-                // Name + coords + distance above the box
-                if (labels) {
-                    double dist = self.distanceTo(new Vec3(cx, cy, cz));
-                    if (dist <= 64) {
-                        String hp = e.health() >= 0
-                                ? "  §c" + (int) Math.ceil(e.health()) + "§7hp" : "";
-                        String[] lines = {
-                            "§f" + e.label() + hp,
-                            "§7" + Mth.floor(cx) + " " + Mth.floor(cy) + " " + Mth.floor(cz)
-                                    + "  §8" + (int) dist + "m"
-                        };
-                        drawLabel(ps, buf, cam, camRot, cx, e.maxY() + 0.35, cz, lines, e.boxColor());
-                    }
                 }
             }
         }
@@ -111,18 +95,6 @@ public final class OverlayWindow {
 
                 if (o.showLine()) {
                     drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, o.lineColor());
-                }
-
-                // Coords + distance label (nearby ores only, to avoid clutter/cost)
-                if (labels) {
-                    double dist = self.distanceTo(new Vec3(cx, cy, cz));
-                    if (dist <= 48) {
-                        String[] lines = {
-                            "§7" + Mth.floor(cx) + " " + Mth.floor(cy) + " " + Mth.floor(cz)
-                                    + "  §8" + (int) dist + "m"
-                        };
-                        drawLabel(ps, buf, cam, camRot, cx, cy + 0.6, cz, lines, o.boxColor());
-                    }
                 }
             }
         }
@@ -161,6 +133,40 @@ public final class OverlayWindow {
                 double bx = chunk.chunkX() * 16.0;
                 double bz = chunk.chunkZ() * 16.0;
                 drawBox(ps, vc, cam, bx, py - 1, bz, bx + 16, py + 3, bz + 16, color);
+            }
+        }
+
+        // ── ESP labels ───────────────────────────────────────────────────
+        // Drawn AFTER every box/line: font.drawInBatch requests text buffers from the
+        // same BufferSource, which ends the shared lines builder. If labels were
+        // interleaved with boxes, the cached `vc` would go stale mid-frame and every
+        // later box/line would silently fail to render.
+        if (labels) {
+            if (cfg.entityEspEnabled && !cfg.entityGlowEnabled) {
+                for (EntityESP.EntityData e : EntityESP.snapshot) {
+                    double cx = (e.minX() + e.maxX()) * 0.5;
+                    double cy = (e.minY() + e.maxY()) * 0.5;
+                    double cz = (e.minZ() + e.maxZ()) * 0.5;
+                    double dist = self.distanceTo(new Vec3(cx, cy, cz));
+                    if (dist > 64) continue;
+                    String hp = e.health() >= 0
+                            ? "  §c" + (int) Math.ceil(e.health()) + "§7hp" : "";
+                    drawLabel(ps, buf, cam, camRot, cx, e.maxY() + 0.35, cz, new String[]{
+                            "§f" + e.label() + hp,
+                            "§7" + Mth.floor(cx) + " " + Mth.floor(cy) + " " + Mth.floor(cz)
+                                    + "  §8" + (int) dist + "m"
+                    }, e.boxColor());
+                }
+            }
+            if (cfg.oreEspEnabled) {
+                for (OreESP.OreData o : OreESP.snapshot) {
+                    double dist = self.distanceTo(new Vec3(o.x(), o.y(), o.z()));
+                    if (dist > 48) continue;
+                    drawLabel(ps, buf, cam, camRot, o.x(), o.y() + 0.6, o.z(), new String[]{
+                            "§7" + Mth.floor(o.x()) + " " + Mth.floor(o.y()) + " " + Mth.floor(o.z())
+                                    + "  §8" + (int) dist + "m"
+                    }, o.boxColor());
+                }
             }
         }
 

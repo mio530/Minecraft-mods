@@ -135,6 +135,9 @@ public final class MovementHacks {
             p.getAbilities().flyingSpeed = 0.05f * clamp(cfg.flySpeed, 0.5f, 5.0f);
             flyWasActive = true;
         } else if (flyWasActive) {
+            // Always restore the vanilla flight speed the hack changed, else creative/
+            // spectator flight stays boosted after the hack is turned off.
+            p.getAbilities().flyingSpeed = 0.05f;
             // Only revoke flight the hack granted — don't strip legitimate flight from
             // creative/spectator, which grant mayfly by gamemode.
             net.minecraft.world.level.GameType gt = mc.gameMode != null ? mc.gameMode.getPlayerMode() : null;
@@ -143,8 +146,8 @@ public final class MovementHacks {
             if (!gamemodeGrantsFlight) {
                 p.getAbilities().mayfly = false;
                 p.getAbilities().flying = false;
-                if (mc.getConnection() != null) p.onUpdateAbilities();
             }
+            if (mc.getConnection() != null) p.onUpdateAbilities();
             flyWasActive = false;
         }
 
