@@ -27,9 +27,11 @@ public final class OreESP {
     public static volatile List<OreData> snapshot = Collections.emptyList();
 
     private static int tickCounter = 0;
+    private static Object lastLevel = null;
 
     public static void resetOnDisconnect() {
         tickCounter = 0;
+        lastLevel = null;
         snapshot = Collections.emptyList();
     }
 
@@ -41,9 +43,9 @@ public final class OreESP {
         Y_RANGES.put("minecraft:deepslate_diamond_ore",  new int[]{-64, 16});
         Y_RANGES.put("minecraft:emerald_ore",            new int[]{-16, 320});
         Y_RANGES.put("minecraft:deepslate_emerald_ore",  new int[]{-64, 16});
-        Y_RANGES.put("minecraft:gold_ore",               new int[]{-64, 32});
+        Y_RANGES.put("minecraft:gold_ore",               new int[]{-64, 256}); // badlands gold generates high
         Y_RANGES.put("minecraft:deepslate_gold_ore",     new int[]{-64, 0});
-        Y_RANGES.put("minecraft:iron_ore",               new int[]{-64, 72});
+        Y_RANGES.put("minecraft:iron_ore",               new int[]{-64, 320}); // upper iron generates in mountains
         Y_RANGES.put("minecraft:deepslate_iron_ore",     new int[]{-64, 8});
         Y_RANGES.put("minecraft:redstone_ore",           new int[]{-64, 16});
         Y_RANGES.put("minecraft:deepslate_redstone_ore", new int[]{-64, 16});
@@ -64,6 +66,10 @@ public final class OreESP {
             snapshot = Collections.emptyList();
             return;
         }
+
+        // A portal swaps mc.level without a disconnect; drop the stale snapshot so the
+        // previous dimension's boxes don't linger for a scan interval in the new one.
+        if (mc.level != lastLevel) { lastLevel = mc.level; snapshot = Collections.emptyList(); tickCounter = 0; }
 
         tickCounter++;
         if (tickCounter % 20 != 0) return;

@@ -22,9 +22,11 @@ public final class StorageESP {
     public static volatile List<StorageData> snapshot = Collections.emptyList();
 
     private static int tickCounter = 0;
+    private static Object lastLevel = null;
 
     public static void resetOnDisconnect() {
         tickCounter = 0;
+        lastLevel = null;
         snapshot = Collections.emptyList();
     }
 
@@ -34,6 +36,8 @@ public final class StorageESP {
             snapshot = Collections.emptyList();
             return;
         }
+
+        if (mc.level != lastLevel) { lastLevel = mc.level; snapshot = Collections.emptyList(); tickCounter = 0; }
 
         tickCounter++;
         if (tickCounter % 20 != 0) return;

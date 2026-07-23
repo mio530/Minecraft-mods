@@ -17,7 +17,8 @@
     "EffectHandlerMixin",
     "FallHandlerMixin",
     "BetterTabMixin",
-    "GammaMixin"
+    "GammaMixin",
+    "OptionsSaveMixin"
   ],
   "injectors": {
     "defaultRequire": 1

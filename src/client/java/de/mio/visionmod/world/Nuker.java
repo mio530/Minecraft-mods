@@ -72,7 +72,7 @@ public final class Nuker {
         if (best.equals(currentTarget)) {
             mc.gameMode.continueDestroyBlock(best, Direction.UP);
             stuckTimer++;
-            if (stuckTimer > 40) { // give up after 2 seconds; blacklist so we move to another block
+            if (stuckTimer > 200) { // give up after ~10s; long enough for hard blocks (obsidian ~9s)
                 mc.gameMode.stopDestroyBlock();
                 blacklist.put(best, 100); // ~5 s cooldown before retrying this position
                 currentTarget = null;

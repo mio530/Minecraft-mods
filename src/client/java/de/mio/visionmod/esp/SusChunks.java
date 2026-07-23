@@ -24,9 +24,11 @@ public final class SusChunks {
     public static volatile List<ChunkData> snapshot = Collections.emptyList();
 
     private static int tickCounter = 0;
+    private static Object lastLevel = null;
 
     public static void resetOnDisconnect() {
         tickCounter = 0;
+        lastLevel = null;
         snapshot = Collections.emptyList();
     }
 
@@ -54,6 +56,8 @@ public final class SusChunks {
             snapshot = Collections.emptyList();
             return;
         }
+
+        if (mc.level != lastLevel) { lastLevel = mc.level; snapshot = Collections.emptyList(); tickCounter = 0; }
 
         tickCounter++;
         if (tickCounter % 40 != 0) return; // scan every 2 seconds

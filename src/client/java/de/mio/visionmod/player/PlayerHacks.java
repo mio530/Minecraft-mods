@@ -9,6 +9,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.client.Minecraft;
@@ -86,13 +87,18 @@ public final class PlayerHacks {
                 // slots are the crafting grid + armor, so stealing from it would shift-click
                 // worn armor off. Only steal from real external containers.
                 int containerSlots = menu.containerId == 0 ? 0 : menu.slots.size() - 36;
-                for (int i = 0; i < containerSlots; i++) {
-                    ItemStack stack = menu.slots.get(i).getItem();
-                    if (!stack.isEmpty()) {
-                        mc.gameMode.handleInventoryMouseClick(
-                                menu.containerId, i, 0, ClickType.QUICK_MOVE, mc.player);
-                        chestStealerCooldown = 2;
-                        break;
+                // Stop if the player has no empty slot, otherwise QUICK_MOVE is a no-op
+                // and we'd spin on the same container slot every couple ticks forever.
+                boolean invFull = mc.player.getInventory().getFreeSlot() < 0;
+                if (!invFull) {
+                    for (int i = 0; i < containerSlots; i++) {
+                        ItemStack stack = menu.slots.get(i).getItem();
+                        if (!stack.isEmpty()) {
+                            mc.gameMode.handleInventoryMouseClick(
+                                    menu.containerId, i, 0, ClickType.QUICK_MOVE, mc.player);
+                            chestStealerCooldown = 2;
+                            break;
+                        }
                     }
                 }
             }
@@ -109,6 +115,9 @@ public final class PlayerHacks {
                 for (int i = 0; i < 36; i++) {
                     ItemStack st = mc.player.getInventory().getItem(i);
                     if (st.isEmpty()) continue;
+                    // Don't auto-equip wearables that aren't protective armor — a carved
+                    // pumpkin would block the view and elytra would replace a chestplate.
+                    if (st.is(Items.CARVED_PUMPKIN) || st.is(Items.ELYTRA)) continue;
                     Equippable eq = st.get(DataComponents.EQUIPPABLE);
                     if (eq == null) continue;
                     EquipmentSlot slot = eq.slot();
