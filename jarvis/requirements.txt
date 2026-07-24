@@ -1,0 +1,16 @@
+# --- Pflicht: das Gehirn ---
+anthropic>=0.40.0
+
+# --- Optional: Sprachein-/ausgabe auf Windows & Linux ---
+# (Jarvis läuft auch ohne diese im reinen Textmodus)
+SpeechRecognition>=3.10.0
+pyttsx3>=2.90
+# Mikrofon-Zugriff. Falls die Installation von pyaudio scheitert:
+#   Windows:        pip install pipwin && pipwin install pyaudio
+#   Debian/Ubuntu:  sudo apt install portaudio19-dev && pip install pyaudio
+#   Fedora:         sudo dnf install portaudio-devel && pip install pyaudio
+#   macOS:          brew install portaudio && pip install pyaudio
+pyaudio>=0.2.13
+
+# Android/Termux braucht KEINE dieser Sprach-Pakete –
+# dort läuft die Sprache über termux-api (siehe README).
