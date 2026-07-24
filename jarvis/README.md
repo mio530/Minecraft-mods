@@ -315,6 +315,7 @@ Jarvis kann auf die Kamera zugreifen (Desktop-Webcam bzw. Handy-Kamera):
 | `look` | nimmt ein Foto auf und **beschreibt, was darauf zu sehen ist** |
 | `enroll_face` | **lernt dein Gesicht an** (Referenzfoto + Name) |
 | `recognize_me` | **erkennt dich wieder** (vergleicht Live-Foto mit deinem Gesicht) |
+| `learn_movement` | **lernt, wie du dich bewegst** (für präzisere Wiedererkennung) |
 
 Sag z. B.: „**Schau mal, was siehst du?**", „Mach ein Foto", „Ist jemand im Raum?",
 „**Merk dir mein Gesicht, ich bin Mio**", „**Erkennst du mich?**".
@@ -350,6 +351,9 @@ Erkennt er eine **fremde Person** (nicht dein angelerntes Gesicht), dann:
    **fortlaufend Live-Bilder** (~alle 5 s) – mit Ton + Vibration
 3. **entsperrt automatisch, wenn er DICH wiedererkennt** – aber nur, wenn du dich
    **~1 Sekunde bewegst** (Lebend-Check, damit ein Foto von dir ihn nicht täuscht).
+   Wenn du zusätzlich „**merk dir, wie ich mich bewege**" sagst, lernt er dein
+   **Bewegungsmuster** an und gleicht es beim Entsperren mit ab – so unterscheidet
+   er dich noch genauer von Fremden.
    Alternativ jederzeit manuell:
    - **Passwort** am PC eintippen
    - laut **„entsperren"** sagen (per `JARVIS_UNLOCK_PHRASE` änderbar)

@@ -127,6 +127,12 @@ def _look(params: dict) -> str:
     return describe_image(tmp, prompt)
 
 
+def _learn_movement(params: dict) -> str:
+    import sentry
+    cam = int(params.get("camera", 0))
+    return sentry.enroll_motion(lambda p: capture(cam, p))
+
+
 def camera_tools() -> list[Tool]:
     return [
         Tool(
@@ -163,6 +169,21 @@ def camera_tools() -> list[Tool]:
                 "required": [],
             },
             handler=_look,
+            dangerous=True,
+        ),
+        Tool(
+            name="learn_movement",
+            description=(
+                "Lernt an, WIE sich der Nutzer bewegt (~2,5 s Aufnahme) – für eine "
+                "genauere Wiedererkennung im Wächter-Modus. Nutze das bei 'merk dir "
+                "wie ich mich bewege'. Der Nutzer sollte sich dabei normal bewegen."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {"camera": {"type": "integer"}},
+                "required": [],
+            },
+            handler=_learn_movement,
             dangerous=True,
         ),
     ]

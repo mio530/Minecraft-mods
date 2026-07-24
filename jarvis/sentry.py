@@ -276,8 +276,91 @@ def has_motion(capture_fn, samples: int = 4, gap: float = 0.3) -> bool:
     return moving >= 2  # Bewegung in mind. 2 Intervallen ~= 1 Sekunde
 
 
+# ----------------------------------------------------------------------------
+# Persönliches Bewegungsmuster (für präzisere Wiedererkennung)
+# ----------------------------------------------------------------------------
+MOTION_PROFILE = Path.home() / ".jarvis" / "motion_profile.json"
+
+
+def _motion_series(capture_fn, samples: int, gap: float):
+    """Bewegungs-Stärke zwischen aufeinanderfolgenden Bildern (Liste) oder None."""
+    try:
+        import cv2
+    except ImportError:
+        return None
+    tmp = str(Path.home() / ".jarvis" / "motion.jpg")
+    prev = None
+    scores = []
+    for i in range(samples):
+        if capture_fn(tmp):
+            return None
+        img = cv2.imread(tmp, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            return None
+        if prev is not None:
+            if prev.shape != img.shape:
+                img = cv2.resize(img, (prev.shape[1], prev.shape[0]))
+            scores.append(float(cv2.absdiff(prev, img).mean()))
+        prev = img
+        if i < samples - 1:
+            time.sleep(gap)
+    return scores
+
+
+def save_motion_profile(profile: dict) -> None:
+    MOTION_PROFILE.parent.mkdir(parents=True, exist_ok=True)
+    MOTION_PROFILE.write_text(json.dumps(profile), encoding="utf-8")
+
+
+def load_motion_profile() -> dict | None:
+    if MOTION_PROFILE.exists():
+        try:
+            return json.loads(MOTION_PROFILE.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+    return None
+
+
+def enroll_motion(capture_fn) -> str:
+    """Lernt an, WIE sich der Besitzer bewegt (~2,5 s Aufnahme)."""
+    scores = _motion_series(capture_fn, samples=10, gap=0.25)
+    if not scores:
+        return "Konnte die Bewegung nicht aufzeichnen (Kamera/OpenCV vorhanden?)."
+    import statistics
+    profile = {
+        "mean": statistics.mean(scores),
+        "std": statistics.pstdev(scores),
+        "n": len(scores),
+    }
+    save_motion_profile(profile)
+    return (f"Bewegungsmuster gemerkt (Ø {profile['mean']:.1f}). Ich erkenne dich "
+            f"jetzt genauer – nicht nur am Gesicht, sondern auch an der Bewegung.")
+
+
+def matches_owner_motion(capture_fn) -> bool:
+    """Lebendig (Bewegung vorhanden) UND – falls angelernt – passt zum Muster."""
+    try:
+        threshold = float(os.environ.get("JARVIS_MOTION_THRESHOLD", "6"))
+    except ValueError:
+        threshold = 6.0
+    scores = _motion_series(capture_fn, samples=4, gap=0.3)
+    if not scores:
+        return False
+    if sum(1 for s in scores if s > threshold) < 2:  # ~1 s Bewegung nötig
+        return False
+    profile = load_motion_profile()
+    if not profile:
+        return True  # kein Muster angelernt -> reine Lebend-Prüfung genügt
+    import statistics
+    live_mean = statistics.mean(scores)
+    # großzügiges Band um das gelernte Mittel (nicht zu wenig, nicht extrem anders)
+    lo = profile["mean"] * 0.3
+    hi = profile["mean"] * 3.0 + 5
+    return lo <= live_mean <= hi
+
+
 def check_owner_live(capture_fn) -> bool:
-    """Ist gerade der Besitzer da – hell genug UND lebendig (bewegt)?"""
+    """Ist gerade der Besitzer da – hell genug, richtiges Gesicht UND passende Bewegung?"""
     tmp = str(Path.home() / ".jarvis" / "owner_probe.jpg")
     if capture_fn(tmp):
         return False
@@ -285,7 +368,7 @@ def check_owner_live(capture_fn) -> bool:
         return False
     if classify_person(tmp) != "owner":
         return False
-    return has_motion(capture_fn)  # ~1 Sekunde Bewegung nötig
+    return matches_owner_motion(capture_fn)  # ~1 s Bewegung + persönliches Muster
 
 
 # ----------------------------------------------------------------------------

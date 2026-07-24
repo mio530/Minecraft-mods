@@ -146,6 +146,17 @@ def _recognize_me(params: dict) -> str:
     return recognize_against_owner(path)
 
 
+def _learn_movement(params: dict) -> str:
+    import sentry
+    cam = str(params.get("camera", 1))
+
+    def cap(p):
+        _tapi(["termux-camera-photo", "-c", cam, os.path.expanduser(p)], timeout=30)
+        return None if os.path.exists(os.path.expanduser(p)) else "kein Bild"
+
+    return sentry.enroll_motion(cap)
+
+
 def android_tools() -> list[Tool]:
     if not HAVE_TERMUX_API:
         return common_tools()
@@ -196,6 +207,9 @@ def android_tools() -> list[Tool]:
         Tool("recognize_me", "Prüft per Frontkamera, ob es der bekannte Nutzer ist.",
              {"type": "object", "properties": {"camera": {"type": "integer"}},
               "required": []}, _recognize_me, dangerous=True),
+        Tool("learn_movement", "Lernt an, wie sich der Nutzer bewegt (genauere Erkennung).",
+             {"type": "object", "properties": {"camera": {"type": "integer"}},
+              "required": []}, _learn_movement, dangerous=True),
     ]
 
 
