@@ -90,6 +90,8 @@ class JarvisGUI:
         # Wächter-Modus (Kamera-Überwachung + Sperre + Handy-Alarm)
         self.sentry = None
         self._lock_win = None
+        self._lock_active = False
+        self._lock_pw_entry = None
         self.sentry_unlock_stop = threading.Event()
 
         self.tools, self.label = load_tools_and_label()
@@ -368,10 +370,24 @@ class JarvisGUI:
             sentry.os_lock()
 
         win = tk.Toplevel(self.root)
-        win.attributes("-fullscreen", True)
-        win.attributes("-topmost", True)
         win.configure(bg="#1a0000")
         win.protocol("WM_DELETE_WINDOW", lambda: None)
+        # Bildschirm wirklich übernehmen: randlos, Vollbild, immer oben, Taskleiste weg
+        try:
+            win.overrideredirect(True)  # keine Titelleiste, nicht verschieb-/schließbar
+        except Exception:
+            pass
+        win.attributes("-fullscreen", True)
+        win.attributes("-topmost", True)
+        # gesamte Bildschirmfläche abdecken (auch ohne WM-Deko)
+        win.geometry(f"{win.winfo_screenwidth()}x{win.winfo_screenheight()}+0+0")
+        # verbreitete Escape-Wege abfangen
+        for seq in ("<Alt-F4>", "<Alt-Tab>", "<Escape>", "<Super_L>", "<Super_R>",
+                    "<Control-w>", "<Control-q>"):
+            win.bind_all(seq, lambda e: "break")
+        # verliert es den Fokus (z.B. per Alt-Tab), holt es ihn sofort zurück
+        win.bind("<FocusOut>", lambda e: self._reassert_lock())
+
         tk.Label(win, text="🔒 GESPERRT", bg="#1a0000", fg="#ff4444",
                  font=("Segoe UI", 40, "bold")).pack(pady=(120, 10))
         tk.Label(win, text="Unbefugter Zugriff erkannt.\nPasswort eingeben – oder per "
@@ -394,8 +410,32 @@ class JarvisGUI:
         tk.Button(win, text="Entsperren", command=try_unlock, bg=ACCENT, fg=BG,
                   bd=0, font=("Segoe UI", 12, "bold"), padx=16, pady=4).pack(pady=8)
         self._lock_win = win
-        win.grab_set()
+        self._lock_pw_entry = pw_entry
+        self._lock_active = True
+        try:
+            win.grab_set_global()   # alle Tastatur-/Maus-Eingaben auf dieses Fenster
+        except Exception:
+            win.grab_set()
         pw_entry.focus_force()
+        self._reassert_lock()       # bleibt oben & fokussiert
+
+    def _reassert_lock(self) -> None:
+        """Hält die Sperre oben und im Fokus, solange sie aktiv ist."""
+        if not getattr(self, "_lock_active", False) or self._lock_win is None:
+            return
+        try:
+            self._lock_win.lift()
+            self._lock_win.attributes("-topmost", True)
+            self._lock_win.focus_force()
+            try:
+                self._lock_win.grab_set_global()
+            except Exception:
+                self._lock_win.grab_set()
+            if getattr(self, "_lock_pw_entry", None) is not None:
+                self._lock_pw_entry.focus_set()
+        except Exception:
+            pass
+        self.root.after(700, self._reassert_lock)
 
     def _remote_unlock(self) -> None:
         if self._lock_win is not None:
@@ -403,6 +443,7 @@ class JarvisGUI:
             self._do_unlock()
 
     def _do_unlock(self) -> None:
+        self._lock_active = False  # stoppt die Reassert-Schleife
         if self._lock_win is not None:
             try:
                 self._lock_win.grab_release()

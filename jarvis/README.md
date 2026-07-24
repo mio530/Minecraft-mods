@@ -342,7 +342,10 @@ dasselbe Vision-Backend wie `look`.)
 Wenn die GUI offen ist, kann Jarvis im **Hintergrund die Webcam überwachen**.
 Erkennt er eine **fremde Person** (nicht dein angelerntes Gesicht), dann:
 
-1. **sperrt er den PC** (Vollbild-Sperrfenster von Jarvis)
+1. **sperrt er den PC** – ein randloses Vollbild-Sperrfenster **übernimmt den
+   Bildschirm**: es liegt über allem (auch der Taskleiste), fängt Alt+F4 / Alt+Tab /
+   Escape / Windows-Taste ab, greift sich alle Eingaben (globaler Grab) und holt
+   sich den Fokus sofort zurück, falls man wegzuwechseln versucht
 2. **schickt einen Alarm** als Push-Benachrichtigung **aufs Handy** (mit Ton + Vibration)
 3. **wartet aufs Entsperren** – per **Passwort am PC** ODER **Fingerabdruck am Handy**
 
