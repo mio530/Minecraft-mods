@@ -74,6 +74,10 @@ class JarvisGUI:
         self.brain_lock = threading.Lock()  # serialisiert ask() + TTS
         self.busy = False
 
+        # Freihändiger Gesprächsmodus
+        self.convo_active = False
+        self.convo_stop = threading.Event()
+
         self.tools, self.label = load_tools_and_label()
 
         # Sprache (nur Desktop)
@@ -133,6 +137,13 @@ class JarvisGUI:
         # Eingabezeile
         bottom = tk.Frame(self.root, bg=BG)
         bottom.pack(fill="x", side="bottom", padx=10, pady=10)
+
+        self.convo_btn = tk.Button(bottom, text="🗣️ Gesprächsmodus", command=self.on_convo,
+                                   bg=BG2, fg=ACCENT, bd=0, font=("Segoe UI", 10, "bold"),
+                                   activebackground=ACCENT, activeforeground=BG, padx=8)
+        self.convo_btn.pack(side="left", padx=(0, 6))
+        if not (self.voice and self.voice.voice_input):
+            self.convo_btn.configure(state="disabled")
 
         self.mic_btn = tk.Button(bottom, text="🎤", command=self.on_mic,
                                  bg=BG2, fg=ACCENT, bd=0, font=("Segoe UI", 14),
@@ -223,16 +234,87 @@ class JarvisGUI:
         done.wait()
         return result["ok"]
 
+    # ------------------------------------------------- Gesprächsmodus (Stimme)
+    def on_convo(self) -> None:
+        if self.convo_active:
+            self._stop_convo()
+        else:
+            self._start_convo()
+
+    def _start_convo(self) -> None:
+        if not (self.voice and self.voice.voice_input):
+            self._add("warn", "Kein Mikrofon verfügbar – Gesprächsmodus nicht möglich.")
+            return
+        if self.brain is None:
+            self._add("warn", "Kein KI-Gehirn aktiv.")
+            return
+        self.convo_active = True
+        self.convo_stop.clear()
+        self.speak_var.set(True)  # Antworten müssen vorgelesen werden
+        self.convo_btn.configure(text="■ Stoppen", bg=WARN_COL, fg=BG)
+        self._set_convo_controls(active=True)
+        self._add("system", "Gesprächsmodus aktiv. Sprich einfach los – "
+                            "sag 'Stopp', um zu beenden.")
+        if not self.voice.voice_output:
+            self._add("warn", "Hinweis: Keine Sprachausgabe verfügbar – "
+                              "Antworten erscheinen nur als Text.")
+        threading.Thread(target=self._convo_loop, daemon=True).start()
+
+    def _stop_convo(self) -> None:
+        self.convo_stop.set()
+        self._set_status("Gesprächsmodus wird beendet …")
+
+    def _convo_loop(self) -> None:
+        STOP_WORDS = ("stopp", "stop", "beenden", "gesprächsmodus aus",
+                      "pause", "danke das war", "ende")
+        while not self.convo_stop.is_set():
+            self.root.after(0, self._set_status, "🎤 Ich höre … sprich")
+            text, err = self.voice.recognize_once(timeout=8, phrase_time_limit=15)
+            if self.convo_stop.is_set():
+                break
+            if not text:
+                continue  # Timeout / nichts gehört -> weiter zuhören
+            low = text.lower().strip()
+            if any(w in low for w in STOP_WORDS):
+                self.root.after(0, self._add, "user", text)
+                break
+            self.root.after(0, self._add, "user", text)
+            self.root.after(0, self._set_status, "Denke nach …")
+            with self.brain_lock:
+                answer = self.brain.ask(text)
+            if self.convo_stop.is_set():
+                break
+            self.root.after(0, self._add, "jarvis", answer)
+            self.root.after(0, self._set_status, "🔊 Antworte …")
+            with self.brain_lock:
+                self.voice.tts(answer)
+        self.root.after(0, self._convo_finished)
+
+    def _convo_finished(self) -> None:
+        self.convo_active = False
+        self.convo_btn.configure(text="🗣️ Gesprächsmodus", bg=BG2, fg=ACCENT)
+        self._set_convo_controls(active=False)
+        self._add("system", "Gesprächsmodus beendet.")
+        self._set_status("Bereit")
+
+    def _set_convo_controls(self, active: bool) -> None:
+        """Sperrt/entsperrt die manuellen Bedienelemente während des Gesprächs."""
+        state = "disabled" if active else "normal"
+        self.send_btn.configure(state=state)
+        self.mic_btn.configure(state=state)
+        self.entry.configure(state=state)
+        self.backend_box.configure(state="disabled" if active else "readonly")
+
     # ---------------------------------------------------------- Aktionen
     def on_send(self) -> None:
         text = self.entry.get().strip()
-        if not text or self.busy:
+        if not text or self.busy or self.convo_active:
             return
         self.entry.delete(0, "end")
         self._handle(text)
 
     def on_mic(self) -> None:
-        if self.busy or not (self.voice and self.voice.voice_input):
+        if self.busy or self.convo_active or not (self.voice and self.voice.voice_input):
             return
         self._set_busy(True)
         self._set_status("🎤 Höre zu … sprich jetzt")

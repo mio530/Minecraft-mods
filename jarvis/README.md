@@ -117,7 +117,11 @@ Ein Fenster (Desktop: Windows / Linux / macOS), in dem du Jarvis auf beide Arten
 bedienst:
 
 - **Tippen:** Text ins Eingabefeld, Enter oder „Senden".
-- **Stimme:** 🎤-Knopf drücken und sprechen.
+- **Stimme (einmal):** 🎤-Knopf drücken und sprechen.
+- **🗣️ Gesprächsmodus (freihändig):** Knopf drücken → einfach drauflos reden.
+  Jarvis hört zu, **antwortet mit Stimme** und hört danach automatisch wieder zu –
+  ein echtes Gespräch ohne Klicken. Sag **„Stopp"** (oder drück „Stoppen"), um
+  den Modus zu beenden.
 - **Vorlesen:** Haken „Antwort vorlesen" schaltet die Sprachausgabe an/aus.
 - **KI wählen:** oben umschaltbar zwischen *Kostenlos* (Ollama/Groq) und *Claude*
   (Claude erscheint nur, wenn `ANTHROPIC_API_KEY` gesetzt ist).
