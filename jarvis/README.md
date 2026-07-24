@@ -311,8 +311,16 @@ Jarvis kann auf die Kamera zugreifen (Desktop-Webcam bzw. Handy-Kamera):
 |----------|------------|
 | `take_photo` | nimmt ein Foto auf und speichert es (in `~/.jarvis/photos/`) |
 | `look` | nimmt ein Foto auf und **beschreibt, was darauf zu sehen ist** |
+| `enroll_face` | **lernt dein Gesicht an** (Referenzfoto + Name) |
+| `recognize_me` | **erkennt dich wieder** (vergleicht Live-Foto mit deinem Gesicht) |
 
-Sag z. B.: „**Schau mal, was siehst du?**", „Mach ein Foto", „Ist jemand im Raum?".
+Sag z. B.: „**Schau mal, was siehst du?**", „Mach ein Foto", „Ist jemand im Raum?",
+„**Merk dir mein Gesicht, ich bin Mio**", „**Erkennst du mich?**".
+
+**Dich erkennen:** Einmal „merk dir mein Gesicht" sagen – Jarvis speichert ein
+Referenzbild (`~/.jarvis/face/owner.jpg`). Danach kann er bei „erkennst du mich?"
+ein Live-Foto aufnehmen und per Vision-Modell abgleichen, ob du es bist. (Nutzt
+dasselbe Vision-Backend wie `look`.)
 
 - **Desktop (Windows/Linux/macOS):** braucht OpenCV → `pip install opencv-python`
 - **Android (Termux):** nutzt die Termux-Kamera (kein Extra-Paket nötig)

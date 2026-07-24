@@ -32,7 +32,7 @@ def _photo_dir() -> Path:
     return d
 
 
-def _capture(camera: int, path: str) -> str | None:
+def capture(camera: int, path: str) -> str | None:
     """Nimmt ein Bild auf und speichert es. Gibt Fehlertext zurück oder None bei Erfolg."""
     try:
         import cv2
@@ -53,38 +53,36 @@ def _capture(camera: int, path: str) -> str | None:
 
 
 # ----------------------------------------------------------------------------
-# Bildbeschreibung – "Jarvis sieht"
+# Vision – "Jarvis sieht" (ein oder mehrere Bilder)
 # ----------------------------------------------------------------------------
-def describe_image(path: str, prompt: str = "Beschreibe kurz und präzise, was auf diesem Bild zu sehen ist.") -> str:
-    path = os.path.expanduser(path)
-    try:
-        b64 = base64.b64encode(open(path, "rb").read()).decode()
-    except Exception as exc:  # noqa: BLE001
-        return f"Bild konnte nicht gelesen werden: {exc}"
+def vision_query(image_paths: list[str], prompt: str) -> str:
+    """Schickt 1..N Bilder + Frage an ein Vision-Modell und gibt die Antwort zurück."""
+    b64s = []
+    for p in image_paths:
+        try:
+            b64s.append(base64.b64encode(open(os.path.expanduser(p), "rb").read()).decode())
+        except Exception as exc:  # noqa: BLE001
+            return f"Bild konnte nicht gelesen werden: {exc}"
 
-    # 1) Claude-Vision
+    # 1) Claude-Vision (unterstützt mehrere Bilder in einer Nachricht)
     if os.environ.get("ANTHROPIC_API_KEY"):
         try:
             import anthropic
+            content = [{"type": "image", "source": {"type": "base64",
+                        "media_type": "image/jpeg", "data": b}} for b in b64s]
+            content.append({"type": "text", "text": prompt})
             c = anthropic.Anthropic()
-            msg = c.messages.create(
-                model="claude-opus-4-8", max_tokens=512,
-                messages=[{"role": "user", "content": [
-                    {"type": "image", "source": {"type": "base64",
-                     "media_type": "image/jpeg", "data": b64}},
-                    {"type": "text", "text": prompt},
-                ]}],
-            )
+            msg = c.messages.create(model="claude-opus-4-8", max_tokens=512,
+                                    messages=[{"role": "user", "content": content}])
             return "".join(b.text for b in msg.content
                            if getattr(b, "type", None) == "text").strip()
         except Exception as exc:  # noqa: BLE001
-            return f"(Claude-Vision-Fehler: {exc}) Bild gespeichert: {path}"
+            return f"(Claude-Vision-Fehler: {exc})"
 
     # 2) OpenAI-kompatibel (Groq oder Ollama)
     model = os.environ.get("JARVIS_VISION_MODEL")
     if os.environ.get("GROQ_API_KEY"):
-        base = "https://api.groq.com/openai/v1"
-        key = os.environ["GROQ_API_KEY"]
+        base, key = "https://api.groq.com/openai/v1", os.environ["GROQ_API_KEY"]
         model = model or "llama-3.2-11b-vision-preview"
     else:
         base = os.environ.get("OLLAMA_HOST", "http://localhost:11434") + "/v1"
@@ -92,19 +90,20 @@ def describe_image(path: str, prompt: str = "Beschreibe kurz und präzise, was a
         model = model or "llava"
     try:
         from openai import OpenAI
+        content = [{"type": "text", "text": prompt}]
+        content += [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b}"}}
+                    for b in b64s]
         client = OpenAI(base_url=base, api_key=key)
-        r = client.chat.completions.create(
-            model=model, max_tokens=512,
-            messages=[{"role": "user", "content": [
-                {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-            ]}],
-        )
+        r = client.chat.completions.create(model=model, max_tokens=512,
+                                           messages=[{"role": "user", "content": content}])
         return (r.choices[0].message.content or "").strip()
     except Exception as exc:  # noqa: BLE001
-        return (f"(Bildbeschreibung nicht verfügbar: {exc}). Das Foto ist gespeichert "
-                f"unter: {path}. Für 'sehen' ein Vision-Modell einrichten "
-                f"(z.B. 'ollama pull llava' oder ANTHROPIC_API_KEY setzen).")
+        return (f"(Vision-Modell nicht verfügbar: {exc}). Richte eines ein: "
+                f"'ollama pull llava', GROQ_API_KEY oder ANTHROPIC_API_KEY.")
+
+
+def describe_image(path: str, prompt: str = "Beschreibe kurz und präzise, was auf diesem Bild zu sehen ist.") -> str:
+    return vision_query([path], prompt)
 
 
 # ----------------------------------------------------------------------------
@@ -113,7 +112,7 @@ def describe_image(path: str, prompt: str = "Beschreibe kurz und präzise, was a
 def _take_photo(params: dict) -> str:
     path = params.get("path") or str(
         _photo_dir() / f"foto_{time.strftime('%Y%m%d_%H%M%S')}.jpg")
-    err = _capture(int(params.get("camera", 0)), path)
+    err = capture(int(params.get("camera", 0)), path)
     if err:
         return err
     return f"Foto aufgenommen und gespeichert: {os.path.expanduser(path)}"
@@ -121,7 +120,7 @@ def _take_photo(params: dict) -> str:
 
 def _look(params: dict) -> str:
     tmp = str(_photo_dir() / f"look_{time.strftime('%Y%m%d_%H%M%S')}.jpg")
-    err = _capture(int(params.get("camera", 0)), tmp)
+    err = capture(int(params.get("camera", 0)), tmp)
     if err:
         return err
     prompt = params.get("prompt", "Beschreibe kurz und präzise, was auf diesem Bild zu sehen ist.")

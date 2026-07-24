@@ -16,6 +16,7 @@ import time
 from tools_base import Tool
 from tools_common import common_tools
 from tools_camera import describe_image
+from tools_face import enroll_owner, recognize_against_owner
 
 
 HAVE_TERMUX_API = shutil.which("termux-battery-status") is not None
@@ -127,6 +128,24 @@ def _look(params: dict) -> str:
     return describe_image(path, prompt)
 
 
+def _enroll_face(params: dict) -> str:
+    path = _photo_path()
+    cam = str(params.get("camera", 1))  # 1 = Frontkamera zum Anlernen
+    _tapi(["termux-camera-photo", "-c", cam, path], timeout=30)
+    if not os.path.exists(path):
+        return "Kein Foto von der Kamera erhalten."
+    return enroll_owner(path, params.get("name", ""))
+
+
+def _recognize_me(params: dict) -> str:
+    path = _photo_path()
+    cam = str(params.get("camera", 1))
+    _tapi(["termux-camera-photo", "-c", cam, path], timeout=30)
+    if not os.path.exists(path):
+        return "Kein Foto von der Kamera erhalten."
+    return recognize_against_owner(path)
+
+
 def android_tools() -> list[Tool]:
     if not HAVE_TERMUX_API:
         return common_tools()
@@ -170,6 +189,13 @@ def android_tools() -> list[Tool]:
              {"type": "object",
               "properties": {"camera": {"type": "integer"}, "prompt": {"type": "string"}},
               "required": []}, _look, dangerous=True),
+        Tool("enroll_face", "Lernt das Gesicht des Nutzers an (Frontkamera). Optional 'name'.",
+             {"type": "object",
+              "properties": {"name": {"type": "string"}, "camera": {"type": "integer"}},
+              "required": []}, _enroll_face, dangerous=True),
+        Tool("recognize_me", "Prüft per Frontkamera, ob es der bekannte Nutzer ist.",
+             {"type": "object", "properties": {"camera": {"type": "integer"}},
+              "required": []}, _recognize_me, dangerous=True),
     ]
 
 
