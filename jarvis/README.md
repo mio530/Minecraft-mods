@@ -351,6 +351,9 @@ Jarvis kann **programmieren** und legt fertige Dateien/Projekte in seine
   `.versions`-Verlauf).
 - In der GUI oben auf **„📁 Werkstatt"** klicken → Liste aller Dateien. Neben
   jeder Datei gibt es das **„⋮"-Menü** mit:
+  - **▶ Ausführen** → startet die Datei direkt und zeigt die Ausgabe
+  - **🔧 Ausführen & fixen lassen** → läuft die Datei; schlägt sie fehl, schickt
+    Jarvis den Fehler automatisch an sich selbst und **behebt ihn**
   - **Anzeigen**
   - **Frühere Varianten …** → alle überschriebenen Versionen ansehen und
     **wiederherstellen**
@@ -358,6 +361,16 @@ Jarvis kann **programmieren** und legt fertige Dateien/Projekte in seine
 
 Sag z. B.: „Schreib mir ein Python-Spiel und leg es in die Werkstatt", oder
 „Stell die vorige Version von app.py wieder her".
+
+### ▶ Ausführen & 🔧 Selbst-Reparieren
+- Jarvis kann Code **selbst ausführen und testen** (`run_file` erkennt Python/JS/
+  Bash/… automatisch, `workspace_run` führt beliebige Befehle im Werkstatt-Ordner
+  aus, z. B. `pip install …`).
+- **Auto-Fix:** Schreibt Jarvis Code, führt er ihn aus, **liest bei Fehlern die
+  Meldung, behebt die Ursache und führt erneut aus** – so lange, bis es läuft.
+  Am Ende erklärt er kurz, was der Fehler war.
+- So kann er auf Anfrage auch **Dinge auf deinem PC/Handy ausführen oder
+  reparieren** – Programme installieren, Skripte laufen lassen, Fehler beheben.
 
 ### 🔗 GitHub-Anbindung
 - Token anlegen: <https://github.com/settings/tokens> (Scope **repo**), dann

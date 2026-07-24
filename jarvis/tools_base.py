@@ -74,5 +74,10 @@ def default_system_prompt(platform_name: str, tool_names: list[str]) -> str:
         "- Du kannst programmieren. FERTIGE Dateien/Projekte legst du mit "
         "'workspace_save' in deine Werkstatt – dort werden frühere Varianten "
         "automatisch aufbewahrt. Zum Veröffentlichen nutze 'github_publish'.\n"
+        "- SELBST TESTEN & REPARIEREN: Nachdem du Code geschrieben hast, führe ihn "
+        "mit 'run_file' aus. Schlägt er fehl, lies die Fehlermeldung, behebe die "
+        "Ursache (workspace_save/edit_file) und führe erneut aus – wiederhole das, "
+        "bis es läuft oder du wirklich blockiert bist. Erkläre am Ende kurz, was "
+        "der Fehler war und wie du ihn behoben hast.\n"
         "- Wenn du etwas nicht sicher weißt, sag es ehrlich."
     )

@@ -12,6 +12,7 @@ import os
 import platform
 import shutil
 import subprocess
+import sys
 import urllib.request
 
 from tools_base import Tool
@@ -129,6 +130,56 @@ def _ws_restore(params: dict) -> str:
     return workspace.restore_version(params["path"], params["version"])
 
 
+# Ausführen von Werkstatt-Dateien (Auto-Erkennung des Interpreters)
+_INTERP = {
+    ".py": [sys.executable], ".js": ["node"], ".ts": ["npx", "ts-node"],
+    ".sh": ["bash"], ".rb": ["ruby"], ".pl": ["perl"], ".php": ["php"],
+    ".go": ["go", "run"],
+}
+
+
+def execute_workspace_file(relpath: str, timeout: int = 60):
+    """Führt eine Datei in der Werkstatt aus. Gibt (exit_code, ausgabe) zurück."""
+    p = workspace._safe(relpath)
+    if not p.exists():
+        return 1, f"Datei nicht gefunden: {relpath}"
+    args = _INTERP.get(p.suffix.lower())
+    if args is None:
+        if os.access(p, os.X_OK):
+            args = []
+        else:
+            return 1, (f"Ich weiß nicht, wie ich '{p.suffix}' ausführen soll. "
+                       f"Nutze 'workspace_run' mit einem passenden Befehl.")
+    cmd = args + [str(p)]
+    try:
+        proc = subprocess.run(cmd, cwd=str(workspace.workspace_dir()),
+                              capture_output=True, text=True, timeout=timeout)
+    except FileNotFoundError as exc:
+        return 1, f"Interpreter fehlt: {exc}"
+    except subprocess.TimeoutExpired:
+        return 124, "Zeitüberschreitung."
+    out = proc.stdout or ""
+    if (proc.stderr or "").strip():
+        out += "\n" + proc.stderr
+    return proc.returncode, (out.strip() or "(keine Ausgabe)")
+
+
+def _run_file(params: dict) -> str:
+    code, out = execute_workspace_file(params["path"], int(params.get("timeout", 60)))
+    return f"Exit-Code: {code}\n{out}"
+
+
+def _ws_run(params: dict) -> str:
+    proc = subprocess.run(params["command"], shell=True,
+                          cwd=str(workspace.workspace_dir()),
+                          capture_output=True, text=True,
+                          timeout=int(params.get("timeout", 120)))
+    out = proc.stdout or ""
+    if (proc.stderr or "").strip():
+        out += "\n" + proc.stderr
+    return f"Exit-Code: {proc.returncode}\n{out.strip() or '(keine Ausgabe)'}"
+
+
 def workspace_tools() -> list[Tool]:
     return [
         Tool("workspace_save",
@@ -150,6 +201,19 @@ def workspace_tools() -> list[Tool]:
              {"type": "object",
               "properties": {"path": {"type": "string"}, "version": {"type": "string"}},
               "required": ["path", "version"]}, _ws_restore),
+        Tool("run_file",
+             "Führt eine Datei aus der Werkstatt aus (erkennt Python/JS/Bash/… "
+             "automatisch) und gibt Exit-Code + Ausgabe zurück. Nutze das zum "
+             "Testen; bei Fehlern die Ausgabe lesen und den Code beheben.",
+             {"type": "object",
+              "properties": {"path": {"type": "string"}, "timeout": {"type": "integer"}},
+              "required": ["path"]}, _run_file, dangerous=True),
+        Tool("workspace_run",
+             "Führt einen beliebigen Befehl IM Werkstatt-Ordner aus (z.B. "
+             "'pip install ...', 'npm install', 'go build').",
+             {"type": "object",
+              "properties": {"command": {"type": "string"}, "timeout": {"type": "integer"}},
+              "required": ["command"]}, _ws_run, dangerous=True),
     ]
 
 

@@ -326,6 +326,10 @@ class JarvisGUI:
     def _file_menu(self, parent, relpath, btn, refresh) -> None:
         import workspace
         m = tk.Menu(parent, tearoff=0)
+        m.add_command(label="▶ Ausführen", command=lambda: self._run_ws_file(relpath))
+        m.add_command(label="🔧 Ausführen & fixen lassen",
+                      command=lambda: self._run_ws_file(relpath, autofix=True))
+        m.add_separator()
         m.add_command(label="Anzeigen", command=lambda: self._view_text(
             relpath, workspace.read(relpath)))
         m.add_command(label="Frühere Varianten …",
@@ -333,6 +337,23 @@ class JarvisGUI:
         m.add_separator()
         m.add_command(label="Löschen", command=lambda: (workspace.delete(relpath), refresh()))
         m.post(btn.winfo_rootx(), btn.winfo_rooty() + btn.winfo_height())
+
+    def _run_ws_file(self, relpath, autofix: bool = False) -> None:
+        """Führt eine Werkstatt-Datei aus; bei autofix schickt es Fehler an Jarvis."""
+        self._set_status(f"▶ Führe {relpath} aus …")
+
+        def worker():
+            from tools_common import execute_workspace_file
+            code, out = execute_workspace_file(relpath)
+            self.root.after(0, lambda: self._view_text(f"▶ {relpath}  (Exit {code})", out))
+            self.root.after(0, lambda: self._set_status("Bereit"))
+            if autofix and code != 0 and not self.busy:
+                msg = (f"Die Datei „{relpath}“ in der Werkstatt schlug beim Ausführen "
+                       f"fehl (Exit {code}). Ausgabe:\n{out}\n\nBitte finde die Ursache, "
+                       f"behebe sie in der Werkstatt und führe erneut aus, bis es läuft.")
+                self.root.after(0, lambda: self._handle(msg))
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _view_versions(self, relpath, refresh) -> None:
         import workspace
