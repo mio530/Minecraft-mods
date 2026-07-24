@@ -31,11 +31,12 @@ import threading
 import time
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, simpledialog, ttk
 
 from tools_base import Tool
 from tools_power import is_unrestricted
 from memory import Memory
+import sentry
 
 
 # ----------------------------------------------------------------------------
@@ -86,6 +87,11 @@ class JarvisGUI:
         self.wake_stop = threading.Event()
         self.mic_lock = threading.Lock()  # nur ein Thread nutzt das Mikrofon
 
+        # Wächter-Modus (Kamera-Überwachung + Sperre + Handy-Alarm)
+        self.sentry = None
+        self._lock_win = None
+        self.sentry_unlock_stop = threading.Event()
+
         self.tools, self.label = load_tools_and_label()
         self.memory = Memory()  # dauerhaftes Gedächtnis (~/.jarvis/memory.json)
 
@@ -131,6 +137,12 @@ class JarvisGUI:
         self.unrestricted_var = tk.BooleanVar(value=is_unrestricted())
         tk.Checkbutton(top, text="🔓 Vollzugriff", variable=self.unrestricted_var,
                        command=self._toggle_unrestricted, bg=BG2, fg=WARN_COL,
+                       selectcolor=BG, activebackground=BG2,
+                       activeforeground=WARN_COL).pack(side="right", padx=4)
+
+        self.sentry_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(top, text="🛡️ Wächter", variable=self.sentry_var,
+                       command=self._toggle_sentry, bg=BG2, fg=WARN_COL,
                        selectcolor=BG, activebackground=BG2,
                        activeforeground=WARN_COL).pack(side="right", padx=4)
 
@@ -287,6 +299,120 @@ class JarvisGUI:
         self.root.after(0, ask)
         done.wait()
         return result["ok"]
+
+    # ------------------------------------------------- Wächter-Modus
+    def _toggle_sentry(self) -> None:
+        if self.sentry_var.get():
+            self._start_sentry()
+        else:
+            self._stop_sentry()
+
+    def _start_sentry(self) -> None:
+        from tools_face import is_enrolled
+        if not is_enrolled():
+            self.sentry_var.set(False)
+            self._add("warn", "Der Wächter braucht dein Gesicht. Sag zuerst "
+                              "„Merk dir mein Gesicht“ und aktiviere ihn dann.")
+            return
+        # Entsperr-Passwort sicherstellen
+        if not sentry.has_password():
+            pw = simpledialog.askstring(
+                "Entsperr-Passwort festlegen",
+                "Lege ein Passwort fest, mit dem du den PC wieder entsperrst:",
+                show="*", parent=self.root)
+            if not pw:
+                self.sentry_var.set(False)
+                return
+            sentry.set_password(pw)
+        # Topic/Token fürs Handy anzeigen
+        topic, token = sentry.get_topic(), sentry.get_token()
+        messagebox.showinfo(
+            "Wächter aktiv – Handy verbinden",
+            "Damit der Alarm aufs Handy kommt, abonniere in der ntfy-App das Topic:\n\n"
+            f"    {topic}\n\n"
+            "Für das Entsperren per Fingerabdruck auf dem Handy setze dort:\n"
+            f"    JARVIS_NTFY_TOPIC={topic}\n"
+            f"    JARVIS_SENTRY_TOKEN={token}\n\n"
+            "und starte  jarvis_sentry_android.py .")
+        self.sentry_unlock_stop.clear()
+        threading.Thread(
+            target=sentry.listen_for_unlock,
+            args=(self.sentry_unlock_stop,
+                  lambda: self.root.after(0, self._remote_unlock)),
+            daemon=True).start()
+        self.sentry = sentry.Sentry(
+            capture_fn=lambda p: __import__("tools_camera").capture(0, p),
+            on_intrusion=lambda: self.root.after(0, self._lockdown),
+            on_status=self._status_async,
+        )
+        self.sentry.start()
+        self._add("system", "🛡️ Wächter aktiv. Ich sperre den PC bei einer fremden "
+                            "Person und alarmiere dein Handy.")
+
+    def _stop_sentry(self) -> None:
+        if self.sentry:
+            self.sentry.stop()
+            self.sentry = None
+        self.sentry_unlock_stop.set()
+        self._add("system", "🛡️ Wächter ausgeschaltet.")
+
+    def _lockdown(self) -> None:
+        if self._lock_win is not None:
+            return
+        threading.Thread(
+            target=sentry.send_alarm,
+            args=("⚠️ JARVIS ALARM",
+                  "Unbekannte Person am PC erkannt – Rechner wurde gesperrt."),
+            daemon=True).start()
+        if os.environ.get("JARVIS_OS_LOCK", "").lower() in ("1", "true", "yes"):
+            sentry.os_lock()
+
+        win = tk.Toplevel(self.root)
+        win.attributes("-fullscreen", True)
+        win.attributes("-topmost", True)
+        win.configure(bg="#1a0000")
+        win.protocol("WM_DELETE_WINDOW", lambda: None)
+        tk.Label(win, text="🔒 GESPERRT", bg="#1a0000", fg="#ff4444",
+                 font=("Segoe UI", 40, "bold")).pack(pady=(120, 10))
+        tk.Label(win, text="Unbefugter Zugriff erkannt.\nPasswort eingeben – oder per "
+                           "Fingerabdruck auf dem Handy entsperren.",
+                 bg="#1a0000", fg=FG, font=("Segoe UI", 14)).pack(pady=10)
+        pw_entry = tk.Entry(win, show="*", font=("Segoe UI", 16), justify="center",
+                            bg=BG2, fg=FG, insertbackground=ACCENT)
+        pw_entry.pack(pady=16, ipady=6)
+        err_lbl = tk.Label(win, text="", bg="#1a0000", fg="#ff4444")
+        err_lbl.pack()
+
+        def try_unlock():
+            if sentry.verify_password(pw_entry.get()):
+                self._do_unlock()
+            else:
+                err_lbl.configure(text="Falsches Passwort.")
+                pw_entry.delete(0, "end")
+
+        pw_entry.bind("<Return>", lambda e: try_unlock())
+        tk.Button(win, text="Entsperren", command=try_unlock, bg=ACCENT, fg=BG,
+                  bd=0, font=("Segoe UI", 12, "bold"), padx=16, pady=4).pack(pady=8)
+        self._lock_win = win
+        win.grab_set()
+        pw_entry.focus_force()
+
+    def _remote_unlock(self) -> None:
+        if self._lock_win is not None:
+            self._add("system", "🔓 Entsperrt per Fingerabdruck vom Handy.")
+            self._do_unlock()
+
+    def _do_unlock(self) -> None:
+        if self._lock_win is not None:
+            try:
+                self._lock_win.grab_release()
+                self._lock_win.destroy()
+            except Exception:
+                pass
+            self._lock_win = None
+        if self.sentry:
+            self.sentry.resume()
+        self._set_status("Entsperrt · Wächter läuft weiter")
 
     # ------------------------------------------------- Wake-Word ("Hey Jarvis")
     def _toggle_wake(self) -> None:

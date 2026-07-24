@@ -47,6 +47,8 @@ Programme öffnen, Befehle ausführen, Dateien lesen/schreiben, Systeme steuern 
 | `tools_common.py` | Werkzeuge für alle Plattformen (Shell, Dateien, Web, Systeminfo) |
 | `tools_power.py` | Voller Gerätezugriff (umschreiben, verschieben, löschen, Prozesse, Code) |
 | `safety.py` | Schutz-Schicht: schützt System/Apps, fragt bei fremden Dateien |
+| `sentry.py` | Wächter-Modus: Kamera-Überwachung, PC-Sperre, Handy-Alarm |
+| `jarvis_sentry_android.py` | Handy-Begleiter: Alarm empfangen + per Fingerabdruck entsperren |
 | `tools_windows.py` / `tools_linux.py` / `tools_android.py` | plattform-spezifische Werkzeuge |
 | `memory.py` | Dauerhaftes Gedächtnis (merkt sich dein Verhalten) |
 | `voice.py` | Sprachein-/ausgabe für Desktop |
@@ -332,6 +334,42 @@ dasselbe Vision-Backend wie `look`.)
 > Die Kamera ist privatsphäre-sensibel und wird deshalb **vor der Aufnahme
 > abgefragt** (auch im Vollzugriff-Modus für Befehle bleibt das eine bewusste
 > Aktion).
+
+---
+
+## 🛡️ Wächter-Modus (Windows/Linux) – erkennt Fremde und sperrt den PC
+
+Wenn die GUI offen ist, kann Jarvis im **Hintergrund die Webcam überwachen**.
+Erkennt er eine **fremde Person** (nicht dein angelerntes Gesicht), dann:
+
+1. **sperrt er den PC** (Vollbild-Sperrfenster von Jarvis)
+2. **schickt einen Alarm** als Push-Benachrichtigung **aufs Handy** (mit Ton + Vibration)
+3. **wartet aufs Entsperren** – per **Passwort am PC** ODER **Fingerabdruck am Handy**
+
+### Einrichten
+1. In der GUI zuerst dein Gesicht anlernen („Merk dir mein Gesicht").
+2. Oben den Haken **„🛡️ Wächter"** setzen. Beim ersten Mal legst du ein
+   **Entsperr-Passwort** fest, und Jarvis zeigt dir ein **Topic** + **Token**.
+3. **Auf dem Handy** (Termux):
+   - Entweder die **ntfy-App** installieren und das Topic abonnieren → du bekommst
+     den Alarm als Push (auch wenn Termux zu ist).
+   - Für das Entsperren per Fingerabdruck: `pkg install termux-api`, dann
+     ```bash
+     export JARVIS_NTFY_TOPIC=jarvis-....     # vom PC angezeigt
+     export JARVIS_SENTRY_TOKEN=....          # vom PC angezeigt
+     python jarvis_sentry_android.py          # lauscht auf Alarme
+     python jarvis_sentry_android.py unlock   # Fingerabdruck -> PC entsperren
+     ```
+
+Die Verbindung läuft über **ntfy.sh** – kostenlos, ohne Server und ohne Account.
+
+> **Ehrliche Grenze:** Das Jarvis-Sperrfenster ist eine **App-Sperre**, kein
+> echter Betriebssystem-Login. Software kann einen fremden PC nicht per Ferne
+> aus dem echten Login-Sperrbildschirm holen – das wäre eine Sicherheitslücke.
+> Für **maximale** Sicherheit zusätzlich `JARVIS_OS_LOCK=1` setzen: dann wird
+> auch der echte OS-Sperrbildschirm ausgelöst (den öffnest du nur mit deinem
+> Konto-Passwort direkt am PC; die Handy-Entsperrung entfernt dann nur noch das
+> Jarvis-Fenster).
 
 ---
 
