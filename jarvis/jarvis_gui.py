@@ -28,6 +28,7 @@ from __future__ import annotations
 import os
 import platform
 import threading
+import time
 
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -79,6 +80,11 @@ class JarvisGUI:
         # Freihändiger Gesprächsmodus
         self.convo_active = False
         self.convo_stop = threading.Event()
+        self._convo_greet = False
+
+        # Wake-Word ("Hey Jarvis") -> automatisch in den Gesprächsmodus
+        self.wake_stop = threading.Event()
+        self.mic_lock = threading.Lock()  # nur ein Thread nutzt das Mikrofon
 
         self.tools, self.label = load_tools_and_label()
         self.memory = Memory()  # dauerhaftes Gedächtnis (~/.jarvis/memory.json)
@@ -127,6 +133,16 @@ class JarvisGUI:
                        command=self._toggle_unrestricted, bg=BG2, fg=WARN_COL,
                        selectcolor=BG, activebackground=BG2,
                        activeforeground=WARN_COL).pack(side="right", padx=4)
+
+        has_mic = bool(self.voice and self.voice.voice_input)
+        self.wake_var = tk.BooleanVar(value=has_mic)  # bei Mikrofon standardmäßig an
+        wake_cb = tk.Checkbutton(top, text="👂 „Hey Jarvis“", variable=self.wake_var,
+                                 command=self._toggle_wake, bg=BG2, fg=ACCENT,
+                                 selectcolor=BG, activebackground=BG2,
+                                 activeforeground=ACCENT)
+        wake_cb.pack(side="right", padx=4)
+        if not has_mic:
+            wake_cb.configure(state="disabled")
 
         # Chatverlauf
         chat_frame = tk.Frame(self.root, bg=BG)
@@ -272,6 +288,47 @@ class JarvisGUI:
         done.wait()
         return result["ok"]
 
+    # ------------------------------------------------- Wake-Word ("Hey Jarvis")
+    def _toggle_wake(self) -> None:
+        if self.wake_var.get():
+            self._start_wake()
+        else:
+            self.wake_stop.set()
+            self._add("system", "👂 „Hey Jarvis“ ausgeschaltet.")
+
+    def _start_wake(self) -> None:
+        if not (self.voice and self.voice.voice_input):
+            self.wake_var.set(False)
+            self._add("warn", "Kein Mikrofon – „Hey Jarvis“ nicht möglich.")
+            return
+        self.wake_stop.clear()
+        threading.Thread(target=self._wake_loop, daemon=True).start()
+        self._add("system", "👂 Sage „Hey Jarvis“, um das Gespräch zu starten.")
+
+    def _wake_loop(self) -> None:
+        while not self.wake_stop.is_set() and self.wake_var.get():
+            # Mikrofon nur nehmen, wenn gerade nichts anderes läuft
+            if self.convo_active or self.busy:
+                time.sleep(0.3)
+                continue
+            if not self.mic_lock.acquire(blocking=False):
+                time.sleep(0.2)
+                continue
+            try:
+                text, _err = self.voice.recognize_once(timeout=5, phrase_time_limit=3)
+            finally:
+                self.mic_lock.release()
+            if self.wake_stop.is_set():
+                break
+            if text and "jarvis" in text.lower():
+                self.root.after(0, self._wake_triggered)
+                time.sleep(0.5)
+
+    def _wake_triggered(self) -> None:
+        if self.convo_active or self.busy:
+            return
+        self._start_convo(greet=True)
+
     # ------------------------------------------------- Gesprächsmodus (Stimme)
     def on_convo(self) -> None:
         if self.convo_active:
@@ -279,13 +336,14 @@ class JarvisGUI:
         else:
             self._start_convo()
 
-    def _start_convo(self) -> None:
+    def _start_convo(self, greet: bool = False) -> None:
         if not (self.voice and self.voice.voice_input):
             self._add("warn", "Kein Mikrofon verfügbar – Gesprächsmodus nicht möglich.")
             return
         if self.brain is None:
             self._add("warn", "Kein KI-Gehirn aktiv.")
             return
+        self._convo_greet = greet
         self.convo_active = True
         self.convo_stop.clear()
         self.speak_var.set(True)  # Antworten müssen vorgelesen werden
@@ -305,9 +363,14 @@ class JarvisGUI:
     def _convo_loop(self) -> None:
         STOP_WORDS = ("stopp", "stop", "beenden", "gesprächsmodus aus",
                       "pause", "danke das war", "ende")
+        if self._convo_greet:
+            self._convo_greet = False
+            with self.brain_lock:
+                self.voice.tts("Ja, Sir?")
         while not self.convo_stop.is_set():
             self.root.after(0, self._set_status, "🎤 Ich höre … sprich")
-            text, err = self.voice.recognize_once(timeout=8, phrase_time_limit=15)
+            with self.mic_lock:
+                text, err = self.voice.recognize_once(timeout=8, phrase_time_limit=15)
             if self.convo_stop.is_set():
                 break
             if not text:
@@ -360,7 +423,8 @@ class JarvisGUI:
         threading.Thread(target=self._listen_worker, daemon=True).start()
 
     def _listen_worker(self) -> None:
-        text, err = self.voice.recognize_once()
+        with self.mic_lock:
+            text, err = self.voice.recognize_once()
         def done():
             self.mic_btn.configure(text="🎤")
             self._set_busy(False)
@@ -405,6 +469,8 @@ def main() -> None:
     root = tk.Tk()
     app = JarvisGUI(root)
     app._add("system", "Systeme online. Guten Tag, Sir. Tippen oder 🎤 drücken.")
+    if app.wake_var.get():
+        root.after(600, app._start_wake)  # kurz warten, dann auf „Hey Jarvis“ hören
     root.mainloop()
 
 

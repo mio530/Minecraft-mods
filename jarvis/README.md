@@ -125,6 +125,10 @@ bedienst:
   Jarvis hört zu, **antwortet mit Stimme** und hört danach automatisch wieder zu –
   ein echtes Gespräch ohne Klicken. Sag **„Stopp"** (oder drück „Stoppen"), um
   den Modus zu beenden.
+- **👂 Wake-Word „Hey Jarvis":** Wenn der Haken oben aktiv ist (bei vorhandenem
+  Mikrofon standardmäßig an), lauscht Jarvis im Hintergrund. Sagst du
+  **„Hey Jarvis"**, wechselt er automatisch in den Gesprächsmodus, antwortet
+  „Ja, Sir?" und du kannst direkt lossprechen – ganz ohne Klicken.
 - **Vorlesen:** Haken „Antwort vorlesen" schaltet die Sprachausgabe an/aus.
 - **KI wählen:** oben umschaltbar zwischen *Kostenlos* (Ollama/Groq) und *Claude*
   (Claude erscheint nur, wenn `ANTHROPIC_API_KEY` gesetzt ist).
@@ -138,6 +142,11 @@ python jarvis_gui.py
 
 Ohne Mikrofon/Sprach-Pakete ist der 🎤-Knopf einfach deaktiviert – Tippen geht
 immer. Gefährliche Aktionen werden per Popup-Fenster bestätigt.
+
+> Hinweis zum Wake-Word: Die Spracherkennung läuft über Google (kostenlos, aber
+> es wird dabei kurz Audio ins Netz gesendet). Wenn du das nicht möchtest,
+> einfach den Haken **„👂 Hey Jarvis"** ausschalten – dann hört Jarvis nur, wenn
+> du selbst den 🎤- oder Gesprächsmodus-Knopf drückst.
 
 > Für **Android** gibt es keine grafische Oberfläche (Termux hat kein Fenster-
 > system) – dort die Konsolen-Version `jarvis_free.py` bzw. `jarvis_android.py`.
