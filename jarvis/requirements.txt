@@ -18,6 +18,10 @@ openai>=1.30.0
 #     Nutzt "tkinter" – bei Windows/macOS-Python bereits enthalten.
 #     Linux ggf.:  sudo apt install python3-tk
 
+# --- Kamera-Zugriff (take_photo / look) auf Desktop ---
+#     Android nutzt die Termux-Kamera und braucht dies NICHT.
+opencv-python>=4.8.0
+
 # --- Optional: Sprachein-/ausgabe auf Windows & Linux ---
 # (Jarvis läuft auch ohne diese im reinen Textmodus)
 SpeechRecognition>=3.10.0

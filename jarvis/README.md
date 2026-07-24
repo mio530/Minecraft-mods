@@ -303,6 +303,30 @@ Dateien werden weiter abgefragt).
 
 ---
 
+## 📷 Kamera – Jarvis kann sehen
+
+Jarvis kann auf die Kamera zugreifen (Desktop-Webcam bzw. Handy-Kamera):
+
+| Werkzeug | Was es tut |
+|----------|------------|
+| `take_photo` | nimmt ein Foto auf und speichert es (in `~/.jarvis/photos/`) |
+| `look` | nimmt ein Foto auf und **beschreibt, was darauf zu sehen ist** |
+
+Sag z. B.: „**Schau mal, was siehst du?**", „Mach ein Foto", „Ist jemand im Raum?".
+
+- **Desktop (Windows/Linux/macOS):** braucht OpenCV → `pip install opencv-python`
+- **Android (Termux):** nutzt die Termux-Kamera (kein Extra-Paket nötig)
+- **Sehen (`look`):** die Bildbeschreibung nutzt automatisch ein Vision-Modell –
+  Claude (`ANTHROPIC_API_KEY`), Groq (`GROQ_API_KEY` + Vision-Modell) oder ein
+  lokales Ollama-Modell wie **llava** (`ollama pull llava`). Modell überschreibbar
+  per `JARVIS_VISION_MODEL`. Ohne Vision-Modell wird das Foto trotzdem gespeichert.
+
+> Die Kamera ist privatsphäre-sensibel und wird deshalb **vor der Aufnahme
+> abgefragt** (auch im Vollzugriff-Modus für Befehle bleibt das eine bewusste
+> Aktion).
+
+---
+
 ## 🔒 Sicherheit
 
 Jarvis kann echte Befehle ausführen – das ist mächtig und potenziell riskant.

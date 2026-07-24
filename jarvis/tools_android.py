@@ -8,11 +8,14 @@ da diese die gleichen Termux-Aufrufe nutzt.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
+import time
 
 from tools_base import Tool
 from tools_common import common_tools
+from tools_camera import describe_image
 
 
 HAVE_TERMUX_API = shutil.which("termux-battery-status") is not None
@@ -101,6 +104,29 @@ def _contacts(_params: dict) -> str:
         return raw or "Kontakte nicht verfügbar."
 
 
+def _photo_path() -> str:
+    d = os.path.expanduser("~/.jarvis/photos")
+    os.makedirs(d, exist_ok=True)
+    return os.path.join(d, f"foto_{time.strftime('%Y%m%d_%H%M%S')}.jpg")
+
+
+def _take_photo(params: dict) -> str:
+    path = params.get("path") or _photo_path()
+    cam = str(params.get("camera", 0))  # 0 = Rückseite, 1 = Frontkamera
+    _tapi(["termux-camera-photo", "-c", cam, os.path.expanduser(path)], timeout=30)
+    return f"Foto aufgenommen: {os.path.expanduser(path)}"
+
+
+def _look(params: dict) -> str:
+    path = _photo_path()
+    cam = str(params.get("camera", 0))
+    _tapi(["termux-camera-photo", "-c", cam, path], timeout=30)
+    if not os.path.exists(path):
+        return "Kein Foto von der Kamera erhalten."
+    prompt = params.get("prompt", "Beschreibe kurz und präzise, was auf diesem Bild zu sehen ist.")
+    return describe_image(path, prompt)
+
+
 def android_tools() -> list[Tool]:
     if not HAVE_TERMUX_API:
         return common_tools()
@@ -136,6 +162,14 @@ def android_tools() -> list[Tool]:
               "required": ["url"]}, _open_url),
         Tool("contacts", "Liest die Kontaktliste des Handys (Name + Nummer).",
              {"type": "object", "properties": {}, "required": []}, _contacts, dangerous=True),
+        Tool("take_photo", "Nimmt ein Foto mit der Handy-Kamera auf (camera 0=hinten, 1=vorne).",
+             {"type": "object",
+              "properties": {"camera": {"type": "integer"}, "path": {"type": "string"}},
+              "required": []}, _take_photo, dangerous=True),
+        Tool("look", "Schaut durch die Handy-Kamera und beschreibt, was zu sehen ist.",
+             {"type": "object",
+              "properties": {"camera": {"type": "integer"}, "prompt": {"type": "string"}},
+              "required": []}, _look, dangerous=True),
     ]
 
 

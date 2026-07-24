@@ -7,6 +7,7 @@ import subprocess
 
 from tools_base import Tool
 from tools_common import common_tools
+from tools_camera import camera_tools
 
 
 def _open_app(params: dict) -> str:
@@ -39,7 +40,7 @@ def _set_volume(params: dict) -> str:
 
 
 def linux_tools() -> list[Tool]:
-    return common_tools() + [
+    return common_tools() + camera_tools() + [
         Tool(
             name="open_app",
             description=(
