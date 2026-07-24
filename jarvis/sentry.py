@@ -221,6 +221,74 @@ def classify_person(image_path: str) -> str:
 
 
 # ----------------------------------------------------------------------------
+# Helligkeit + Bewegung (Dunkel-Schutz & Lebend-Check gegen Foto-Täuschung)
+# ----------------------------------------------------------------------------
+def _min_brightness() -> float:
+    try:
+        return float(os.environ.get("JARVIS_SENTRY_MIN_BRIGHTNESS", "35"))
+    except ValueError:
+        return 35.0
+
+
+def brightness(image_path: str) -> float:
+    """Mittlere Helligkeit 0..255 (klein = dunkel). 255 wenn OpenCV fehlt."""
+    try:
+        import cv2
+    except ImportError:
+        return 255.0
+    img = cv2.imread(os.path.expanduser(image_path))
+    if img is None:
+        return 0.0
+    return float(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).mean())
+
+
+def is_too_dark(image_path: str) -> bool:
+    return brightness(image_path) < _min_brightness()
+
+
+def has_motion(capture_fn, samples: int = 4, gap: float = 0.3) -> bool:
+    """True, wenn sich über ~1 Sekunde etwas bewegt (echte Person, kein Foto)."""
+    try:
+        import cv2
+    except ImportError:
+        return False
+    try:
+        threshold = float(os.environ.get("JARVIS_MOTION_THRESHOLD", "6"))
+    except ValueError:
+        threshold = 6.0
+    tmp = str(Path.home() / ".jarvis" / "motion.jpg")
+    prev = None
+    moving = 0
+    for i in range(samples):
+        if capture_fn(tmp):
+            return False
+        img = cv2.imread(tmp, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            return False
+        if prev is not None:
+            if prev.shape != img.shape:
+                img = cv2.resize(img, (prev.shape[1], prev.shape[0]))
+            if cv2.absdiff(prev, img).mean() > threshold:
+                moving += 1
+        prev = img
+        if i < samples - 1:
+            time.sleep(gap)
+    return moving >= 2  # Bewegung in mind. 2 Intervallen ~= 1 Sekunde
+
+
+def check_owner_live(capture_fn) -> bool:
+    """Ist gerade der Besitzer da – hell genug UND lebendig (bewegt)?"""
+    tmp = str(Path.home() / ".jarvis" / "owner_probe.jpg")
+    if capture_fn(tmp):
+        return False
+    if is_too_dark(tmp):          # zu dunkel -> unsicher, nicht auto-entsperren
+        return False
+    if classify_person(tmp) != "owner":
+        return False
+    return has_motion(capture_fn)  # ~1 Sekunde Bewegung nötig
+
+
+# ----------------------------------------------------------------------------
 # Der Wächter
 # ----------------------------------------------------------------------------
 class Sentry:
@@ -257,6 +325,12 @@ class Sentry:
             err = self.capture_fn(self._tmp)
             if err:
                 self.on_status(f"Wächter: {err}")
+                time.sleep(self.interval)
+                continue
+            # Im Dunkeln nicht sperren (zu unsicher) – abwarten
+            if is_too_dark(self._tmp):
+                strangers = 0
+                self.on_status("Wächter: zu dunkel – ich sperre nicht (unsicher)")
                 time.sleep(self.interval)
                 continue
             n = detect_faces(self._tmp)

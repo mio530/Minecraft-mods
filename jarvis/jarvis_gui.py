@@ -416,8 +416,9 @@ class JarvisGUI:
 
         tk.Label(frame, text="🔒 GESPERRT", bg="#1a0000", fg="#ff4444",
                  font=("Segoe UI", 40, "bold")).pack(pady=(0, 10))
-        tk.Label(frame, text="Unbefugter Zugriff erkannt.\nPasswort eingeben, "
-                             "„entsperren“ sagen, oder Fingerabdruck am Handy.",
+        tk.Label(frame, text="Unbefugter Zugriff erkannt.\nEntsperrt automatisch, wenn "
+                             "ich DICH (in Bewegung) erkenne –\noder: Passwort eingeben, "
+                             "„entsperren“ sagen, Fingerabdruck am Handy.",
                  bg="#1a0000", fg=FG, font=("Segoe UI", 14), justify="center").pack(pady=10)
         pw_entry = tk.Entry(frame, show="*", font=("Segoe UI", 16), justify="center",
                             bg=BG2, fg=FG, insertbackground=ACCENT)
@@ -451,19 +452,30 @@ class JarvisGUI:
             threading.Thread(target=self._lock_voice_loop, daemon=True).start()
 
     def _lock_camera_loop(self) -> None:
-        """Schickt beim Sperren fortlaufend Fotos (Live-Feed) ans Handy."""
+        """Live-Feed ans Handy + Auto-Entsperren, wenn der Besitzer (lebendig) zurückkommt."""
         import tools_camera
+        capture_fn = lambda p: tools_camera.capture(0, p)
         path = os.path.expanduser("~/.jarvis/photos/intruder.jpg")
         first = True
+        auto = os.environ.get("JARVIS_AUTO_UNLOCK", "1").lower() not in ("0", "false", "no")
         while self._lock_active:
-            if tools_camera.capture(0, path) is None:
+            if capture_fn(path) is None:
                 sentry.send_photo(path, "⚠️ JARVIS",
                                   "Eindringling" if first else "Live-Bild vom PC")
                 first = False
-            for _ in range(10):  # ~5 s, aber schnell abbrechbar
+            # Auto-Entsperren: Besitzer erkannt UND ~1 Sek. Bewegung (kein Foto)
+            if auto and self._lock_active and sentry.check_owner_live(capture_fn):
+                self.root.after(0, self._auto_unlock)
+                return
+            for _ in range(6):  # ~3 s Pause (check_owner_live dauert selbst ~1-2 s)
                 if not self._lock_active:
                     return
                 time.sleep(0.5)
+
+    def _auto_unlock(self) -> None:
+        if self._lock_win is not None:
+            self._add("system", "🔓 Willkommen zurück – ich habe dich erkannt und entsperrt.")
+            self._do_unlock()
 
     def _lock_voice_loop(self) -> None:
         """Hört auf das Entsperr-Wort, während gesperrt ist."""

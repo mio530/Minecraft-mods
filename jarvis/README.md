@@ -348,11 +348,15 @@ Erkennt er eine **fremde Person** (nicht dein angelerntes Gesicht), dann:
    sich alle Eingaben (globaler Grab) und holt sich den Fokus sofort zurück
 2. **schickt einen Alarm + ein Foto** des Eindringlings **aufs Handy** und danach
    **fortlaufend Live-Bilder** (~alle 5 s) – mit Ton + Vibration
-3. **wartet aufs Entsperren** – auf **drei** Wegen:
+3. **entsperrt automatisch, wenn er DICH wiedererkennt** – aber nur, wenn du dich
+   **~1 Sekunde bewegst** (Lebend-Check, damit ein Foto von dir ihn nicht täuscht).
+   Alternativ jederzeit manuell:
    - **Passwort** am PC eintippen
-   - laut **„entsperren"** sagen (gesprochenes Entsperr-Wort, per
-     `JARVIS_UNLOCK_PHRASE` änderbar)
+   - laut **„entsperren"** sagen (per `JARVIS_UNLOCK_PHRASE` änderbar)
    - **Fingerabdruck** am Handy
+
+Und: **im Dunkeln sperrt er nicht** – wenn das Bild zu dunkel und die Erkennung
+unsicher ist, wartet er lieber ab, statt einen Fehlalarm auszulösen.
 
 ### Einrichten
 1. In der GUI zuerst dein Gesicht anlernen („Merk dir mein Gesicht").
@@ -370,6 +374,15 @@ Erkennt er eine **fremde Person** (nicht dein angelerntes Gesicht), dann:
      ```
 
 Die Verbindung läuft über **ntfy.sh** – kostenlos, ohne Server und ohne Account.
+
+**Feineinstellung (Umgebungsvariablen):**
+| Variable | Bedeutung | Standard |
+|----------|-----------|----------|
+| `JARVIS_AUTO_UNLOCK` | Auto-Entsperren bei Wiedererkennung (`0` = aus) | `1` |
+| `JARVIS_SENTRY_MIN_BRIGHTNESS` | Ab welcher Helligkeit (0–255) überhaupt gesperrt wird | `35` |
+| `JARVIS_MOTION_THRESHOLD` | Wie viel Bewegung als „lebendig" zählt | `6` |
+| `JARVIS_UNLOCK_PHRASE` | gesprochenes Entsperr-Wort | `entsperren` |
+| `JARVIS_OS_LOCK` | zusätzlich echten OS-Sperrbildschirm auslösen | aus |
 
 > **Zur Stimm-Entsperrung:** Echte Stimm-Biometrie („nur DEINE Stimme") ist mit
 > diesen Mitteln nicht zuverlässig – das „entsperren" wirkt wie ein gesprochenes
