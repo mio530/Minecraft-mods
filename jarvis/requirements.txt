@@ -1,5 +1,18 @@
-# --- Pflicht: das Gehirn ---
+# ============================================================
+#  Wähle je nach Version:
+# ============================================================
+
+# --- Version A: Claude (kostenpflichtig, sehr schlau) ---
+#     Startdateien: jarvis_windows.py / jarvis_linux.py / jarvis_android.py
 anthropic>=0.40.0
+
+# --- Version B: KOSTENLOS (Ollama lokal oder Groq Gratis-Cloud) ---
+#     Startdatei: jarvis_free.py
+#     Das 'openai'-Paket spricht mit BEIDEN (Ollama und Groq).
+openai>=1.30.0
+#     Für Ollama zusätzlich das Programm installieren: https://ollama.com
+#     dann:  ollama pull llama3.1
+#     Für Groq nur einen kostenlosen Key: https://console.groq.com
 
 # --- Optional: Sprachein-/ausgabe auf Windows & Linux ---
 # (Jarvis läuft auch ohne diese im reinen Textmodus)

@@ -1,15 +1,27 @@
 # J.A.R.V.I.S. – dein persönlicher KI-Assistent
 
 Ein **echter, funktionierender** Sprach-KI-Assistent im Stil von Jarvis aus Iron Man –
-für **Windows**, **Linux** und **Android**. Als „Gehirn" nutzt er **Claude (Opus 4.8)**
-von Anthropic und hat **echten Zugriff auf dein Gerät**: Programme öffnen, Befehle
-ausführen, Dateien lesen/schreiben, Systeme steuern und (am Handy) Akku, SMS, Standort,
-Taschenlampe usw.
+für **Windows**, **Linux** und **Android**. Er hat **echten Zugriff auf dein Gerät**:
+Programme öffnen, Befehle ausführen, Dateien lesen/schreiben, Systeme steuern und
+(am Handy) Akku, SMS, Standort, Taschenlampe usw.
 
 > **Ehrliche Einordnung:** Ein allmächtiges Film-Jarvis (eine bewusste AGI, die *alles*
 > steuert) gibt es real nicht. Das hier ist aber das Nächste, was heute wirklich
 > machbar ist: ein KI-Agent, der über Sprache gesteuert wird und **echte Werkzeuge auf
 > deinem System ausführt**.
+
+## Zwei Versionen – such dir eine aus
+
+| | **Version A: Claude** | **Version B: KOSTENLOS** |
+|---|---|---|
+| Startdatei | `jarvis_windows.py` / `jarvis_linux.py` / `jarvis_android.py` | **`jarvis_free.py`** (alle Plattformen) |
+| Gehirn | Claude Opus 4.8 (Cloud) | **Ollama** (lokal) oder **Groq** (Gratis-Cloud) |
+| Kosten | pro Nutzung (API-Key nötig) | **0 €** |
+| Klugheit | sehr hoch | gut bis sehr gut (je nach Modell) |
+| Offline? | nein | ja (mit Ollama) |
+
+**Wenn du „kostenfrei" willst → nimm `jarvis_free.py`.** Details unten unter
+„Kostenlose Version".
 
 ---
 
@@ -31,15 +43,17 @@ Taschenlampe usw.
 
 | Datei | Zweck |
 |-------|-------|
-| `jarvis_core.py` | Das gemeinsame Gehirn (Claude + Werkzeug-Schleife) |
+| `tools_base.py` | Werkzeug-Grunddefinition (ohne KI-Abhängigkeit) |
 | `tools_common.py` | Werkzeuge für alle Plattformen (Shell, Dateien, Web, Systeminfo) |
+| `tools_windows.py` / `tools_linux.py` / `tools_android.py` | plattform-spezifische Werkzeuge |
 | `voice.py` | Sprachein-/ausgabe für Desktop |
-| **`jarvis_windows.py`** | **Startdatei für Windows** |
-| **`jarvis_linux.py`** | **Startdatei für Linux** |
-| **`jarvis_android.py`** | **Startdatei für Android (Termux)** |
+| `jarvis_core.py` | Gehirn der **Claude**-Version |
+| `jarvis_free_core.py` | Gehirn der **kostenlosen** Version (Ollama/Groq/Offline) |
+| **`jarvis_windows.py`** / **`jarvis_linux.py`** / **`jarvis_android.py`** | **Start: Claude-Version** |
+| **`jarvis_free.py`** | **Start: kostenlose Version (alle Plattformen)** |
 
-Du startest immer **eine** Datei – die für deine Plattform. Die anderen drei
-(`jarvis_core`, `tools_common`, `voice`) müssen nur im selben Ordner liegen.
+Du startest immer **eine** Datei. Alle anderen `.py`-Dateien müssen nur im selben
+Ordner liegen.
 
 ---
 
@@ -91,6 +105,60 @@ Android lässt keine App frei aufs System zugreifen. Der echte Weg ist **Termux*
 Kann: Akkustand, Standort (GPS), SMS senden, anrufen, Taschenlampe, Vibration,
 Benachrichtigungen, Zwischenablage, Kontakte lesen, URLs öffnen, Shell-Befehle –
 plus Sprachein-/ausgabe über `termux-speech-to-text` / `termux-tts-speak`.
+
+---
+
+---
+
+## 💸 Kostenlose Version (`jarvis_free.py`)
+
+Diese Version braucht **keinen kostenpflichtigen Claude-Key**. Sie erkennt dein
+Betriebssystem automatisch und benutzt eine gratis KI. Es gibt drei Backends –
+Jarvis wählt automatisch das beste verfügbare (`auto`), du kannst aber per
+`JARVIS_BACKEND` erzwingen.
+
+### Option 1 – Ollama (lokal, offline, 100 % gratis) — empfohlen für PC
+```bash
+# 1. Ollama installieren:  https://ollama.com
+# 2. Ein Modell laden (unterstützt Funktionsaufrufe):
+ollama pull llama3.1          # oder: qwen2.5, mistral-nemo
+# 3. Python-Paket:
+pip install openai
+# 4. Starten:
+python jarvis_free.py
+```
+Vorteile: läuft komplett offline, keine Anmeldung, deine Daten bleiben lokal.
+Braucht etwas RAM (llama3.1 ≈ 5 GB). Für schwache Geräte kleineres Modell:
+`ollama pull llama3.2` und `export OLLAMA_MODEL=llama3.2`.
+
+### Option 2 – Groq (kostenlose Cloud) — empfohlen fürs Handy / schwache PCs
+```bash
+# 1. Kostenlosen Key holen:  https://console.groq.com
+pip install openai
+export GROQ_API_KEY="gsk_..."     # Windows:  set GROQ_API_KEY=gsk_...
+python jarvis_free.py
+```
+Vorteile: sehr schnell, kein lokales Modell nötig. Nachteil: braucht Internet
+und Anmeldung (aber gratis, mit fairen Limits).
+
+### Option 3 – Offline-Notfallmodus (ganz ohne KI)
+Wenn weder Ollama läuft noch ein Groq-Key gesetzt ist, startet Jarvis in einem
+einfachen Kommando-Modus. Er versteht dann nur direkte Befehle wie „Systeminfo",
+„Akku", „Standort", „Taschenlampe an", „öffne firefox" oder „Befehl: ls -la".
+Kein echtes Sprachverständnis, aber sofort und ohne alles nutzbar.
+
+### Einstellungen (Umgebungsvariablen)
+| Variable | Bedeutung | Standard |
+|----------|-----------|----------|
+| `JARVIS_BACKEND` | `auto` / `ollama` / `groq` / `offline` | `auto` |
+| `OLLAMA_HOST` | Adresse des Ollama-Servers | `http://localhost:11434` |
+| `OLLAMA_MODEL` | verwendetes Ollama-Modell | `llama3.1` |
+| `GROQ_API_KEY` | dein kostenloser Groq-Key | – |
+| `GROQ_MODEL` | verwendetes Groq-Modell | `llama-3.3-70b-versatile` |
+
+> **Hinweis:** Lokale/kleinere Modelle sind nicht so zuverlässig beim Werkzeug-
+> Einsatz wie Claude. Wenn ein Befehl nicht klappt, formuliere ihn klarer oder
+> nutze ein größeres Modell (z. B. Groq `llama-3.3-70b`).
 
 ---
 

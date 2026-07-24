@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import urllib.request
 
-from jarvis_core import Tool
+from tools_base import Tool
 
 
 # ----------------------------------------------------------------------------
