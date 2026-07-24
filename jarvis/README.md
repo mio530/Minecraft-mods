@@ -50,7 +50,8 @@ Programme öffnen, Befehle ausführen, Dateien lesen/schreiben, Systeme steuern 
 | `jarvis_core.py` | Gehirn der **Claude**-Version |
 | `jarvis_free_core.py` | Gehirn der **kostenlosen** Version (Ollama/Groq/Offline) |
 | **`jarvis_windows.py`** / **`jarvis_linux.py`** / **`jarvis_android.py`** | **Start: Claude-Version** |
-| **`jarvis_free.py`** | **Start: kostenlose Version (alle Plattformen)** |
+| **`jarvis_free.py`** | **Start: kostenlose Version (alle Plattformen, Konsole)** |
+| **`jarvis_gui.py`** | **Start: grafische Oberfläche (Tippen + Stimme)** |
 
 Du startest immer **eine** Datei. Alle anderen `.py`-Dateien müssen nur im selben
 Ordner liegen.
@@ -107,6 +108,32 @@ Benachrichtigungen, Zwischenablage, Kontakte lesen, URLs öffnen, Shell-Befehle 
 plus Sprachein-/ausgabe über `termux-speech-to-text` / `termux-tts-speak`.
 
 ---
+
+---
+
+## 🖥️ Grafische Oberfläche (`jarvis_gui.py`) – Tippen **und** Stimme
+
+Ein Fenster (Desktop: Windows / Linux / macOS), in dem du Jarvis auf beide Arten
+bedienst:
+
+- **Tippen:** Text ins Eingabefeld, Enter oder „Senden".
+- **Stimme:** 🎤-Knopf drücken und sprechen.
+- **Vorlesen:** Haken „Antwort vorlesen" schaltet die Sprachausgabe an/aus.
+- **KI wählen:** oben umschaltbar zwischen *Kostenlos* (Ollama/Groq) und *Claude*
+  (Claude erscheint nur, wenn `ANTHROPIC_API_KEY` gesetzt ist).
+
+```bash
+pip install openai                              # kostenlose KI
+pip install SpeechRecognition pyttsx3 pyaudio   # optional, für Stimme
+# Linux zusätzlich, falls tkinter fehlt:  sudo apt install python3-tk
+python jarvis_gui.py
+```
+
+Ohne Mikrofon/Sprach-Pakete ist der 🎤-Knopf einfach deaktiviert – Tippen geht
+immer. Gefährliche Aktionen werden per Popup-Fenster bestätigt.
+
+> Für **Android** gibt es keine grafische Oberfläche (Termux hat kein Fenster-
+> system) – dort die Konsolen-Version `jarvis_free.py` bzw. `jarvis_android.py`.
 
 ---
 

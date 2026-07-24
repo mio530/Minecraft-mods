@@ -43,6 +43,10 @@ class Voice:
 
     def say(self, text: str) -> None:
         print(f"\nJARVIS: {text}\n")
+        self.tts(text)
+
+    def tts(self, text: str) -> None:
+        """Nur Sprachausgabe (ohne Konsolenausgabe) – praktisch für die GUI."""
         if self.voice_output and self._tts is not None:
             try:
                 self._tts.say(text)
@@ -86,3 +90,23 @@ class Voice:
         except Exception:
             # Netzwerkfehler o.ä. -> Tastatur
             return input(prompt).strip()
+
+    def recognize_once(self, timeout: int = 8, phrase_time_limit: int = 15):
+        """Für die GUI: nimmt EINMAL auf und gibt (text, fehler) zurück.
+        Fällt NICHT auf die Tastatur zurück (das erledigt die GUI selbst)."""
+        if not self.voice_input:
+            return "", "Kein Mikrofon verfügbar."
+        import speech_recognition as sr
+        try:
+            with self._mic as source:
+                audio = self._recognizer.listen(
+                    source, timeout=timeout, phrase_time_limit=phrase_time_limit
+                )
+            text = self._recognizer.recognize_google(audio, language=self.language)
+            return text.strip(), ""
+        except sr.WaitTimeoutError:
+            return "", "Zeitüberschreitung – nichts gehört."
+        except sr.UnknownValueError:
+            return "", "Nicht verstanden."
+        except Exception as exc:  # noqa: BLE001
+            return "", f"Fehler bei der Spracherkennung: {exc}"

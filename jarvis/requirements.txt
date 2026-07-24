@@ -14,6 +14,10 @@ openai>=1.30.0
 #     dann:  ollama pull llama3.1
 #     Für Groq nur einen kostenlosen Key: https://console.groq.com
 
+# --- Grafische Oberfläche (jarvis_gui.py) ---
+#     Nutzt "tkinter" – bei Windows/macOS-Python bereits enthalten.
+#     Linux ggf.:  sudo apt install python3-tk
+
 # --- Optional: Sprachein-/ausgabe auf Windows & Linux ---
 # (Jarvis läuft auch ohne diese im reinen Textmodus)
 SpeechRecognition>=3.10.0
