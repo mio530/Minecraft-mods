@@ -1,0 +1,37 @@
+# ============================================================
+#  Wähle je nach Version:
+# ============================================================
+
+# --- Version A: Claude (kostenpflichtig, sehr schlau) ---
+#     Startdateien: jarvis_windows.py / jarvis_linux.py / jarvis_android.py
+anthropic>=0.40.0
+
+# --- Version B: KOSTENLOS (Ollama lokal oder Groq Gratis-Cloud) ---
+#     Startdatei: jarvis_free.py
+#     Das 'openai'-Paket spricht mit BEIDEN (Ollama und Groq).
+openai>=1.30.0
+#     Für Ollama zusätzlich das Programm installieren: https://ollama.com
+#     dann:  ollama pull llama3.1
+#     Für Groq nur einen kostenlosen Key: https://console.groq.com
+
+# --- Grafische Oberfläche (jarvis_gui.py) ---
+#     Nutzt "tkinter" – bei Windows/macOS-Python bereits enthalten.
+#     Linux ggf.:  sudo apt install python3-tk
+
+# --- Kamera-Zugriff (take_photo / look) auf Desktop ---
+#     Android nutzt die Termux-Kamera und braucht dies NICHT.
+opencv-python>=4.8.0
+
+# --- Optional: Sprachein-/ausgabe auf Windows & Linux ---
+# (Jarvis läuft auch ohne diese im reinen Textmodus)
+SpeechRecognition>=3.10.0
+pyttsx3>=2.90
+# Mikrofon-Zugriff. Falls die Installation von pyaudio scheitert:
+#   Windows:        pip install pipwin && pipwin install pyaudio
+#   Debian/Ubuntu:  sudo apt install portaudio19-dev && pip install pyaudio
+#   Fedora:         sudo dnf install portaudio-devel && pip install pyaudio
+#   macOS:          brew install portaudio && pip install pyaudio
+pyaudio>=0.2.13
+
+# Android/Termux braucht KEINE dieser Sprach-Pakete –
+# dort läuft die Sprache über termux-api (siehe README).
