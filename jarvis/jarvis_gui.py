@@ -120,6 +120,9 @@ class JarvisGUI:
         top.pack(fill="x", side="top")
         tk.Label(top, text="◆ J.A.R.V.I.S.", bg=BG2, fg=ACCENT,
                  font=("Segoe UI", 15, "bold")).pack(side="left", padx=12, pady=8)
+        tk.Button(top, text="📁 Werkstatt", command=self._open_workspace, bg=BG2, fg=FG,
+                  bd=0, activebackground=ACCENT, activeforeground=BG,
+                  font=("Segoe UI", 10)).pack(side="left", padx=4)
 
         tk.Label(top, text="KI:", bg=BG2, fg=SYS_COL).pack(side="left", padx=(10, 2))
         self.backend_var = tk.StringVar(value="Kostenlos (Ollama/Groq)")
@@ -281,6 +284,110 @@ class JarvisGUI:
                               "System/App-Dateien bleiben geschützt.")
         else:
             self._add("system", "🔒 Vollzugriff aus – riskante Aktionen werden wieder abgefragt.")
+
+    # ---------------------------------------------------------- Werkstatt
+    def _open_workspace(self) -> None:
+        import workspace
+        win = tk.Toplevel(self.root)
+        win.title("Werkstatt – fertige Dateien")
+        win.geometry("560x460")
+        win.configure(bg=BG)
+        tk.Label(win, text=f"📁 {workspace.workspace_dir()}", bg=BG, fg=SYS_COL,
+                 font=("Segoe UI", 9)).pack(fill="x", padx=10, pady=(8, 4))
+        listbox = tk.Frame(win, bg=BG)
+        listbox.pack(fill="both", expand=True, padx=10, pady=6)
+
+        def refresh():
+            for w in listbox.winfo_children():
+                w.destroy()
+            files = workspace.list_files()
+            if not files:
+                tk.Label(listbox, text="(noch keine Dateien)", bg=BG, fg=SYS_COL).pack(pady=20)
+                return
+            for rel in files:
+                row = tk.Frame(listbox, bg=BG2)
+                row.pack(fill="x", pady=2)
+                nver = len(workspace.list_versions(rel))
+                tag = f"  ⟳ {nver}" if nver else ""
+                tk.Label(row, text=rel + tag, bg=BG2, fg=FG, anchor="w",
+                         font=("Segoe UI", 11)).pack(side="left", fill="x", expand=True,
+                                                     padx=8, pady=6)
+                btn = tk.Button(row, text="⋮", bg=BG2, fg=ACCENT, bd=0,
+                                font=("Segoe UI", 14), activebackground=ACCENT,
+                                activeforeground=BG, width=3)
+                btn.configure(command=lambda r=rel, b=btn: self._file_menu(win, r, b, refresh))
+                btn.pack(side="right", padx=4)
+
+        self._ws_refresh = refresh
+        tk.Button(win, text="Aktualisieren", command=refresh, bg=BG2, fg=FG, bd=0,
+                  font=("Segoe UI", 10)).pack(pady=(0, 8))
+        refresh()
+
+    def _file_menu(self, parent, relpath, btn, refresh) -> None:
+        import workspace
+        m = tk.Menu(parent, tearoff=0)
+        m.add_command(label="Anzeigen", command=lambda: self._view_text(
+            relpath, workspace.read(relpath)))
+        m.add_command(label="Frühere Varianten …",
+                      command=lambda: self._view_versions(relpath, refresh))
+        m.add_separator()
+        m.add_command(label="Löschen", command=lambda: (workspace.delete(relpath), refresh()))
+        m.post(btn.winfo_rootx(), btn.winfo_rooty() + btn.winfo_height())
+
+    def _view_versions(self, relpath, refresh) -> None:
+        import workspace
+        versions = workspace.list_versions(relpath)
+        win = tk.Toplevel(self.root)
+        win.title(f"Frühere Varianten – {relpath}")
+        win.geometry("460x360")
+        win.configure(bg=BG)
+        if not versions:
+            tk.Label(win, text="Keine früheren Varianten vorhanden.", bg=BG, fg=SYS_COL).pack(pady=20)
+            return
+        tk.Label(win, text="Neueste zuerst. Auswählen und wiederherstellen oder ansehen:",
+                 bg=BG, fg=SYS_COL, font=("Segoe UI", 9)).pack(fill="x", padx=10, pady=8)
+        lb = tk.Listbox(win, bg=BG2, fg=FG, bd=0, font=("Consolas", 10),
+                        selectbackground=ACCENT, selectforeground=BG)
+        for v in versions:
+            lb.insert("end", v)
+        lb.pack(fill="both", expand=True, padx=10, pady=6)
+        lb.selection_set(0)
+
+        def sel():
+            i = lb.curselection()
+            return versions[i[0]] if i else None
+
+        def view():
+            v = sel()
+            if v:
+                self._view_text(f"{relpath} @ {v}", workspace.read_version(relpath, v))
+
+        def restore():
+            v = sel()
+            if v and messagebox.askyesno("Wiederherstellen",
+                                         f"Variante {v} für {relpath} wiederherstellen?\n"
+                                         "(Der aktuelle Stand wird ebenfalls im Verlauf gesichert.)"):
+                workspace.restore_version(relpath, v)
+                refresh()
+                win.destroy()
+
+        bar = tk.Frame(win, bg=BG)
+        bar.pack(fill="x", padx=10, pady=8)
+        tk.Button(bar, text="Ansehen", command=view, bg=BG2, fg=FG, bd=0,
+                  font=("Segoe UI", 10), padx=10).pack(side="left")
+        tk.Button(bar, text="Wiederherstellen", command=restore, bg=ACCENT, fg=BG, bd=0,
+                  font=("Segoe UI", 10, "bold"), padx=10).pack(side="right")
+
+    def _view_text(self, title, text) -> None:
+        win = tk.Toplevel(self.root)
+        win.title(str(title))
+        win.geometry("640x480")
+        win.configure(bg=BG)
+        t = tk.Text(win, bg=BG, fg=FG, wrap="none", bd=0, font=("Consolas", 10),
+                    insertbackground=FG)
+        t.insert("1.0", text)
+        t.configure(state="disabled")
+        t.pack(fill="both", expand=True, padx=8, pady=8)
 
     # ---------------------------------------------------- Bestätigungsdialog
     def _confirm(self, tool: Tool, params: dict) -> bool:

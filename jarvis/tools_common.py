@@ -16,6 +16,7 @@ import urllib.request
 
 from tools_base import Tool
 from tools_power import power_tools
+import workspace
 
 
 # ----------------------------------------------------------------------------
@@ -106,8 +107,55 @@ def _system_info(_params: dict) -> str:
 # ----------------------------------------------------------------------------
 # Werkzeug-Liste
 # ----------------------------------------------------------------------------
+def _ws_save(params: dict) -> str:
+    return workspace.save(params["path"], params["content"])
+
+
+def _ws_read(params: dict) -> str:
+    return workspace.read(params["path"])
+
+
+def _ws_list(_params: dict) -> str:
+    files = workspace.list_files()
+    return "\n".join(files) if files else "(Werkstatt ist leer)"
+
+
+def _ws_versions(params: dict) -> str:
+    v = workspace.list_versions(params["path"])
+    return "\n".join(v) if v else "(keine früheren Varianten)"
+
+
+def _ws_restore(params: dict) -> str:
+    return workspace.restore_version(params["path"], params["version"])
+
+
+def workspace_tools() -> list[Tool]:
+    return [
+        Tool("workspace_save",
+             "Speichert eine fertige Datei in Jarvis' Werkstatt. Beim Überschreiben "
+             "wird die vorherige Variante automatisch im Verlauf aufbewahrt. Nutze "
+             "das für fertige Programme/Projekte.",
+             {"type": "object",
+              "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
+              "required": ["path", "content"]}, _ws_save),
+        Tool("workspace_read", "Liest eine Datei aus der Werkstatt.",
+             {"type": "object", "properties": {"path": {"type": "string"}},
+              "required": ["path"]}, _ws_read),
+        Tool("workspace_list", "Listet alle Dateien in der Werkstatt auf.",
+             {"type": "object", "properties": {}, "required": []}, _ws_list),
+        Tool("workspace_versions", "Zeigt die früheren Varianten einer Werkstatt-Datei.",
+             {"type": "object", "properties": {"path": {"type": "string"}},
+              "required": ["path"]}, _ws_versions),
+        Tool("workspace_restore", "Stellt eine frühere Variante einer Datei wieder her.",
+             {"type": "object",
+              "properties": {"path": {"type": "string"}, "version": {"type": "string"}},
+              "required": ["path", "version"]}, _ws_restore),
+    ]
+
+
 def common_tools() -> list[Tool]:
-    return power_tools() + [
+    from tools_git import git_tools
+    return power_tools() + workspace_tools() + git_tools() + [
         Tool(
             name="run_shell",
             description=(

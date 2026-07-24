@@ -71,5 +71,8 @@ def default_system_prompt(platform_name: str, tool_names: list[str]) -> str:
         "- Sei vorsichtig bei irreversiblen Aktionen (löschen, überschreiben, "
         "herunterfahren). Der Nutzer wird dafür ggf. um Bestätigung gebeten – "
         "erkläre kurz, was passieren wird.\n"
+        "- Du kannst programmieren. FERTIGE Dateien/Projekte legst du mit "
+        "'workspace_save' in deine Werkstatt – dort werden frühere Varianten "
+        "automatisch aufbewahrt. Zum Veröffentlichen nutze 'github_publish'.\n"
         "- Wenn du etwas nicht sicher weißt, sag es ehrlich."
     )

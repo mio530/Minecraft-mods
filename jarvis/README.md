@@ -51,6 +51,8 @@ Programme öffnen, Befehle ausführen, Dateien lesen/schreiben, Systeme steuern 
 | `jarvis_sentry_android.py` | Handy-Begleiter: Alarm empfangen + per Fingerabdruck entsperren |
 | `tools_windows.py` / `tools_linux.py` / `tools_android.py` | plattform-spezifische Werkzeuge |
 | `memory.py` | Dauerhaftes Gedächtnis (merkt sich dein Verhalten) |
+| `workspace.py` | Werkstatt: eigener Arbeitsbereich mit Versionsverlauf |
+| `tools_git.py` | Git-/GitHub-Anbindung (Repo anlegen, committen, pushen) |
 | `voice.py` | Sprachein-/ausgabe für Desktop |
 | `jarvis_core.py` | Gehirn der **Claude**-Version |
 | `jarvis_free_core.py` | Gehirn der **kostenlosen** Version (Ollama/Groq/Offline) |
@@ -335,6 +337,38 @@ dasselbe Vision-Backend wie `look`.)
 > Die Kamera ist privatsphäre-sensibel und wird deshalb **vor der Aufnahme
 > abgefragt** (auch im Vollzugriff-Modus für Befehle bleibt das eine bewusste
 > Aktion).
+
+---
+
+## 💻 Programmieren + Werkstatt + GitHub
+
+Jarvis kann **programmieren** und legt fertige Dateien/Projekte in seine
+**Werkstatt** – einen eigenen Ordner unter `~/.jarvis/workspace`.
+
+### 📁 Werkstatt mit Versionsverlauf („⋮"-Menü)
+- Fertige Dateien speichert Jarvis mit `workspace_save`.
+- **Beim Überschreiben bleibt die vorherige Variante erhalten** (im versteckten
+  `.versions`-Verlauf).
+- In der GUI oben auf **„📁 Werkstatt"** klicken → Liste aller Dateien. Neben
+  jeder Datei gibt es das **„⋮"-Menü** mit:
+  - **Anzeigen**
+  - **Frühere Varianten …** → alle überschriebenen Versionen ansehen und
+    **wiederherstellen**
+  - **Löschen** (Verlauf bleibt erhalten)
+
+Sag z. B.: „Schreib mir ein Python-Spiel und leg es in die Werkstatt", oder
+„Stell die vorige Version von app.py wieder her".
+
+### 🔗 GitHub-Anbindung
+- Token anlegen: <https://github.com/settings/tokens> (Scope **repo**), dann
+  `export GITHUB_TOKEN=ghp_...` (Windows: `set GITHUB_TOKEN=ghp_...`).
+- Werkzeuge: `git_init`, `git_commit`, `git_push`, `git_clone`,
+  `github_create_repo` und **`github_publish`** (ein Schritt: committen, Repo
+  anlegen, verknüpfen, pushen).
+- Sag z. B.: „**Lade mein Projekt auf GitHub**" → er legt das Repo an und pusht.
+
+> Braucht **git** installiert (<https://git-scm.com>). Push/Repo-Anlegen sind
+> heikle Aktionen und werden vorher abgefragt.
 
 ---
 
