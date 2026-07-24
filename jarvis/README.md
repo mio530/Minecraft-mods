@@ -342,12 +342,17 @@ dasselbe Vision-Backend wie `look`.)
 Wenn die GUI offen ist, kann Jarvis im **Hintergrund die Webcam überwachen**.
 Erkennt er eine **fremde Person** (nicht dein angelerntes Gesicht), dann:
 
-1. **sperrt er den PC** – ein randloses Vollbild-Sperrfenster **übernimmt den
-   Bildschirm**: es liegt über allem (auch der Taskleiste), fängt Alt+F4 / Alt+Tab /
-   Escape / Windows-Taste ab, greift sich alle Eingaben (globaler Grab) und holt
-   sich den Fokus sofort zurück, falls man wegzuwechseln versucht
-2. **schickt einen Alarm** als Push-Benachrichtigung **aufs Handy** (mit Ton + Vibration)
-3. **wartet aufs Entsperren** – per **Passwort am PC** ODER **Fingerabdruck am Handy**
+1. **sperrt er den PC** – ein randloses Sperrfenster **übernimmt den Bildschirm
+   über ALLE Monitore** (2. und 3. Monitor inklusive): es liegt über allem (auch
+   der Taskleiste), fängt Alt+F4 / Alt+Tab / Escape / Windows-Taste ab, greift
+   sich alle Eingaben (globaler Grab) und holt sich den Fokus sofort zurück
+2. **schickt einen Alarm + ein Foto** des Eindringlings **aufs Handy** und danach
+   **fortlaufend Live-Bilder** (~alle 5 s) – mit Ton + Vibration
+3. **wartet aufs Entsperren** – auf **drei** Wegen:
+   - **Passwort** am PC eintippen
+   - laut **„entsperren"** sagen (gesprochenes Entsperr-Wort, per
+     `JARVIS_UNLOCK_PHRASE` änderbar)
+   - **Fingerabdruck** am Handy
 
 ### Einrichten
 1. In der GUI zuerst dein Gesicht anlernen („Merk dir mein Gesicht").
@@ -365,6 +370,12 @@ Erkennt er eine **fremde Person** (nicht dein angelerntes Gesicht), dann:
      ```
 
 Die Verbindung läuft über **ntfy.sh** – kostenlos, ohne Server und ohne Account.
+
+> **Zur Stimm-Entsperrung:** Echte Stimm-Biometrie („nur DEINE Stimme") ist mit
+> diesen Mitteln nicht zuverlässig – das „entsperren" wirkt wie ein gesprochenes
+> Passwort. Setze mit `JARVIS_UNLOCK_PHRASE` ein geheimes Wort, das ein Fremder
+> nicht errät. **Zum Live-Video:** echtes Streaming braucht einen Server; Jarvis
+> schickt stattdessen fortlaufend Fotos (Schnappschuss-„Live-Feed").
 
 > **Ehrliche Grenze:** Das Jarvis-Sperrfenster ist eine **App-Sperre**, kein
 > echter Betriebssystem-Login. Software kann einen fremden PC nicht per Ferne

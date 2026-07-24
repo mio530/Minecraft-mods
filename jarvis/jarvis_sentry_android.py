@@ -57,6 +57,13 @@ def listen_alarms() -> None:
                     if obj.get("event") == "message":
                         title = obj.get("title", "JARVIS Alarm")
                         msg = obj.get("message", "Alarm vom PC")
+                        att = obj.get("attachment") or {}
+                        url = att.get("url")
+                        if url:
+                            msg = f"{msg}\nFoto: {url}"
+                            # Foto direkt öffnen (Live-Bild vom Eindringling)
+                            subprocess.run(["termux-open", "--content-type", "image/jpeg", url],
+                                           capture_output=True)
                         print(f"🚨 {title}: {msg}")
                         _notify(title, msg)
         except KeyboardInterrupt:

@@ -110,6 +110,29 @@ def send_alarm(title: str, message: str) -> None:
         pass
 
 
+def send_photo(path: str, title: str = "⚠️ JARVIS", message: str = "Eindringling erkannt") -> None:
+    """Sendet ein Foto als Anhang an den Alarm-Kanal (Handy zeigt es an)."""
+    try:
+        data = open(os.path.expanduser(path), "rb").read()
+    except Exception:
+        return
+    req = urllib.request.Request(
+        f"https://ntfy.sh/{get_topic()}", data=data, method="PUT",
+        headers={"Filename": "intruder.jpg", "Title": title, "Message": message,
+                 "Priority": "urgent", "Tags": "rotating_light,camera"},
+    )
+    try:
+        urllib.request.urlopen(req, timeout=15)
+    except Exception:
+        pass
+
+
+def get_voice_phrase() -> str:
+    """Das gesprochene Entsperr-Wort (Standard 'entsperren')."""
+    return (os.environ.get("JARVIS_UNLOCK_PHRASE")
+            or _load().get("voice_phrase") or "entsperren").lower()
+
+
 def send_unlock() -> None:
     """Vom Handy aufgerufen: schickt das (authentifizierte) Entsperr-Signal an den PC."""
     topic = get_topic() + "-ctl"

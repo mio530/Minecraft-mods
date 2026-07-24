@@ -335,7 +335,8 @@ class JarvisGUI:
             "Für das Entsperren per Fingerabdruck auf dem Handy setze dort:\n"
             f"    JARVIS_NTFY_TOPIC={topic}\n"
             f"    JARVIS_SENTRY_TOKEN={token}\n\n"
-            "und starte  jarvis_sentry_android.py .")
+            "und starte  jarvis_sentry_android.py .\n\n"
+            f"Entsperren am PC: Passwort ODER sag laut „{sentry.get_voice_phrase()}“.")
         self.sentry_unlock_stop.clear()
         threading.Thread(
             target=sentry.listen_for_unlock,
@@ -358,6 +359,28 @@ class JarvisGUI:
         self.sentry_unlock_stop.set()
         self._add("system", "🛡️ Wächter ausgeschaltet.")
 
+    def _virtual_geometry(self):
+        """(x, y, w, h) der GESAMTEN Bildschirmfläche über alle Monitore."""
+        import sys
+        if sys.platform.startswith("win"):
+            try:
+                import ctypes
+                u = ctypes.windll.user32
+                x, y = u.GetSystemMetrics(76), u.GetSystemMetrics(77)  # X/Y VIRTUALSCREEN
+                w, h = u.GetSystemMetrics(78), u.GetSystemMetrics(79)  # CX/CY VIRTUALSCREEN
+                if w and h:
+                    return x, y, w, h
+            except Exception:
+                pass
+        try:  # X11: virtueller Wurzel-Bereich umfasst alle Monitore
+            w, h = self.root.winfo_vrootwidth(), self.root.winfo_vrootheight()
+            x, y = self.root.winfo_vrootx(), self.root.winfo_vrooty()
+            if w and h:
+                return x, y, w, h
+        except Exception:
+            pass
+        return 0, 0, self.root.winfo_screenwidth(), self.root.winfo_screenheight()
+
     def _lockdown(self) -> None:
         if self._lock_win is not None:
             return
@@ -372,31 +395,34 @@ class JarvisGUI:
         win = tk.Toplevel(self.root)
         win.configure(bg="#1a0000")
         win.protocol("WM_DELETE_WINDOW", lambda: None)
-        # Bildschirm wirklich übernehmen: randlos, Vollbild, immer oben, Taskleiste weg
         try:
-            win.overrideredirect(True)  # keine Titelleiste, nicht verschieb-/schließbar
+            win.overrideredirect(True)  # randlos, nicht verschieb-/schließbar
         except Exception:
             pass
-        win.attributes("-fullscreen", True)
         win.attributes("-topmost", True)
-        # gesamte Bildschirmfläche abdecken (auch ohne WM-Deko)
-        win.geometry(f"{win.winfo_screenwidth()}x{win.winfo_screenheight()}+0+0")
-        # verbreitete Escape-Wege abfangen
+        # ALLE Monitore abdecken (2. und 3. Monitor inklusive)
+        x, y, w, h = self._virtual_geometry()
+        win.geometry(f"{w}x{h}+{x}+{y}")
         for seq in ("<Alt-F4>", "<Alt-Tab>", "<Escape>", "<Super_L>", "<Super_R>",
                     "<Control-w>", "<Control-q>"):
             win.bind_all(seq, lambda e: "break")
-        # verliert es den Fokus (z.B. per Alt-Tab), holt es ihn sofort zurück
         win.bind("<FocusOut>", lambda e: self._reassert_lock())
 
-        tk.Label(win, text="🔒 GESPERRT", bg="#1a0000", fg="#ff4444",
-                 font=("Segoe UI", 40, "bold")).pack(pady=(120, 10))
-        tk.Label(win, text="Unbefugter Zugriff erkannt.\nPasswort eingeben – oder per "
-                           "Fingerabdruck auf dem Handy entsperren.",
-                 bg="#1a0000", fg=FG, font=("Segoe UI", 14)).pack(pady=10)
-        pw_entry = tk.Entry(win, show="*", font=("Segoe UI", 16), justify="center",
+        # Inhalt zentriert auf dem HAUPTmonitor (nicht in der Mitte aller Monitore)
+        pw_scr, ph_scr = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
+        cx, cy = (0 - x) + pw_scr // 2, (0 - y) + ph_scr // 2
+        frame = tk.Frame(win, bg="#1a0000")
+        frame.place(x=cx, y=cy, anchor="center")
+
+        tk.Label(frame, text="🔒 GESPERRT", bg="#1a0000", fg="#ff4444",
+                 font=("Segoe UI", 40, "bold")).pack(pady=(0, 10))
+        tk.Label(frame, text="Unbefugter Zugriff erkannt.\nPasswort eingeben, "
+                             "„entsperren“ sagen, oder Fingerabdruck am Handy.",
+                 bg="#1a0000", fg=FG, font=("Segoe UI", 14), justify="center").pack(pady=10)
+        pw_entry = tk.Entry(frame, show="*", font=("Segoe UI", 16), justify="center",
                             bg=BG2, fg=FG, insertbackground=ACCENT)
         pw_entry.pack(pady=16, ipady=6)
-        err_lbl = tk.Label(win, text="", bg="#1a0000", fg="#ff4444")
+        err_lbl = tk.Label(frame, text="", bg="#1a0000", fg="#ff4444")
         err_lbl.pack()
 
         def try_unlock():
@@ -407,17 +433,58 @@ class JarvisGUI:
                 pw_entry.delete(0, "end")
 
         pw_entry.bind("<Return>", lambda e: try_unlock())
-        tk.Button(win, text="Entsperren", command=try_unlock, bg=ACCENT, fg=BG,
+        tk.Button(frame, text="Entsperren", command=try_unlock, bg=ACCENT, fg=BG,
                   bd=0, font=("Segoe UI", 12, "bold"), padx=16, pady=4).pack(pady=8)
+
         self._lock_win = win
         self._lock_pw_entry = pw_entry
         self._lock_active = True
         try:
-            win.grab_set_global()   # alle Tastatur-/Maus-Eingaben auf dieses Fenster
+            win.grab_set_global()
         except Exception:
             win.grab_set()
         pw_entry.focus_force()
-        self._reassert_lock()       # bleibt oben & fokussiert
+        self._reassert_lock()
+        # Foto-/Live-Feed ans Handy + Sprach-Entsperrung
+        threading.Thread(target=self._lock_camera_loop, daemon=True).start()
+        if self.voice and self.voice.voice_input:
+            threading.Thread(target=self._lock_voice_loop, daemon=True).start()
+
+    def _lock_camera_loop(self) -> None:
+        """Schickt beim Sperren fortlaufend Fotos (Live-Feed) ans Handy."""
+        import tools_camera
+        path = os.path.expanduser("~/.jarvis/photos/intruder.jpg")
+        first = True
+        while self._lock_active:
+            if tools_camera.capture(0, path) is None:
+                sentry.send_photo(path, "⚠️ JARVIS",
+                                  "Eindringling" if first else "Live-Bild vom PC")
+                first = False
+            for _ in range(10):  # ~5 s, aber schnell abbrechbar
+                if not self._lock_active:
+                    return
+                time.sleep(0.5)
+
+    def _lock_voice_loop(self) -> None:
+        """Hört auf das Entsperr-Wort, während gesperrt ist."""
+        phrase = sentry.get_voice_phrase()
+        while self._lock_active:
+            if not self.mic_lock.acquire(blocking=False):
+                time.sleep(0.3)
+                continue
+            try:
+                text, _err = self.voice.recognize_once(timeout=5, phrase_time_limit=3)
+            finally:
+                self.mic_lock.release()
+            if not self._lock_active:
+                return
+            if text and phrase in text.lower():
+                self.root.after(0, self._voice_unlock)
+
+    def _voice_unlock(self) -> None:
+        if self._lock_win is not None:
+            self._add("system", "🔓 Per Stimme entsperrt.")
+            self._do_unlock()
 
     def _reassert_lock(self) -> None:
         """Hält die Sperre oben und im Fokus, solange sie aktiv ist."""
@@ -475,7 +542,7 @@ class JarvisGUI:
     def _wake_loop(self) -> None:
         while not self.wake_stop.is_set() and self.wake_var.get():
             # Mikrofon nur nehmen, wenn gerade nichts anderes läuft
-            if self.convo_active or self.busy:
+            if self.convo_active or self.busy or self._lock_active:
                 time.sleep(0.3)
                 continue
             if not self.mic_lock.acquire(blocking=False):
