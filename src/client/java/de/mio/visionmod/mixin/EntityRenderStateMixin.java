@@ -19,7 +19,7 @@ public class EntityRenderStateMixin {
     private void visionmod_isGlowing(CallbackInfoReturnable<Boolean> cir) {
         try {
             VisionConfig cfg = VisionConfig.get();
-            if (!cfg.entityEspEnabled || !cfg.entityGlowEnabled) return;
+            if (!cfg.masterEnabled || !cfg.entityEspEnabled || !cfg.entityGlowEnabled) return;
 
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.level == null || !VisionModClient.fullyJoined) return;
@@ -39,7 +39,7 @@ public class EntityRenderStateMixin {
     private void visionmod_getTeamColor(CallbackInfoReturnable<Integer> cir) {
         try {
             VisionConfig cfg = VisionConfig.get();
-            if (!cfg.entityEspEnabled || !cfg.entityGlowEnabled) return;
+            if (!cfg.masterEnabled || !cfg.entityEspEnabled || !cfg.entityGlowEnabled) return;
 
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || mc.level == null || !VisionModClient.fullyJoined) return;

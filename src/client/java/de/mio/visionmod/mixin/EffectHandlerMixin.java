@@ -21,7 +21,8 @@ public class EffectHandlerMixin {
     // the blindness still applied — that is the bug this fixes.
     @Inject(method = "canBeAffected", at = @At("HEAD"), cancellable = true, require = 0)
     private void visionmod_antiBlind(MobEffectInstance effect, CallbackInfoReturnable<Boolean> cir) {
-        if (!VisionConfig.get().antiBlindEnabled) return;
+        VisionConfig c = VisionConfig.get();
+        if (!c.masterEnabled || !c.antiBlindEnabled) return;
         if (!((Object) this instanceof LocalPlayer)) return;
         if (effect.getEffect() == MobEffects.BLINDNESS || effect.getEffect() == MobEffects.DARKNESS) {
             cir.setReturnValue(false);

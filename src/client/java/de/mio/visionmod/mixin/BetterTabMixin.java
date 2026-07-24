@@ -18,11 +18,11 @@ public class BetterTabMixin {
 
     @ModifyConstant(method = "render", constant = @Constant(intValue = 80), require = 0)
     private int visionmod_tabCapInt(int original) {
-        return VisionConfig.get().betterTabEnabled ? 1000 : original;
+        return VisionConfig.get().masterEnabled && VisionConfig.get().betterTabEnabled ? 1000 : original;
     }
 
     @ModifyConstant(method = "render", constant = @Constant(longValue = 80L), require = 0)
     private long visionmod_tabCapLong(long original) {
-        return VisionConfig.get().betterTabEnabled ? 1000L : original;
+        return VisionConfig.get().masterEnabled && VisionConfig.get().betterTabEnabled ? 1000L : original;
     }
 }

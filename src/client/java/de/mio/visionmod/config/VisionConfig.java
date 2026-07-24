@@ -17,6 +17,11 @@ public class VisionConfig {
     private static VisionConfig INSTANCE;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
+    // --- Master switch: when false the whole client is dormant (no ticks, no
+    //     rendering, no mixin effects) but the JAR stays loaded and settings are kept. ---
+    public boolean masterEnabled = true;
+    public int     keyMaster     = 0;   // toggle the whole client on/off
+
     // --- Global toggles ---
     public boolean entityEspEnabled = false;
     public boolean entityGlowEnabled = false;
@@ -378,8 +383,9 @@ public class VisionConfig {
         return FabricLoader.getInstance().getConfigDir().resolve("visionmod.json");
     }
 
-    // Display preferences (not "hacks") that the panic button must NOT touch.
-    private static final Set<String> RESET_SKIP = Set.of("globalLinesEnabled");
+    // Fields ending in "Enabled" that the panic/reset must NOT touch: the tracer-line
+    // display pref, and the master switch (panic disables features, not the whole client).
+    private static final Set<String> RESET_SKIP = Set.of("globalLinesEnabled", "masterEnabled");
 
     /**
      * Sets every feature toggle to false (keeps settings like colors, radii, keybinds intact).

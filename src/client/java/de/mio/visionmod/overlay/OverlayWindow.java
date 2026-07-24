@@ -37,6 +37,7 @@ public final class OverlayWindow {
     }
 
     private void onRenderEndInner(WorldRenderContext ctx) {
+        if (!VisionConfig.get().masterEnabled) return;   // client dormant
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 

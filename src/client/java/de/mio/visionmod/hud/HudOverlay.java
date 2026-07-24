@@ -14,6 +14,7 @@ public final class HudOverlay {
     /** Called every HUD render frame via HudRenderCallback. */
     public static void onHudRender(GuiGraphics g, DeltaTracker delta) {
         VisionConfig cfg = VisionConfig.get();
+        if (!cfg.masterEnabled) return;   // client dormant
         Minecraft mc = Minecraft.getInstance();
 
         // ── Coordinates HUD ───────────────────────────────────────────────────

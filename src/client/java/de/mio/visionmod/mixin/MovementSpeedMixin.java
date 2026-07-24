@@ -20,7 +20,8 @@ public class MovementSpeedMixin {
     // instead of crashing the game at load.
     @Inject(method = "makeStuckInBlock", at = @At("HEAD"), cancellable = true, require = 0)
     private void visionmod_noSlow(BlockState state, Vec3 multiplier, CallbackInfo ci) {
-        if (VisionConfig.get().noSlowEnabled && (Object) this instanceof LocalPlayer) {
+        VisionConfig c = VisionConfig.get();
+        if (c.masterEnabled && c.noSlowEnabled && (Object) this instanceof LocalPlayer) {
             ci.cancel();
         }
     }

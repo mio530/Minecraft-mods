@@ -74,6 +74,32 @@ public class VisionModClient implements ClientModInitializer {
                 postJoinTicks = 0;
             }
 
+            boolean typing = mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen
+                    || (mc.screen != null
+                        && mc.screen.getFocused() instanceof net.minecraft.client.gui.components.EditBox);
+
+            // Master toggle — polled cheaply every tick so it works even while dormant.
+            if (cfg.keyMaster > 0 && justPressed(win, cfg.keyMaster) && !typing) {
+                cfg.masterEnabled = !cfg.masterEnabled;
+                VisionConfig.save();
+            }
+
+            // Master OFF → fully dormant: bail out BEFORE any keybind polling, scanning,
+            // rendering or hack ticks, so an off client costs essentially nothing. Only
+            // the config-open key is still honoured so you can reach the menu.
+            if (!cfg.masterEnabled) {
+                RenderHacks.zoomActive = false;
+                if (mc.screen == null && cfg.keyOpenConfig > 0 && justPressed(win, cfg.keyOpenConfig))
+                    mc.setScreen(new VisionConfigScreen(null));
+                EntityESP.snapshot  = java.util.Collections.emptyList();
+                ItemESP.snapshot    = java.util.Collections.emptyList();
+                OreESP.snapshot     = java.util.Collections.emptyList();
+                StorageESP.snapshot = java.util.Collections.emptyList();
+                SusChunks.snapshot  = java.util.Collections.emptyList();
+                return;
+            }
+
+            // ══ Master ON — full processing ══════════════════════════════════
             // Zoom: hold-key (no toggle)
             RenderHacks.zoomActive = cfg.keyZoom > 0
                 && GLFW.glfwGetKey(win, cfg.keyZoom) == GLFW.GLFW_PRESS;
@@ -95,12 +121,6 @@ public class VisionModClient implements ClientModInitializer {
                 int k = e.getValue();
                 if (k > 0 && edges.getOrDefault(k, false) && mc.screen == null) toggleModule(cfg, e.getKey());
             }
-
-            // Don't let panic fire while the user is typing (chat / config search box),
-            // otherwise a panic key bound to a letter triggers mid-word.
-            boolean typing = mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen
-                    || (mc.screen != null
-                        && mc.screen.getFocused() instanceof net.minecraft.client.gui.components.EditBox);
 
             // Panic 2: silent — just disable all hacks, no disconnect, no exit
             if (f_panic2 && !typing) {

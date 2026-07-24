@@ -32,7 +32,7 @@ public class GammaMixin {
     private void visionmod_gammaBoost(CallbackInfoReturnable<Object> cir) {
         if (visionmod_saving) return;               // keep options.txt at the real gamma
         VisionConfig cfg = VisionConfig.get();
-        if (!cfg.gammaBoostEnabled) return;
+        if (!cfg.masterEnabled || !cfg.gammaBoostEnabled) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.options != null && (Object) this == mc.options.gamma()) {
             cir.setReturnValue((double) cfg.gammaValue);

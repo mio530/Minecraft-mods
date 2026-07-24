@@ -20,6 +20,7 @@ public class FoodDataMixin {
 
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true, require = 0)
     private void visionmod_antiHunger(ServerPlayer player, CallbackInfo ci) {
-        if (VisionConfig.get().antiHungerEnabled) ci.cancel();
+        VisionConfig c = VisionConfig.get();
+        if (c.masterEnabled && c.antiHungerEnabled) ci.cancel();
     }
 }

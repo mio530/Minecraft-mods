@@ -713,6 +713,10 @@ public class VisionConfigScreen extends Screen {
 
         // ── Session ──────────────────────────────────────────────────────────
         case "session"    -> {
+            sToggle(g, "Client aktiv (Master)", c.masterEnabled, () -> { c.masterEnabled = !c.masterEnabled; save(); });
+            sDesc(g, "Aus = komplett schlafend (kein ESP/Hacks/Mixins,");
+            sDesc(g, "keine Performance-Last). Einstellungen bleiben erhalten.");
+            sSep(g, "Reset");
             sToggle(g, "Reset bei Relog",    c.resetOnRelog,   () -> { c.resetOnRelog   = !c.resetOnRelog;   save(); });
             sDesc(g, "Alle Features deaktivieren wenn du den Server verlässt.");
             sToggle(g, "Reset bei Neustart", c.resetOnRestart, () -> { c.resetOnRestart = !c.resetOnRestart; save(); });
@@ -725,6 +729,7 @@ public class VisionConfigScreen extends Screen {
             sCY += 2;
             // Special keys (not toggles)
             sSep(g, "Spezial");
+            sKeybindRow(g, "Master (An/Aus)", "master", c.keyMaster, c);
             sKeybindRow(g, "Config öffnen", "openConfig", c.keyOpenConfig, c);
             sKeybindRow(g, "Zoom (halten)", "zoom",       c.keyZoom,       c);
             sKeybindRow(g, "Panic",         "panic",      c.keyPanic,      c);
@@ -986,6 +991,7 @@ public class VisionConfigScreen extends Screen {
                     case "zoom"       -> c.keyZoom       = keyCode;
                     case "panic"      -> c.keyPanic      = keyCode;
                     case "panic2"     -> c.keyPanic2     = keyCode;
+                    case "master"     -> c.keyMaster     = keyCode;
                 }
                 VisionConfig.save();
             }
