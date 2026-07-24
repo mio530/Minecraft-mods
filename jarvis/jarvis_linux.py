@@ -18,11 +18,14 @@ from __future__ import annotations
 
 from jarvis_core import Jarvis, Tool
 from tools_linux import linux_tools
+from tools_power import is_unrestricted
 from memory import Memory
 from voice import Voice
 
 
 def confirm(tool: Tool, params: dict) -> bool:
+    if is_unrestricted():
+        return True  # Vollzugriff-Modus: ohne Rückfrage
     print(f"\n⚠️  Jarvis möchte '{tool.name}' ausführen:")
     for k, v in params.items():
         print(f"     {k} = {v}")
@@ -40,6 +43,8 @@ def main() -> None:
     )
 
     print("=" * 60)
+    if is_unrestricted():
+        print("  🔓 VOLLZUGRIFF AKTIV – Jarvis handelt OHNE Rückfragen!")
     print("  J.A.R.V.I.S.  –  Linux (Claude)")
     print("  Sprich oder tippe. 'exit' zum Beenden, 'reset' für neuen Kontext.")
     print(f"  Sprachausgabe: {'an' if voice.voice_output else 'aus'} | "

@@ -15,6 +15,7 @@ import subprocess
 import urllib.request
 
 from tools_base import Tool
+from tools_power import power_tools
 
 
 # ----------------------------------------------------------------------------
@@ -106,7 +107,7 @@ def _system_info(_params: dict) -> str:
 # Werkzeug-Liste
 # ----------------------------------------------------------------------------
 def common_tools() -> list[Tool]:
-    return [
+    return power_tools() + [
         Tool(
             name="run_shell",
             description=(

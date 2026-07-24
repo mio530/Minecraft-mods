@@ -45,6 +45,7 @@ Programme öffnen, Befehle ausführen, Dateien lesen/schreiben, Systeme steuern 
 |-------|-------|
 | `tools_base.py` | Werkzeug-Grunddefinition (ohne KI-Abhängigkeit) |
 | `tools_common.py` | Werkzeuge für alle Plattformen (Shell, Dateien, Web, Systeminfo) |
+| `tools_power.py` | Voller Gerätezugriff (umschreiben, verschieben, löschen, Prozesse, Code) |
 | `tools_windows.py` / `tools_linux.py` / `tools_android.py` | plattform-spezifische Werkzeuge |
 | `memory.py` | Dauerhaftes Gedächtnis (merkt sich dein Verhalten) |
 | `voice.py` | Sprachein-/ausgabe für Desktop |
@@ -235,6 +236,46 @@ Du kannst ihm auch direkt Anweisungen geben, z. B.:
 Jarvis sagen „vergiss alles über mich").
 
 > Hinweis: Jarvis speichert **keine Passwörter/Geheimnisse** ins Gedächtnis.
+
+---
+
+## 🛠️ Voller Gerätezugriff
+
+Jarvis kann auf **alles** auf dem Gerät zugreifen, es benutzen und **umschreiben**.
+Neben Shell/Dateien/Systeminfo hat er dafür zusätzliche Power-Werkzeuge (auf allen
+Plattformen):
+
+| Werkzeug | Was es tut |
+|----------|------------|
+| `edit_file` | Text in einer Datei **ersetzen/umschreiben** |
+| `move_path` / `copy_path` | verschieben, umbenennen, kopieren |
+| `delete_path` | Datei oder Ordner löschen |
+| `make_dir` | Ordner anlegen |
+| `find_files` | Dateien per Muster suchen (z. B. `*.pdf`) |
+| `search_in_files` | Dateiinhalte durchsuchen (grep-artig) |
+| `chmod_path` | Rechte ändern / ausführbar machen |
+| `list_processes` / `kill_process` | Prozesse anzeigen und beenden |
+| `run_python` | **beliebigen Python-Code ausführen** (maximaler Zugriff) |
+| `env` | Umgebungsvariablen lesen |
+| `run_shell` | jeden beliebigen Systembefehl ausführen |
+
+Damit kann er praktisch alles tun, was du selbst am Gerät tun könntest.
+
+### 🔓 Vollzugriff-Modus (ohne Rückfragen)
+
+Standardmäßig fragt Jarvis vor riskanten Aktionen (löschen, umschreiben, Code
+ausführen …) nach. Wenn er **frei und ohne Nachfragen** handeln soll:
+
+- **Konsole:** vor dem Start setzen
+  ```bash
+  export JARVIS_UNRESTRICTED=1     # Windows:  set JARVIS_UNRESTRICTED=1
+  ```
+- **GUI:** oben den Haken **„🔓 Vollzugriff"** setzen (mit Sicherheitsabfrage).
+
+> ⚠️ **Achtung:** Im Vollzugriff-Modus führt Jarvis **alles ohne Bestätigung** aus –
+> inklusive Löschen, Überschreiben und beliebigem Code. Nutze das nur auf deinem
+> eigenen Gerät, mit einem verlässlichen Modell und mit Bedacht. Zum Deaktivieren
+> die Variable entfernen bzw. den Haken abwählen.
 
 ---
 

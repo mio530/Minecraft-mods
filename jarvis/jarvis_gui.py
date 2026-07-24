@@ -33,6 +33,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from tools_base import Tool
+from tools_power import is_unrestricted
 from memory import Memory
 
 
@@ -120,6 +121,12 @@ class JarvisGUI:
         tk.Checkbutton(top, text="Antwort vorlesen", variable=self.speak_var,
                        bg=BG2, fg=FG, selectcolor=BG, activebackground=BG2,
                        activeforeground=FG).pack(side="right", padx=12)
+
+        self.unrestricted_var = tk.BooleanVar(value=is_unrestricted())
+        tk.Checkbutton(top, text="🔓 Vollzugriff", variable=self.unrestricted_var,
+                       command=self._toggle_unrestricted, bg=BG2, fg=WARN_COL,
+                       selectcolor=BG, activebackground=BG2,
+                       activeforeground=WARN_COL).pack(side="right", padx=4)
 
         # Chatverlauf
         chat_frame = tk.Frame(self.root, bg=BG)
@@ -222,9 +229,29 @@ class JarvisGUI:
         # wird aus dem Worker-Thread gerufen
         self.root.after(0, self._set_status, msg)
 
+    # ------------------------------------------------------ Vollzugriff
+    def _toggle_unrestricted(self) -> None:
+        if self.unrestricted_var.get():
+            ok = messagebox.askyesno(
+                "Vollzugriff aktivieren?",
+                "Im Vollzugriff-Modus führt Jarvis ALLE Aktionen OHNE Nachfrage aus – "
+                "auch Dateien löschen/umschreiben, Prozesse beenden oder beliebigen "
+                "Code ausführen.\n\nNur auf deinem eigenen Gerät und mit Bedacht nutzen.\n\n"
+                "Wirklich aktivieren?",
+                icon="warning",
+            )
+            if not ok:
+                self.unrestricted_var.set(False)
+                return
+            self._add("warn", "🔓 Vollzugriff aktiv – Jarvis handelt jetzt ohne Rückfragen.")
+        else:
+            self._add("system", "🔒 Vollzugriff aus – riskante Aktionen werden wieder abgefragt.")
+
     # ---------------------------------------------------- Bestätigungsdialog
     def _confirm(self, tool: Tool, params: dict) -> bool:
         """Thread-sicher: fragt im Hauptthread per Popup nach."""
+        if self.unrestricted_var.get():
+            return True  # Vollzugriff: keine Rückfrage
         result = {"ok": False}
         done = threading.Event()
 

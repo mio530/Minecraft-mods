@@ -32,6 +32,7 @@ import platform
 
 from tools_base import Tool
 from jarvis_free_core import JarvisFree, detect_backend
+from tools_power import is_unrestricted
 from memory import Memory
 
 
@@ -61,6 +62,8 @@ def load_platform():
 
 
 def confirm(tool: Tool, params: dict) -> bool:
+    if is_unrestricted():
+        return True  # Vollzugriff-Modus: ohne Rückfrage
     print(f"\n⚠️  Jarvis möchte '{tool.name}' ausführen:")
     for k, v in params.items():
         print(f"     {k} = {v}")
@@ -88,6 +91,8 @@ def main() -> None:
     )
 
     print("=" * 60)
+    if is_unrestricted():
+        print("  🔓 VOLLZUGRIFF AKTIV – Jarvis handelt OHNE Rückfragen!")
     print("  J.A.R.V.I.S.  –  KOSTENLOSE Version")
     print(f"  Plattform: {label}")
     print(f"  KI-Backend: {BACKEND_INFO.get(backend, backend)}")
