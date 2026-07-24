@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from jarvis_core import Jarvis, Tool
 from tools_android import android_tools, speak, listen, HAVE_TERMUX_API
+from memory import Memory
 
 
 def confirm(tool: Tool, params: dict) -> bool:
@@ -33,6 +34,7 @@ def main() -> None:
     jarvis = Jarvis(
         tools=android_tools(),
         platform_name="Android (Termux)",
+        memory=Memory(),
         confirm=confirm,
         on_status=lambda msg: print(f"   … {msg}"),
     )

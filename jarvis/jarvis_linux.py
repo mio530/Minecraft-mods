@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from jarvis_core import Jarvis, Tool
 from tools_linux import linux_tools
+from memory import Memory
 from voice import Voice
 
 
@@ -33,6 +34,7 @@ def main() -> None:
     jarvis = Jarvis(
         tools=linux_tools(),
         platform_name="Linux Desktop",
+        memory=Memory(),
         confirm=confirm,
         on_status=lambda msg: print(f"   … {msg}"),
     )

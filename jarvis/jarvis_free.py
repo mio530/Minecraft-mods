@@ -32,6 +32,7 @@ import platform
 
 from tools_base import Tool
 from jarvis_free_core import JarvisFree, detect_backend
+from memory import Memory
 
 
 # ----------------------------------------------------------------------------
@@ -81,6 +82,7 @@ def main() -> None:
         tools=tools,
         backend=backend,
         platform_name=label,
+        memory=Memory(),
         confirm=confirm,
         on_status=lambda msg: print(f"   … {msg}"),
     )

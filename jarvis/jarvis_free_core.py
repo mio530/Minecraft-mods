@@ -69,21 +69,34 @@ class JarvisFree:
     platform_name: str = field(default_factory=lambda: platform.system())
     system_prompt: Optional[str] = None
     max_tokens: int = 2048
+    memory: object = None  # optionales Langzeitgedächtnis (memory.Memory)
     confirm: Callable[[Tool, dict], bool] = lambda tool, params: True
     on_status: Callable[[str], None] = lambda msg: None
 
     def __post_init__(self) -> None:
         self.backend = self.backend or detect_backend()
-        self._by_name = {t.name: t for t in self.tools}
         self._messages: list[dict] = []
         if self.system_prompt is None:
             self.system_prompt = default_system_prompt(
                 self.platform_name, [t.name for t in self.tools]
             )
-        self._client = None
+        self._base_system = self.system_prompt
+        if self.memory is not None:
+            from memory import memory_tools, MEMORY_INSTRUCTION
+            self.tools = list(self.tools) + memory_tools(self.memory)
+            self._base_system = self.system_prompt + "\n\n" + MEMORY_INSTRUCTION
+        self._by_name = {t.name: t for t in self.tools}
         self._model = None
         if self.backend in ("ollama", "groq"):
             self._setup_openai_client()
+
+    def _system_now(self) -> str:
+        """Aktueller Systemprompt inkl. gemerkter Nutzer-Fakten."""
+        if self.memory is not None:
+            block = self.memory.as_prompt_block()
+            if block:
+                return self._base_system + "\n\n" + block
+        return self._base_system
 
     def _setup_openai_client(self) -> None:
         try:
@@ -134,7 +147,7 @@ class JarvisFree:
             try:
                 response = self._client.chat.completions.create(
                     model=self._model,
-                    messages=[{"role": "system", "content": self.system_prompt}] + self._messages,
+                    messages=[{"role": "system", "content": self._system_now()}] + self._messages,
                     tools=openai_tools,
                     max_tokens=self.max_tokens,
                 )

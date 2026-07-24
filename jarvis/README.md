@@ -46,6 +46,7 @@ Programme öffnen, Befehle ausführen, Dateien lesen/schreiben, Systeme steuern 
 | `tools_base.py` | Werkzeug-Grunddefinition (ohne KI-Abhängigkeit) |
 | `tools_common.py` | Werkzeuge für alle Plattformen (Shell, Dateien, Web, Systeminfo) |
 | `tools_windows.py` / `tools_linux.py` / `tools_android.py` | plattform-spezifische Werkzeuge |
+| `memory.py` | Dauerhaftes Gedächtnis (merkt sich dein Verhalten) |
 | `voice.py` | Sprachein-/ausgabe für Desktop |
 | `jarvis_core.py` | Gehirn der **Claude**-Version |
 | `jarvis_free_core.py` | Gehirn der **kostenlosen** Version (Ollama/Groq/Offline) |
@@ -205,6 +206,35 @@ Beispiele:
 - „Erstelle auf dem Desktop eine Datei notizen.txt mit meiner Einkaufsliste."
 - „Wie viel Speicher habe ich noch frei?"
 - „Schick meiner Mutter eine SMS, dass ich später komme." (Android)
+
+---
+
+## 🧠 Gedächtnis – Jarvis merkt sich dein Verhalten
+
+Jarvis lernt dich über die Zeit kennen und **passt sein Verhalten an**. Wenn er
+etwas Dauerhaftes über dich erfährt – deinen Namen, Vorlieben, Gewohnheiten, wie
+kurz oder ausführlich du Antworten magst, wiederkehrende Aufgaben – speichert er
+das und erinnert sich **beim nächsten Start** daran.
+
+- Gespeichert wird lokal in **`~/.jarvis/memory.json`** (bleibt privat auf deinem
+  Gerät, geht über keine Cloud).
+- Beim Start lädt Jarvis das Gedächtnis in seinen „Kopf" und begrüßt dich als
+  jemanden, den er schon kennt.
+- Er hat dafür drei Werkzeuge, die er selbst benutzt:
+  - `remember` – merkt sich eine Tatsache
+  - `recall` – schlägt nach, was er schon weiß
+  - `forget` – vergisst etwas (veraltet oder auf deinen Wunsch)
+
+Du kannst ihm auch direkt Anweisungen geben, z. B.:
+- „Merk dir, dass ich dich Boss nennen möchte."
+- „Ich mag kurze Antworten – merk dir das."
+- „Was weißt du über mich?"  → er liest sein Gedächtnis vor
+- „Vergiss, dass ich Kaffee mag."
+
+**Alles zurücksetzen:** einfach die Datei `~/.jarvis/memory.json` löschen (oder
+Jarvis sagen „vergiss alles über mich").
+
+> Hinweis: Jarvis speichert **keine Passwörter/Geheimnisse** ins Gedächtnis.
 
 ---
 

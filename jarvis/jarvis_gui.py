@@ -33,6 +33,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from tools_base import Tool
+from memory import Memory
 
 
 # ----------------------------------------------------------------------------
@@ -79,6 +80,7 @@ class JarvisGUI:
         self.convo_stop = threading.Event()
 
         self.tools, self.label = load_tools_and_label()
+        self.memory = Memory()  # dauerhaftes Gedächtnis (~/.jarvis/memory.json)
 
         # Sprache (nur Desktop)
         self.voice = None
@@ -175,7 +177,7 @@ class JarvisGUI:
             if choice == "claude":
                 from jarvis_core import Jarvis
                 self.brain = Jarvis(
-                    tools=self.tools, platform_name=self.label,
+                    tools=self.tools, platform_name=self.label, memory=self.memory,
                     confirm=self._confirm, on_status=self._status_async,
                 )
                 self._add("system", f"Claude-Gehirn aktiv · {self.label}")
@@ -184,7 +186,7 @@ class JarvisGUI:
                 from jarvis_free_core import JarvisFree, detect_backend
                 be = detect_backend()
                 self.brain = JarvisFree(
-                    tools=self.tools, backend=be, platform_name=self.label,
+                    tools=self.tools, backend=be, platform_name=self.label, memory=self.memory,
                     confirm=self._confirm, on_status=self._status_async,
                 )
                 names = {"ollama": "Ollama (lokal)", "groq": "Groq (Cloud)",
@@ -200,6 +202,10 @@ class JarvisGUI:
         except Exception as exc:  # noqa: BLE001
             self.brain = None
             self._add("warn", f"Konnte KI nicht starten: {exc}")
+
+        n = len(self.memory.items)
+        if n and self.brain is not None:
+            self._add("system", f"🧠 Ich erinnere mich an {n} Sache(n) über dich.")
 
     # -------------------------------------------------------- Chat-Ausgabe
     def _add(self, tag: str, text: str) -> None:

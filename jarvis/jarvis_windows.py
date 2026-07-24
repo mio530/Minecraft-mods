@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from jarvis_core import Jarvis, Tool
 from tools_windows import windows_tools
+from memory import Memory
 from voice import Voice
 
 
@@ -32,6 +33,7 @@ def main() -> None:
     jarvis = Jarvis(
         tools=windows_tools(),
         platform_name="Windows PC",
+        memory=Memory(),
         confirm=confirm,
         on_status=lambda msg: print(f"   … {msg}"),
     )

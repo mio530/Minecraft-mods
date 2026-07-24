@@ -46,6 +46,8 @@ class Jarvis:
     platform_name: str = field(default_factory=lambda: platform.system())
     system_prompt: Optional[str] = None
     max_tokens: int = 4096
+    # Optionales Langzeitgedächtnis (memory.Memory); passt Verhalten dauerhaft an
+    memory: object = None
     # Callback zur Bestätigung gefährlicher Aktionen: (tool, params) -> bool
     confirm: Callable[[Tool, dict], bool] = lambda tool, params: True
     # Callback, um dem Nutzer live zu zeigen, was gerade passiert
@@ -56,12 +58,26 @@ class Jarvis:
         # wenn api_key None ist.
         self._client = anthropic.Anthropic(api_key=self.api_key) if self.api_key \
             else anthropic.Anthropic()
-        self._by_name = {t.name: t for t in self.tools}
         self._messages: list[dict] = []
         if self.system_prompt is None:
             self.system_prompt = default_system_prompt(
                 self.platform_name, [t.name for t in self.tools]
             )
+        # Gedächtnis anhängen: Merk-Werkzeuge + Anweisung im Systemprompt
+        self._base_system = self.system_prompt
+        if self.memory is not None:
+            from memory import memory_tools, MEMORY_INSTRUCTION
+            self.tools = list(self.tools) + memory_tools(self.memory)
+            self._base_system = self.system_prompt + "\n\n" + MEMORY_INSTRUCTION
+        self._by_name = {t.name: t for t in self.tools}
+
+    def _system_now(self) -> str:
+        """Aktueller Systemprompt inkl. gemerkter Nutzer-Fakten."""
+        if self.memory is not None:
+            block = self.memory.as_prompt_block()
+            if block:
+                return self._base_system + "\n\n" + block
+        return self._base_system
 
     # -- interne Werkzeug-Ausführung -------------------------------------
     def _run_tool(self, name: str, params: dict) -> tuple[str, bool]:
@@ -93,7 +109,7 @@ class Jarvis:
             response = self._client.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
-                system=self.system_prompt,
+                system=self._system_now(),
                 thinking={"type": "adaptive"},
                 tools=api_tools,
                 messages=self._messages,
