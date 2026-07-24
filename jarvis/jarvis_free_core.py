@@ -33,6 +33,8 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from tools_base import Tool, default_system_prompt
+from tools_power import is_unrestricted
+from safety import Guard
 
 
 # ----------------------------------------------------------------------------
@@ -70,6 +72,7 @@ class JarvisFree:
     system_prompt: Optional[str] = None
     max_tokens: int = 2048
     memory: object = None  # optionales Langzeitgedächtnis (memory.Memory)
+    unrestricted: Callable[[], bool] = is_unrestricted
     confirm: Callable[[Tool, dict], bool] = lambda tool, params: True
     on_status: Callable[[str], None] = lambda msg: None
 
@@ -86,6 +89,7 @@ class JarvisFree:
             self.tools = list(self.tools) + memory_tools(self.memory)
             self._base_system = self.system_prompt + "\n\n" + MEMORY_INSTRUCTION
         self._by_name = {t.name: t for t in self.tools}
+        self._guard = Guard(self.unrestricted)
         self._model = None
         if self.backend in ("ollama", "groq"):
             self._setup_openai_client()
@@ -124,11 +128,15 @@ class JarvisFree:
         tool = self._by_name.get(name)
         if tool is None:
             return f"Unbekanntes Werkzeug: {name}"
-        if tool.dangerous and not self.confirm(tool, params):
+        decision, reason = self._guard.decide(tool, params)
+        if decision == "block":
+            return f"⛔ Aus Sicherheitsgründen blockiert: {reason}"
+        if decision == "ask" and not self.confirm(tool, params):
             return "Abgebrochen: Der Nutzer hat diese Aktion nicht bestätigt."
         try:
             self.on_status(f"[Werkzeug] {name}({json.dumps(params, ensure_ascii=False)})")
             result = tool.handler(params) or "(kein Rückgabewert)"
+            self._guard.record(tool, params)
             if len(result) > 8000:
                 result = result[:8000] + "\n... (gekürzt)"
             return result

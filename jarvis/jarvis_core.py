@@ -25,6 +25,8 @@ from typing import Callable, Optional
 # Tool + Systemprompt liegen in tools_base (ohne Anthropic-Abhängigkeit),
 # damit die kostenlose Version denselben Werkzeug-Code nutzen kann.
 from tools_base import Tool, default_system_prompt  # noqa: F401 (re-export)
+from tools_power import is_unrestricted
+from safety import Guard
 
 try:
     import anthropic
@@ -48,6 +50,8 @@ class Jarvis:
     max_tokens: int = 4096
     # Optionales Langzeitgedächtnis (memory.Memory); passt Verhalten dauerhaft an
     memory: object = None
+    # Vollzugriff-Modus? (Schutz für System/App-Dateien bleibt trotzdem aktiv)
+    unrestricted: Callable[[], bool] = is_unrestricted
     # Callback zur Bestätigung gefährlicher Aktionen: (tool, params) -> bool
     confirm: Callable[[Tool, dict], bool] = lambda tool, params: True
     # Callback, um dem Nutzer live zu zeigen, was gerade passiert
@@ -70,6 +74,7 @@ class Jarvis:
             self.tools = list(self.tools) + memory_tools(self.memory)
             self._base_system = self.system_prompt + "\n\n" + MEMORY_INSTRUCTION
         self._by_name = {t.name: t for t in self.tools}
+        self._guard = Guard(self.unrestricted)
 
     def _system_now(self) -> str:
         """Aktueller Systemprompt inkl. gemerkter Nutzer-Fakten."""
@@ -84,11 +89,15 @@ class Jarvis:
         tool = self._by_name.get(name)
         if tool is None:
             return f"Unbekanntes Werkzeug: {name}", True
-        if tool.dangerous and not self.confirm(tool, params):
+        decision, reason = self._guard.decide(tool, params)
+        if decision == "block":
+            return f"⛔ Aus Sicherheitsgründen blockiert: {reason}", True
+        if decision == "ask" and not self.confirm(tool, params):
             return "Abgebrochen: Der Nutzer hat diese Aktion nicht bestätigt.", True
         try:
             self.on_status(f"[Werkzeug] {name}({json.dumps(params, ensure_ascii=False)})")
             result = tool.handler(params)
+            self._guard.record(tool, params)
             if result is None:
                 result = "(kein Rückgabewert)"
             # Sehr lange Ausgaben kürzen, damit das Kontextfenster nicht explodiert

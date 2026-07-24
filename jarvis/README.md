@@ -46,6 +46,7 @@ Programme öffnen, Befehle ausführen, Dateien lesen/schreiben, Systeme steuern 
 | `tools_base.py` | Werkzeug-Grunddefinition (ohne KI-Abhängigkeit) |
 | `tools_common.py` | Werkzeuge für alle Plattformen (Shell, Dateien, Web, Systeminfo) |
 | `tools_power.py` | Voller Gerätezugriff (umschreiben, verschieben, löschen, Prozesse, Code) |
+| `safety.py` | Schutz-Schicht: schützt System/Apps, fragt bei fremden Dateien |
 | `tools_windows.py` / `tools_linux.py` / `tools_android.py` | plattform-spezifische Werkzeuge |
 | `memory.py` | Dauerhaftes Gedächtnis (merkt sich dein Verhalten) |
 | `voice.py` | Sprachein-/ausgabe für Desktop |
@@ -261,21 +262,35 @@ Plattformen):
 
 Damit kann er praktisch alles tun, was du selbst am Gerät tun könntest.
 
-### 🔓 Vollzugriff-Modus (ohne Rückfragen)
+### 🛡️ Schutz-Schicht (immer aktiv)
 
-Standardmäßig fragt Jarvis vor riskanten Aktionen (löschen, umschreiben, Code
-ausführen …) nach. Wenn er **frei und ohne Nachfragen** handeln soll:
+Jarvis hat einen Wächter (`safety.py`), der **vor jeder Aktion** prüft, was
+erlaubt ist. Diese Regeln gelten **immer – auch im Vollzugriff-Modus**:
 
-- **Konsole:** vor dem Start setzen
-  ```bash
-  export JARVIS_UNRESTRICTED=1     # Windows:  set JARVIS_UNRESTRICTED=1
-  ```
-- **GUI:** oben den Haken **„🔓 Vollzugriff"** setzen (mit Sicherheitsabfrage).
+| Situation | Verhalten |
+|-----------|-----------|
+| System- oder App-Dateien ändern/löschen | ⛔ **blockiert** (nie erlaubt) |
+| Datei ändern/löschen, die Jarvis **nicht selbst** erstellt hat | ❓ **fragt nach** |
+| „Wichtig" wirkende Dateien (`~/.ssh`, `.bashrc`, Schlüssel …) | ❓ **fragt nach** |
+| **Neue** Datei/Ordner **erstellen** | ✅ ohne Nachfrage |
+| Datei ändern, die Jarvis **selbst erstellt** hat | ✅ ohne Nachfrage |
 
-> ⚠️ **Achtung:** Im Vollzugriff-Modus führt Jarvis **alles ohne Bestätigung** aus –
-> inklusive Löschen, Überschreiben und beliebigem Code. Nutze das nur auf deinem
-> eigenen Gerät, mit einem verlässlichen Modell und mit Bedacht. Zum Deaktivieren
-> die Variable entfernen bzw. den Haken abwählen.
+So kann Jarvis nichts Wichtiges kaputt machen, arbeitet aber bei eigenen und
+neuen Dateien flüssig. Geschützte Bereiche sind u. a. `C:\Windows`,
+`C:\Program Files` (Windows); `/usr`, `/etc`, `/bin`, `/System`, `/Applications`
+(Linux/macOS); `/system`, `/data/app` und die Termux-Laufzeit (Android).
+
+### 🔓 Vollzugriff-Modus
+
+Standardmäßig fragt Jarvis vor riskanten **Befehlen** (Shell, Code, Prozesse
+beenden …) nach. Im Vollzugriff-Modus laufen diese **ohne Nachfrage** – die
+Schutz-Schicht oben **bleibt trotzdem aktiv** (System/Apps geschützt, fremde
+Dateien werden weiter abgefragt).
+
+- **Konsole:** `export JARVIS_UNRESTRICTED=1` (Windows: `set JARVIS_UNRESTRICTED=1`)
+- **GUI:** oben den Haken **„🔓 Vollzugriff"** (mit Sicherheitsabfrage).
+
+> ⚠️ Nur auf deinem eigenen Gerät und mit einem verlässlichen Modell nutzen.
 
 ---
 

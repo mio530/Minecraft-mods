@@ -62,8 +62,6 @@ def load_platform():
 
 
 def confirm(tool: Tool, params: dict) -> bool:
-    if is_unrestricted():
-        return True  # Vollzugriff-Modus: ohne Rückfrage
     print(f"\n⚠️  Jarvis möchte '{tool.name}' ausführen:")
     for k, v in params.items():
         print(f"     {k} = {v}")

@@ -185,6 +185,7 @@ class JarvisGUI:
                 from jarvis_core import Jarvis
                 self.brain = Jarvis(
                     tools=self.tools, platform_name=self.label, memory=self.memory,
+                    unrestricted=lambda: self.unrestricted_var.get(),
                     confirm=self._confirm, on_status=self._status_async,
                 )
                 self._add("system", f"Claude-Gehirn aktiv · {self.label}")
@@ -194,6 +195,7 @@ class JarvisGUI:
                 be = detect_backend()
                 self.brain = JarvisFree(
                     tools=self.tools, backend=be, platform_name=self.label, memory=self.memory,
+                    unrestricted=lambda: self.unrestricted_var.get(),
                     confirm=self._confirm, on_status=self._status_async,
                 )
                 names = {"ollama": "Ollama (lokal)", "groq": "Groq (Cloud)",
@@ -234,24 +236,27 @@ class JarvisGUI:
         if self.unrestricted_var.get():
             ok = messagebox.askyesno(
                 "Vollzugriff aktivieren?",
-                "Im Vollzugriff-Modus führt Jarvis ALLE Aktionen OHNE Nachfrage aus – "
-                "auch Dateien löschen/umschreiben, Prozesse beenden oder beliebigen "
-                "Code ausführen.\n\nNur auf deinem eigenen Gerät und mit Bedacht nutzen.\n\n"
-                "Wirklich aktivieren?",
+                "Im Vollzugriff-Modus führt Jarvis Befehle (Shell, Code, Prozesse) "
+                "ohne Nachfrage aus.\n\nDER SCHUTZ BLEIBT AKTIV:\n"
+                "• System- und App-Dateien werden nie verändert oder gelöscht\n"
+                "• Fremde oder wichtige Dateien werden weiterhin abgefragt\n"
+                "• Neue und selbst erstellte Dateien laufen ohne Nachfrage\n\n"
+                "Nur auf deinem eigenen Gerät nutzen. Wirklich aktivieren?",
                 icon="warning",
             )
             if not ok:
                 self.unrestricted_var.set(False)
                 return
-            self._add("warn", "🔓 Vollzugriff aktiv – Jarvis handelt jetzt ohne Rückfragen.")
+            self._add("warn", "🔓 Vollzugriff aktiv – Befehle ohne Rückfrage. "
+                              "System/App-Dateien bleiben geschützt.")
         else:
             self._add("system", "🔒 Vollzugriff aus – riskante Aktionen werden wieder abgefragt.")
 
     # ---------------------------------------------------- Bestätigungsdialog
     def _confirm(self, tool: Tool, params: dict) -> bool:
-        """Thread-sicher: fragt im Hauptthread per Popup nach."""
-        if self.unrestricted_var.get():
-            return True  # Vollzugriff: keine Rückfrage
+        """Thread-sicher: fragt im Hauptthread per Popup nach.
+        (Der Guard hat schon entschieden, DASS gefragt wird – z.B. bei fremden
+        oder wichtigen Dateien, auch im Vollzugriff-Modus.)"""
         result = {"ok": False}
         done = threading.Event()
 
