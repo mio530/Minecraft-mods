@@ -1,6 +1,7 @@
 package de.mio.visionmod.mixin;
 
 import de.mio.visionmod.config.VisionConfig;
+import de.mio.visionmod.render.RenderHacks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,16 +22,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(OptionInstance.class)
 public class GammaMixin {
 
-    /**
-     * True only while Options.save() is running (see OptionsSaveMixin). During a save
-     * we must NOT return the boosted value, otherwise the boost is written into
-     * options.txt and the real gamma is permanently overwritten.
-     */
-    public static volatile boolean visionmod_saving = false;
-
     @Inject(method = "get", at = @At("RETURN"), cancellable = true, require = 0)
     private void visionmod_gammaBoost(CallbackInfoReturnable<Object> cir) {
-        if (visionmod_saving) return;               // keep options.txt at the real gamma
+        if (RenderHacks.gammaSaving) return;        // keep options.txt at the real gamma
         VisionConfig cfg = VisionConfig.get();
         if (!cfg.masterEnabled || !cfg.gammaBoostEnabled) return;
         Minecraft mc = Minecraft.getInstance();

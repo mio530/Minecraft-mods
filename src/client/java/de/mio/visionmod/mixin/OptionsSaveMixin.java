@@ -1,5 +1,6 @@
 package de.mio.visionmod.mixin;
 
+import de.mio.visionmod.render.RenderHacks;
 import net.minecraft.client.Options;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,11 +19,11 @@ public class OptionsSaveMixin {
 
     @Inject(method = "save", at = @At("HEAD"), require = 0)
     private void visionmod_saveStart(CallbackInfo ci) {
-        GammaMixin.visionmod_saving = true;
+        RenderHacks.gammaSaving = true;
     }
 
     @Inject(method = "save", at = @At("RETURN"), require = 0)
     private void visionmod_saveEnd(CallbackInfo ci) {
-        GammaMixin.visionmod_saving = false;
+        RenderHacks.gammaSaving = false;
     }
 }
