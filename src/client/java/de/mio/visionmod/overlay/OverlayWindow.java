@@ -1,5 +1,6 @@
 package de.mio.visionmod.overlay;
 
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import de.mio.visionmod.config.VisionConfig;
@@ -23,6 +24,13 @@ public final class OverlayWindow {
 
     public static final OverlayWindow INSTANCE = new OverlayWindow();
     private OverlayWindow() {}
+
+    // Our OWN vertex buffer, reused each frame. We render ESP boxes/lines/labels
+    // through a private MultiBufferSource.immediate(this) instead of the game's shared
+    // bufferSource(), so ImmediatelyFast's BatchableBufferSource never batches/flushes
+    // our lines — that combination throws "Missing elements in vertex: LineWidth" and
+    // crashes the render thread. Rendering thread only, so a single static builder is fine.
+    private static final ByteBufferBuilder ESP_BUFFER = new ByteBufferBuilder(4096);
 
     public void init(Minecraft mc) {}
     public void destroy() {}
@@ -55,7 +63,7 @@ public final class OverlayWindow {
         Vec3 cam = ((de.mio.visionmod.mixin.CameraAccessor) camera).visionmod_getCameraPosition();
         if (cam == null) return;
         Quaternionf camRot = ((de.mio.visionmod.mixin.CameraAccessor) camera).visionmod_getCameraRotation();
-        MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
+        MultiBufferSource.BufferSource buf = MultiBufferSource.immediate(ESP_BUFFER);
         VisionConfig cfg = VisionConfig.get();
         Vec3 self = mc.player.position();
         boolean labels = cfg.espLabels && camRot != null;
