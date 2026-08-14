@@ -260,12 +260,15 @@ public final class CombatHacks {
                 }
         );
 
-        // FOV filter
+        // FOV filter — measured EYE-to-EYE (where you actually aim), not foot-to-foot.
+        // Using feet made the angle to a nearby mob much larger than the crosshair
+        // offset, so any FOV below ~30° filtered out even a mob you look straight at.
         if (cfg.killAuraFov < 360f) {
+            Vec3 eye = mc.player.getEyePosition();
             Vec3 lookVec = mc.player.getLookAngle();
             float halfFov = cfg.killAuraFov / 2f;
             candidates = candidates.stream().filter(e -> {
-                Vec3 toTarget = e.position().subtract(mc.player.position()).normalize();
+                Vec3 toTarget = e.getEyePosition().subtract(eye).normalize();
                 double dot = lookVec.dot(toTarget);
                 double angle = Math.toDegrees(Math.acos(Math.max(-1.0, Math.min(1.0, dot))));
                 return angle <= halfFov;
