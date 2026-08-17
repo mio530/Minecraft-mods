@@ -356,6 +356,8 @@ public class VisionConfigScreen extends Screen {
             sRadius(g, "Radius",       c.oreEspRadius,     1,  8,
                 () -> { c.oreEspRadius = Math.max(1, c.oreEspRadius-1); save(); },
                 () -> { c.oreEspRadius = Math.min(8, c.oreEspRadius+1); save(); });
+            sToggle(g, "Nur freiliegende Erze", c.oreEspExposedOnly, () -> { c.oreEspExposedOnly = !c.oreEspExposedOnly; save(); });
+            sDesc(g, "An = nur Erze an Luft/Höhlen. Aus = auch vergrabene.");
             sToggle(g, "Info-Text (Koord)", c.espLabels, () -> { c.espLabels = !c.espLabels; save(); });
             sSep(g, "Erz-Farben");
             for (String oid : VisionConfig.ALL_ORES) sOreRow(g, oid, c);

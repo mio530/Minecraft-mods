@@ -2,6 +2,7 @@ package de.mio.visionmod.esp;
 
 import de.mio.visionmod.config.VisionConfig;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
@@ -104,6 +105,8 @@ public final class OreESP {
         int radius = Math.max(1, Math.min(cfg.oreEspRadius, 8));
         List<OreData> next = new ArrayList<>();
         int worldMinY = mc.level.dimensionType().minY();
+        boolean exposedOnly = cfg.oreEspExposedOnly;
+        BlockPos.MutableBlockPos npos = new BlockPos.MutableBlockPos();
 
         for (int cx = center.x - radius; cx <= center.x + radius; cx++) {
             for (int cz = center.z - radius; cz <= center.z + radius; cz++) {
@@ -128,8 +131,10 @@ public final class OreESP {
                             for (int lz = 0; lz < 16; lz++) {
                                 OreParams p = targets.get(sec.getBlockState(lx, ly, lz).getBlock());
                                 if (p != null && y >= p.minY() && y <= p.maxY()) {
+                                    int wx = cx * 16 + lx, wz = cz * 16 + lz;
+                                    if (exposedOnly && !isExposed(mc.level, wx, y, wz, npos)) continue;
                                     next.add(new OreData(
-                                            cx * 16 + lx + 0.5, y + 0.5, cz * 16 + lz + 0.5,
+                                            wx + 0.5, y + 0.5, wz + 0.5,
                                             p.boxColor(), p.lineColor(), p.showLine()
                                     ));
                                 }
@@ -141,5 +146,16 @@ public final class OreESP {
         }
 
         snapshot = Collections.unmodifiableList(next);
+    }
+
+    private static final int[][] FACES = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
+
+    /** True if any of the 6 neighbours is air — i.e. the ore is exposed to a cave/opening. */
+    private static boolean isExposed(net.minecraft.world.level.Level level, int x, int y, int z,
+                                     BlockPos.MutableBlockPos m) {
+        for (int[] f : FACES) {
+            if (level.getBlockState(m.set(x + f[0], y + f[1], z + f[2])).isAir()) return true;
+        }
+        return false;
     }
 }

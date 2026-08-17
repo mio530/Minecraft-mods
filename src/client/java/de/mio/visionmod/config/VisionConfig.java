@@ -53,6 +53,7 @@ public class VisionConfig {
     // --- General ---
     public int  entityEspRadius = 4;   // chunk radius for entity ESP
     public int  oreEspRadius    = 3;   // chunk radius for ore ESP
+    public boolean oreEspExposedOnly = false; // only show ores touching air (cave-exposed)
     public int  susChunksRadius = 4;   // chunk radius for sus chunk scan
     public boolean fillBoxes    = false;
 
