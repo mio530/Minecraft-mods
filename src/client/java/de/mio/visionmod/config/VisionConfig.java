@@ -93,6 +93,10 @@ public class VisionConfig {
     public boolean killAuraMobs       = true;
     public int     killAuraCps        = 12;
     public boolean killAuraRotate     = true;
+    public boolean killAuraSmooth       = true;  // move the camera smoothly instead of snapping
+    public int     killAuraRotateSpeed  = 20;    // max degrees per tick when smooth (lower = smoother)
+    public boolean killAuraRequireClick = false; // only attack while the attack key is held
+    public boolean killAuraRequireCross = false; // only attack the entity under the crosshair
     public String  killAuraPriority   = "Nearest"; // Nearest, LowestHP, HighestHP
     public float   killAuraFov        = 360f;
     public boolean criticalsEnabled   = false;

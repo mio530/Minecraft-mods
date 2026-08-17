@@ -392,6 +392,12 @@ public class VisionConfigScreen extends Screen {
                 () -> { c.killAuraCps = Math.max(1,  c.killAuraCps - 1); save(); },
                 () -> { c.killAuraCps = Math.min(20, c.killAuraCps + 1); save(); });
             sToggle(g, "Rotation",         c.killAuraRotate,     () -> { c.killAuraRotate     = !c.killAuraRotate;     save(); });
+            sToggle(g, "Smooth Aim",       c.killAuraSmooth,     () -> { c.killAuraSmooth     = !c.killAuraSmooth;     save(); });
+            sInt(g, "Aim-Speed", c.killAuraRotateSpeed, "°/t", 2, 90,
+                () -> { c.killAuraRotateSpeed = Math.max(2,  c.killAuraRotateSpeed - 2); save(); },
+                () -> { c.killAuraRotateSpeed = Math.min(90, c.killAuraRotateSpeed + 2); save(); });
+            sToggle(g, "Nur bei Klick",    c.killAuraRequireClick, () -> { c.killAuraRequireClick = !c.killAuraRequireClick; save(); });
+            sToggle(g, "Nur auf Ziel (Fadenkreuz)", c.killAuraRequireCross, () -> { c.killAuraRequireCross = !c.killAuraRequireCross; save(); });
             sPriority(g, "Priorität", c.killAuraPriority,
                 () -> {
                     c.killAuraPriority = switch (c.killAuraPriority) {

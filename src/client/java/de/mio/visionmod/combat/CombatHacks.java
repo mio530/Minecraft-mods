@@ -244,6 +244,8 @@ public final class CombatHacks {
 
     private static void tickKillAura(Minecraft mc, VisionConfig cfg) {
         if (!cfg.killAuraEnabled || mc.screen != null || mc.gameMode == null) return;
+        // Mode: only swing while the attack button is held.
+        if (cfg.killAuraRequireClick && !mc.options.keyAttack.isDown()) return;
         if (killAuraCooldown > 0) { killAuraCooldown--; return; }
 
         float atkStrength = mc.player.getAttackStrengthScale(0f);
@@ -285,15 +287,29 @@ public final class CombatHacks {
                     .min(Comparator.comparingDouble(mc.player::distanceTo)).orElse(null);
         };
 
+        // Mode: only hit the entity the crosshair is actually on (legit-style).
+        if (cfg.killAuraRequireCross) {
+            target = (mc.crosshairPickEntity instanceof LivingEntity le && candidates.contains(le))
+                    ? le : null;
+        }
+
         if (target != null) {
             // Rotation
             if (cfg.killAuraRotate) {
                 Vec3 delta = target.getEyePosition().subtract(mc.player.getEyePosition());
-                double yaw = Math.toDegrees(Math.atan2(-delta.x, delta.z));
+                float tYaw = (float) Math.toDegrees(Math.atan2(-delta.x, delta.z));
                 double horiz = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
-                double pitch = Math.toDegrees(-Math.atan2(delta.y, horiz));
-                mc.player.setYRot((float) yaw);
-                mc.player.setXRot((float) pitch);
+                float tPitch = (float) Math.toDegrees(-Math.atan2(delta.y, horiz));
+                if (cfg.killAuraSmooth) {
+                    // Move the real camera toward the target a limited amount each tick,
+                    // so it glides like normal mouse movement instead of snapping.
+                    float step = Math.max(1f, cfg.killAuraRotateSpeed);
+                    mc.player.setYRot(approachAngle(mc.player.getYRot(), tYaw, step));
+                    mc.player.setXRot(Mth.clamp(approachAngle(mc.player.getXRot(), tPitch, step), -90f, 90f));
+                } else {
+                    mc.player.setYRot(tYaw);
+                    mc.player.setXRot(tPitch);
+                }
             }
             mc.gameMode.attack(mc.player, target);
             killAuraCooldown = Math.max(1, 20 / Math.max(1, cfg.killAuraCps));
