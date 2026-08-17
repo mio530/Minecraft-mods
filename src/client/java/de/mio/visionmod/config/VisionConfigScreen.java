@@ -135,6 +135,7 @@ public class VisionConfigScreen extends Screen {
     private String rebindingKey = null;
     private boolean settingsClip = false;
     private String searchQuery = "";
+    private String entityQuery = "";   // filters the entity-type list in the ESP panel
     private EditBox searchBox;
 
     // Meteor-style draggable category panels: cat -> {screenX, screenY}
@@ -194,8 +195,15 @@ public class VisionConfigScreen extends Screen {
         searchBox.setResponder(v -> searchQuery = v == null ? "" : v.toLowerCase(java.util.Locale.ROOT));
         addRenderableWidget(searchBox);
 
-        // entityEsp player filter — only while its settings popup is open.
+        // entityEsp: mob-type search + player filter, pinned in the popup's bottom strip.
         if ("entityEsp".equals(selMod)) {
+            EditBox eb = new EditBox(font, spX + 5, spY + spH - 35, spW - 10, 14, Component.empty());
+            eb.setMaxLength(48);
+            eb.setValue(entityQuery);
+            eb.setHint(Component.literal("§8Mob suchen... (leer = alle)"));
+            eb.setResponder(v -> entityQuery = v == null ? "" : v.toLowerCase(java.util.Locale.ROOT));
+            addRenderableWidget(eb);
+
             EditBox nb = new EditBox(font, spX + 5, spY + spH - 18, spW - 10, 14, Component.empty());
             nb.setMaxLength(512);
             nb.setValue(String.join(",", VisionConfig.get().enabledPlayerNames));
@@ -294,6 +302,12 @@ public class VisionConfigScreen extends Screen {
         return n;
     }
 
+    private boolean matchesEntity(String id) {
+        if (entityQuery == null || entityQuery.isEmpty()) return true;
+        return id.toLowerCase(java.util.Locale.ROOT).contains(entityQuery)
+            || VisionConfig.displayName(id).toLowerCase(java.util.Locale.ROOT).contains(entityQuery);
+    }
+
     private boolean matchesSearch(ModDef m) {
         if (searchQuery == null || searchQuery.isEmpty()) return true;
         return m.name().toLowerCase(java.util.Locale.ROOT).contains(searchQuery)
@@ -320,7 +334,7 @@ public class VisionConfigScreen extends Screen {
 
         int cy = spY + 16;
         int ch = spH - 16;
-        int reserve = "entityEsp".equals(selMod) ? 20 : 0;
+        int reserve = "entityEsp".equals(selMod) ? 37 : 0;  // mob search + player filter
         ch -= reserve;
 
         g.enableScissor(spX, cy, spX + spW, cy + ch);
@@ -347,7 +361,13 @@ public class VisionConfigScreen extends Screen {
                 () -> { c.entityEspRadius = Math.min(16, c.entityEspRadius+1); save(); });
             sToggle(g, "Info-Text (Name/Koord)", c.espLabels, () -> { c.espLabels = !c.espLabels; save(); });
             sSep(g, "Entity-Farben");
-            for (String eid : VisionConfig.ALL_ENTITY_TYPES) sEntityRow(g, eid, c);
+            int shown = 0;
+            for (String eid : VisionConfig.ALL_ENTITY_TYPES) {
+                if (!matchesEntity(eid)) continue;
+                sEntityRow(g, eid, c);
+                shown++;
+            }
+            if (shown == 0) sDesc(g, "§8Kein Mob gefunden.");
         }
         case "entityGlow" -> {
             sToggle(g, "Entity Glow",  c.entityGlowEnabled, () -> { c.entityGlowEnabled = !c.entityGlowEnabled; save(); });

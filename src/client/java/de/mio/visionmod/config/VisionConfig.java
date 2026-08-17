@@ -227,7 +227,70 @@ public class VisionConfig {
             "minecraft:zoglin",
             "minecraft:drowned",
             "minecraft:husk",
-            "minecraft:stray"
+            "minecraft:stray",
+            // more hostiles
+            "minecraft:zombie_villager",
+            "minecraft:zombified_piglin",
+            "minecraft:piglin_brute",
+            "minecraft:cave_spider",
+            "minecraft:slime",
+            "minecraft:magma_cube",
+            "minecraft:silverfish",
+            "minecraft:endermite",
+            "minecraft:guardian",
+            "minecraft:elder_guardian",
+            "minecraft:shulker",
+            "minecraft:evoker",
+            "minecraft:vex",
+            "minecraft:warden",
+            "minecraft:breeze",
+            "minecraft:bogged",
+            "minecraft:creaking",
+            "minecraft:wither",
+            "minecraft:ender_dragon",
+            // passive / normal mobs
+            "minecraft:villager",
+            "minecraft:wandering_trader",
+            "minecraft:iron_golem",
+            "minecraft:snow_golem",
+            "minecraft:cow",
+            "minecraft:mooshroom",
+            "minecraft:pig",
+            "minecraft:sheep",
+            "minecraft:chicken",
+            "minecraft:rabbit",
+            "minecraft:horse",
+            "minecraft:donkey",
+            "minecraft:mule",
+            "minecraft:llama",
+            "minecraft:camel",
+            "minecraft:goat",
+            "minecraft:wolf",
+            "minecraft:cat",
+            "minecraft:ocelot",
+            "minecraft:fox",
+            "minecraft:panda",
+            "minecraft:polar_bear",
+            "minecraft:bee",
+            "minecraft:turtle",
+            "minecraft:frog",
+            "minecraft:axolotl",
+            "minecraft:allay",
+            "minecraft:armadillo",
+            "minecraft:sniffer",
+            "minecraft:parrot",
+            "minecraft:bat",
+            "minecraft:squid",
+            "minecraft:glow_squid",
+            "minecraft:dolphin",
+            "minecraft:cod",
+            "minecraft:salmon",
+            "minecraft:tropical_fish",
+            "minecraft:pufferfish",
+            "minecraft:strider",
+            "minecraft:trader_llama",
+            "minecraft:skeleton_horse",
+            "minecraft:zombie_horse"
     );
 
     // Ordered list of all ore block IDs
@@ -278,6 +341,69 @@ public class VisionConfig {
         DEFAULT_ENTITY_BOX.put("minecraft:drowned",        "#FF008080");
         DEFAULT_ENTITY_BOX.put("minecraft:husk",           "#FFD2B48C");
         DEFAULT_ENTITY_BOX.put("minecraft:stray",          "#FFB0C4DE");
+        // more hostiles — reddish/dark tones
+        DEFAULT_ENTITY_BOX.put("minecraft:zombie_villager","#FF5F9E5F");
+        DEFAULT_ENTITY_BOX.put("minecraft:zombified_piglin","#FFE08A9E");
+        DEFAULT_ENTITY_BOX.put("minecraft:piglin_brute",   "#FFB5651D");
+        DEFAULT_ENTITY_BOX.put("minecraft:cave_spider",    "#FF008B8B");
+        DEFAULT_ENTITY_BOX.put("minecraft:slime",          "#FF66DD44");
+        DEFAULT_ENTITY_BOX.put("minecraft:magma_cube",     "#FFFF6600");
+        DEFAULT_ENTITY_BOX.put("minecraft:silverfish",     "#FF9AA0A6");
+        DEFAULT_ENTITY_BOX.put("minecraft:endermite",      "#FF7B4FA8");
+        DEFAULT_ENTITY_BOX.put("minecraft:guardian",       "#FF3FA9A0");
+        DEFAULT_ENTITY_BOX.put("minecraft:elder_guardian", "#FF86B3AF");
+        DEFAULT_ENTITY_BOX.put("minecraft:shulker",        "#FF9B6FA8");
+        DEFAULT_ENTITY_BOX.put("minecraft:evoker",         "#FFD8D8C0");
+        DEFAULT_ENTITY_BOX.put("minecraft:vex",            "#FFBFD4FF");
+        DEFAULT_ENTITY_BOX.put("minecraft:warden",         "#FF0F5B60");
+        DEFAULT_ENTITY_BOX.put("minecraft:breeze",         "#FF9AC4FF");
+        DEFAULT_ENTITY_BOX.put("minecraft:bogged",         "#FF8FA36B");
+        DEFAULT_ENTITY_BOX.put("minecraft:creaking",       "#FF6B5B4B");
+        DEFAULT_ENTITY_BOX.put("minecraft:wither",         "#FF303030");
+        DEFAULT_ENTITY_BOX.put("minecraft:ender_dragon",   "#FF6A0DAD");
+        // passive / normal mobs — soft tones
+        DEFAULT_ENTITY_BOX.put("minecraft:villager",       "#FFC8A165");
+        DEFAULT_ENTITY_BOX.put("minecraft:wandering_trader","#FF4C7BD1");
+        DEFAULT_ENTITY_BOX.put("minecraft:iron_golem",     "#FFD9D9D9");
+        DEFAULT_ENTITY_BOX.put("minecraft:snow_golem",     "#FFEFFFFF");
+        DEFAULT_ENTITY_BOX.put("minecraft:cow",            "#FF8B5A2B");
+        DEFAULT_ENTITY_BOX.put("minecraft:mooshroom",      "#FFB03030");
+        DEFAULT_ENTITY_BOX.put("minecraft:pig",            "#FFFFAEC9");
+        DEFAULT_ENTITY_BOX.put("minecraft:sheep",          "#FFF2F2F2");
+        DEFAULT_ENTITY_BOX.put("minecraft:chicken",        "#FFFFF0A0");
+        DEFAULT_ENTITY_BOX.put("minecraft:rabbit",         "#FFD2B48C");
+        DEFAULT_ENTITY_BOX.put("minecraft:horse",          "#FFC19A6B");
+        DEFAULT_ENTITY_BOX.put("minecraft:donkey",         "#FF9C7A5B");
+        DEFAULT_ENTITY_BOX.put("minecraft:mule",           "#FF8A6642");
+        DEFAULT_ENTITY_BOX.put("minecraft:llama",          "#FFE5D3B3");
+        DEFAULT_ENTITY_BOX.put("minecraft:camel",          "#FFE0B87A");
+        DEFAULT_ENTITY_BOX.put("minecraft:goat",           "#FFCFC6BA");
+        DEFAULT_ENTITY_BOX.put("minecraft:wolf",           "#FFBFBFBF");
+        DEFAULT_ENTITY_BOX.put("minecraft:cat",            "#FFE0A030");
+        DEFAULT_ENTITY_BOX.put("minecraft:ocelot",         "#FFEFC050");
+        DEFAULT_ENTITY_BOX.put("minecraft:fox",            "#FFE07A3C");
+        DEFAULT_ENTITY_BOX.put("minecraft:panda",          "#FFF0F0F0");
+        DEFAULT_ENTITY_BOX.put("minecraft:polar_bear",     "#FFFAFAF0");
+        DEFAULT_ENTITY_BOX.put("minecraft:bee",            "#FFFFD84D");
+        DEFAULT_ENTITY_BOX.put("minecraft:turtle",         "#FF64C864");
+        DEFAULT_ENTITY_BOX.put("minecraft:frog",           "#FFD3A02C");
+        DEFAULT_ENTITY_BOX.put("minecraft:axolotl",        "#FFFFB5D8");
+        DEFAULT_ENTITY_BOX.put("minecraft:allay",          "#FF7FD8FF");
+        DEFAULT_ENTITY_BOX.put("minecraft:armadillo",      "#FFA07A55");
+        DEFAULT_ENTITY_BOX.put("minecraft:sniffer",        "#FF9AD1B0");
+        DEFAULT_ENTITY_BOX.put("minecraft:parrot",         "#FF33CC33");
+        DEFAULT_ENTITY_BOX.put("minecraft:bat",            "#FF6B5040");
+        DEFAULT_ENTITY_BOX.put("minecraft:squid",          "#FF4A6B8A");
+        DEFAULT_ENTITY_BOX.put("minecraft:glow_squid",     "#FF3FE0C8");
+        DEFAULT_ENTITY_BOX.put("minecraft:dolphin",        "#FFB9D6E8");
+        DEFAULT_ENTITY_BOX.put("minecraft:cod",            "#FFC7A87A");
+        DEFAULT_ENTITY_BOX.put("minecraft:salmon",         "#FFE07A6B");
+        DEFAULT_ENTITY_BOX.put("minecraft:tropical_fish",  "#FFFF9E3D");
+        DEFAULT_ENTITY_BOX.put("minecraft:pufferfish",     "#FFFFD966");
+        DEFAULT_ENTITY_BOX.put("minecraft:strider",        "#FFA33B3B");
+        DEFAULT_ENTITY_BOX.put("minecraft:trader_llama",   "#FFD6C39A");
+        DEFAULT_ENTITY_BOX.put("minecraft:skeleton_horse", "#FFD8D8D8");
+        DEFAULT_ENTITY_BOX.put("minecraft:zombie_horse",   "#FF6E9E6E");
 
         DEFAULT_ORE_BOX.put("minecraft:diamond_ore",           "#FF00FFFF");
         DEFAULT_ORE_BOX.put("minecraft:deepslate_diamond_ore", "#FF00FFFF");
