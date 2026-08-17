@@ -164,8 +164,8 @@ public class VisionConfigScreen extends Screen {
     @Override
     protected void init() {
         // Fixed settings-popup rectangle on the right; also anchors the entityEsp filter box.
-        spW = 182;
-        spH = Math.min(height - 36, 232);
+        spW = 228;
+        spH = Math.min(height - 36, 240);
         spX = width - spW - 8;
         spY = 26;
 
@@ -395,7 +395,7 @@ public class VisionConfigScreen extends Screen {
             sToggle(g, "Kill Aura",        c.killAuraEnabled,    () -> { c.killAuraEnabled    = !c.killAuraEnabled;    save(); });
             sToggle(g, "Spieler targeten", c.killAuraPlayers,    () -> { c.killAuraPlayers    = !c.killAuraPlayers;    save(); });
             sToggle(g, "Mobs targeten",    c.killAuraMobs,       () -> { c.killAuraMobs       = !c.killAuraMobs;       save(); });
-            sFloat(g,  "Reichweite",       c.killAuraRange,
+            sFloat(g,  "Reichweite",       c.killAuraRange, 1.5f, 10.0f,
                 () -> { c.killAuraRange = Math.max(1.5f,  c.killAuraRange - 0.5f); save(); },
                 () -> { c.killAuraRange = Math.min(10.0f, c.killAuraRange + 0.5f); save(); });
             sInt(g, "CPS", c.killAuraCps, "", 1, 20,
@@ -425,7 +425,7 @@ public class VisionConfigScreen extends Screen {
                     };
                     save();
                 });
-            sFloat(g, "FOV",               c.killAuraFov,
+            sFloat(g, "FOV",               c.killAuraFov, 10f, 360f,
                 () -> { c.killAuraFov = Math.max(10f,  c.killAuraFov - 10f); save(); },
                 () -> { c.killAuraFov = Math.min(360f, c.killAuraFov + 10f); save(); });
             sDesc(g, "Greift nächste Entity in Reichweite an.");
@@ -443,17 +443,17 @@ public class VisionConfigScreen extends Screen {
         }
         case "velocity"   -> {
             sToggle(g, "Motion Adjust",    c.velocityEnabled,    () -> { c.velocityEnabled    = !c.velocityEnabled;    save(); });
-            sFloat(g, "Horizontal %",      c.velocityXZ * 100f,
+            sFloat(g, "Horizontal %",      c.velocityXZ * 100f, 0f, 100f,
                 () -> { c.velocityXZ = Math.max(0f, c.velocityXZ - 0.05f); save(); },
                 () -> { c.velocityXZ = Math.min(1f, c.velocityXZ + 0.05f); save(); });
-            sFloat(g, "Vertikal %",        c.velocityY * 100f,
+            sFloat(g, "Vertikal %",        c.velocityY * 100f, 0f, 100f,
                 () -> { c.velocityY = Math.max(0f, c.velocityY - 0.05f); save(); },
                 () -> { c.velocityY = Math.min(1f, c.velocityY + 0.05f); save(); });
             sDesc(g, "0% = komplett abbrechen, 100% = normal");
         }
         case "autoTotem"  -> {
             sToggle(g, "Auto Totem",       c.autoTotemEnabled,   () -> { c.autoTotemEnabled   = !c.autoTotemEnabled;   save(); });
-            sFloat(g, "Aktivieren bei HP", c.autoTotemHpThresh,
+            sFloat(g, "Aktivieren bei HP", c.autoTotemHpThresh, 1f, 20f,
                 () -> { c.autoTotemHpThresh = Math.max(1f,  c.autoTotemHpThresh - 1f); save(); },
                 () -> { c.autoTotemHpThresh = Math.min(20f, c.autoTotemHpThresh + 1f); save(); });
             sDesc(g, "Bewegt Totem automatisch in Offhand.");
@@ -470,14 +470,14 @@ public class VisionConfigScreen extends Screen {
         }
         case "fly"        -> {
             sToggle(g, "Fly",              c.flyEnabled,         () -> { c.flyEnabled         = !c.flyEnabled;         save(); });
-            sFloat(g, "Geschwindigkeit",   c.flySpeed,
+            sFloat(g, "Geschwindigkeit",   c.flySpeed, 0.5f, 5.0f,
                 () -> { c.flySpeed = Math.max(0.5f, c.flySpeed - 0.5f); save(); },
                 () -> { c.flySpeed = Math.min(5.0f, c.flySpeed + 0.5f); save(); });
             sDesc(g, "Creative-Fliegen. Server muss erlauben.");
         }
         case "speed"      -> {
             sToggle(g, "Speed",            c.speedEnabled,       () -> { c.speedEnabled       = !c.speedEnabled;       save(); });
-            sFloat(g, "Multiplikator",     c.speedMultiplier,
+            sFloat(g, "Multiplikator",     c.speedMultiplier, 1.0f, 5.0f,
                 () -> { c.speedMultiplier = Math.max(1.0f, c.speedMultiplier - 0.5f); save(); },
                 () -> { c.speedMultiplier = Math.min(5.0f, c.speedMultiplier + 0.5f); save(); });
             sDesc(g, "Erhöht Bewegungsgeschwindigkeit.");
@@ -488,7 +488,7 @@ public class VisionConfigScreen extends Screen {
         }
         case "step"       -> {
             sToggle(g, "Step",             c.stepEnabled,        () -> { c.stepEnabled        = !c.stepEnabled;        save(); });
-            sFloat(g, "Stufenhöhe",        c.stepHeight,
+            sFloat(g, "Stufenhöhe",        c.stepHeight, 0.6f, 2.0f,
                 () -> { c.stepHeight = Math.max(0.6f, c.stepHeight - 0.25f); save(); },
                 () -> { c.stepHeight = Math.min(2.0f, c.stepHeight + 0.25f); save(); });
             sDesc(g, "Erklimmt höhere Stufen automatisch.");
@@ -548,7 +548,7 @@ public class VisionConfigScreen extends Screen {
         }
         case "autoLog"    -> {
             sToggle(g, "Auto Disconnect",  c.autoLogEnabled,     () -> { c.autoLogEnabled     = !c.autoLogEnabled;     save(); });
-            sFloat(g, "HP Schwelle",       c.autoLogHp,
+            sFloat(g, "HP Schwelle",       c.autoLogHp, 1f, 20f,
                 () -> { c.autoLogHp = Math.max(1f,  c.autoLogHp - 1f); save(); },
                 () -> { c.autoLogHp = Math.min(20f, c.autoLogHp + 1f); save(); });
         }
@@ -564,7 +564,7 @@ public class VisionConfigScreen extends Screen {
         }
         case "stunSlam"   -> {
             sToggle(g, "StunSlam",         c.stunSlamEnabled,        () -> { c.stunSlamEnabled        = !c.stunSlamEnabled;        save(); });
-            sFloat(g, "Min. Fallhöhe",     c.stunSlamMinFall,
+            sFloat(g, "Min. Fallhöhe",     c.stunSlamMinFall, 1f, 20f,
                 () -> { c.stunSlamMinFall = Math.max(1f,  c.stunSlamMinFall - 0.5f); save(); },
                 () -> { c.stunSlamMinFall = Math.min(20f, c.stunSlamMinFall + 0.5f); save(); });
             sDesc(g, "Stunnt Schild wenn vom Angriff aus der Luft.");
@@ -573,10 +573,10 @@ public class VisionConfigScreen extends Screen {
         }
         case "autoMace"   -> {
             sToggle(g, "Auto Mace",        c.autoMaceEnabled,    () -> { c.autoMaceEnabled    = !c.autoMaceEnabled;    save(); });
-            sFloat(g, "Reichweite",        c.autoMaceRange,
+            sFloat(g, "Reichweite",        c.autoMaceRange, 2.0f, 8.0f,
                 () -> { c.autoMaceRange = Math.max(2.0f, c.autoMaceRange - 0.5f); save(); },
                 () -> { c.autoMaceRange = Math.min(8.0f, c.autoMaceRange + 0.5f); save(); });
-            sFloat(g, "Dreh-Speed °/Tick", c.autoMaceSpeed,
+            sFloat(g, "Dreh-Speed °/Tick", c.autoMaceSpeed, 5f, 90f,
                 () -> { c.autoMaceSpeed = Math.max(5f,  c.autoMaceSpeed - 5f); save(); },
                 () -> { c.autoMaceSpeed = Math.min(90f, c.autoMaceSpeed + 5f); save(); });
             sDesc(g, "Dreht sanft zum nächsten Gegner (nur mit Mace).");
@@ -584,7 +584,7 @@ public class VisionConfigScreen extends Screen {
         }
         case "reach"      -> {
             sToggle(g, "Reach Extend",     c.reachEnabled,       () -> { c.reachEnabled       = !c.reachEnabled;       save(); });
-            sFloat(g, "Reichweite",        c.reachDistance,
+            sFloat(g, "Reichweite",        c.reachDistance, 3.0f, 6.0f,
                 () -> { c.reachDistance = Math.max(3.0f, c.reachDistance - 0.25f); save(); },
                 () -> { c.reachDistance = Math.min(6.0f, c.reachDistance + 0.25f); save(); });
             sDesc(g, "Erhöht die Interaktions-Reichweite.");
@@ -655,7 +655,7 @@ public class VisionConfigScreen extends Screen {
         }
         case "gammaBoost" -> {
             sToggle(g, "Brightness Boost", c.gammaBoostEnabled,  () -> { c.gammaBoostEnabled = !c.gammaBoostEnabled; save(); });
-            sFloat(g, "Gamma",             c.gammaValue,
+            sFloat(g, "Gamma",             c.gammaValue, 1.0f, 16.0f,
                 () -> { c.gammaValue = Math.max(1.0f,  c.gammaValue - 1.0f); save(); },
                 () -> { c.gammaValue = Math.min(16.0f, c.gammaValue + 1.0f); save(); });
             sDesc(g, "Echtes Vollhell über Gamma — heller als Night Vision.");
@@ -677,7 +677,7 @@ public class VisionConfigScreen extends Screen {
         }
         case "zoom"       -> {
             sDesc(g, "Taste halten zum Zoomen.");
-            sFloat(g, "Zoom FOV",          c.zoomFov,
+            sFloat(g, "Zoom FOV",          c.zoomFov, 5f, 60f,
                 () -> { c.zoomFov = Math.max(5f,  c.zoomFov - 1f); save(); },
                 () -> { c.zoomFov = Math.min(60f, c.zoomFov + 1f); save(); });
             sSep(g, "Taste");
@@ -720,7 +720,7 @@ public class VisionConfigScreen extends Screen {
         }
         case "nuker"      -> {
             sToggle(g, "Nuker",            c.nukerEnabled,       () -> { c.nukerEnabled       = !c.nukerEnabled;       save(); });
-            sFloat(g, "Reichweite",        c.nukerRange,
+            sFloat(g, "Reichweite",        c.nukerRange, 1.5f, 6.0f,
                 () -> { c.nukerRange = Math.max(1.5f, c.nukerRange - 0.5f); save(); },
                 () -> { c.nukerRange = Math.min(6.0f, c.nukerRange + 0.5f); save(); });
             sDesc(g, "Bricht Blöcke in Reichweite.");
@@ -778,50 +778,68 @@ public class VisionConfigScreen extends Screen {
         sCY += S_ROW;
     }
 
+    /** Slider track with a filled portion and a knob at `frac` (0..1). */
+    private void drawSlider(GuiGraphics g, int x, int y, int w, double frac) {
+        frac = Math.max(0, Math.min(1, frac));
+        int ty = y + 8;
+        g.fill(x, ty, x + w, ty + 2, 0xFF243828);              // track
+        int kx = x + (int) (frac * (w - 5));
+        g.fill(x, ty, kx + 2, ty + 2, C_IND_ON);               // filled part
+        g.fill(kx, y + 4, kx + 5, y + 14, 0xFFBFEFD0);         // knob
+    }
+
+    /** Shared numeric row: label · slider · value · −/+ (reference-style layout). */
+    private void numRow(GuiGraphics g, int y, String label, String valText, double frac,
+                        Runnable dec, Runnable inc) {
+        g.drawString(font, label, sX + 5, y + 5, C_DIM, false);
+        int bx = sX + sW - 40;
+        int vW = font.width(valText);
+        g.drawString(font, "§f" + valText, bx - vW - 6, y + 5, C_TEXT, false);
+        int trackX = sX + 78;
+        int trackW = (bx - vW - 8) - trackX;
+        if (trackW > 12) drawSlider(g, trackX, y, trackW, frac);
+        drawBtn(g, bx,      y + 2, 18, 14, "§c−", sMX, sMY); hit(bx,      y + 2, 18, 14, dec);
+        drawBtn(g, bx + 20, y + 2, 18, 14, "§a+", sMX, sMY); hit(bx + 20, y + 2, 18, 14, inc);
+    }
+
     private void sRadius(GuiGraphics g, String label, int val, int min, int max,
                           Runnable dec, Runnable inc) {
         int y = sCY;
-        if (vis(y, S_ROW, sY, sH)) {
-            g.drawString(font, label + ": §f" + val + " §8Chunks", sX + 5, y + 5, C_DIM, false);
-            int bx = sX + sW - 42;
-            drawBtn(g, bx,    y + 2, 18, 14, "§c−", sMX, sMY); hit(bx,    y + 2, 18, 14, dec);
-            drawBtn(g, bx+20, y + 2, 18, 14, "§a+", sMX, sMY); hit(bx+20, y + 2, 18, 14, inc);
-        }
+        if (vis(y, S_ROW, sY, sH))
+            numRow(g, y, label, val + " Ch", (val - min) / (double) Math.max(1, max - min), dec, inc);
         sCY += S_ROW;
     }
 
     private void sInt(GuiGraphics g, String label, int val, String unit,
                        int min, int max, Runnable dec, Runnable inc) {
         int y = sCY;
-        if (vis(y, S_ROW, sY, sH)) {
-            String disp = unit.isEmpty() ? label + ": §f" + val
-                                         : label + ": §f" + val + " §8" + unit;
-            g.drawString(font, disp, sX + 5, y + 5, C_DIM, false);
-            int bx = sX + sW - 42;
-            drawBtn(g, bx,    y + 2, 18, 14, "§c−", sMX, sMY); hit(bx,    y + 2, 18, 14, dec);
-            drawBtn(g, bx+20, y + 2, 18, 14, "§a+", sMX, sMY); hit(bx+20, y + 2, 18, 14, inc);
-        }
+        if (vis(y, S_ROW, sY, sH))
+            numRow(g, y, label, unit.isEmpty() ? "" + val : val + " " + unit,
+                    (val - min) / (double) Math.max(1, max - min), dec, inc);
+        sCY += S_ROW;
+    }
+
+    private void sFloat(GuiGraphics g, String label, float val, float min, float max,
+                         Runnable dec, Runnable inc) {
+        int y = sCY;
+        if (vis(y, S_ROW, sY, sH))
+            numRow(g, y, label, String.format("%.1f", val),
+                    (val - min) / Math.max(0.001f, max - min), dec, inc);
         sCY += S_ROW;
     }
 
     private void sPriority(GuiGraphics g, String label, String val, Runnable dec, Runnable inc) {
         int y = sCY;
         if (vis(y, S_ROW, sY, sH)) {
-            g.drawString(font, label + ": §f" + val, sX + 5, y + 5, C_DIM, false);
-            int bx = sX + sW - 42;
-            drawBtn(g, bx,    y + 2, 18, 14, "§c←", sMX, sMY); hit(bx,    y + 2, 18, 14, dec);
-            drawBtn(g, bx+20, y + 2, 18, 14, "§a→", sMX, sMY); hit(bx+20, y + 2, 18, 14, inc);
-        }
-        sCY += S_ROW;
-    }
-
-    private void sFloat(GuiGraphics g, String label, float val, Runnable dec, Runnable inc) {
-        int y = sCY;
-        if (vis(y, S_ROW, sY, sH)) {
-            g.drawString(font, label + ": §f" + String.format("%.1f", val), sX + 5, y + 5, C_DIM, false);
-            int bx = sX + sW - 42;
-            drawBtn(g, bx,    y + 2, 18, 14, "§c−", sMX, sMY); hit(bx,    y + 2, 18, 14, dec);
-            drawBtn(g, bx+20, y + 2, 18, 14, "§a+", sMX, sMY); hit(bx+20, y + 2, 18, 14, inc);
+            g.drawString(font, label, sX + 5, y + 5, C_DIM, false);
+            int bw = 100, bx = sX + sW - bw - 4;
+            boolean hover = inRect(sMX, sMY, bx, y + 2, bw, 14);
+            g.fill(bx, y + 2, bx + bw, y + 16, hover ? C_BTN_H : C_BTN);
+            g.fill(bx, y + 2, bx + bw, y + 3, C_BTN_BD);
+            g.drawString(font, "§f" + val, bx + 5, y + 5, C_TEXT, false);
+            g.drawString(font, "§7▼", bx + bw - 11, y + 5, C_DIM, false);
+            hit(bx, y + 2, bw - 13, 14, inc);          // click body → next option
+            hit(bx + bw - 13, y + 2, 13, 14, dec);     // ▼ arrow → previous option
         }
         sCY += S_ROW;
     }
@@ -829,9 +847,11 @@ public class VisionConfigScreen extends Screen {
     private void sSep(GuiGraphics g, String label) {
         int y = sCY;
         if (vis(y, 14, sY, sH)) {
-            g.fill(sX, y, sX + sW, y + 13, 0xFF0C0C1A);
-            g.fill(sX, y + 12, sX + sW, y + 13, 0xFF1A2E1C);
-            g.drawString(font, "§8" + label, sX + 5, y + 3, 0xFF2E4830, false);
+            int lw = font.width(label);
+            int cx = sX + sW / 2, ly = y + 7;
+            g.fill(sX + 6, ly, cx - lw / 2 - 5, ly + 1, C_DIVIDER);
+            g.fill(cx + lw / 2 + 5, ly, sX + sW - 6, ly + 1, C_DIVIDER);
+            g.drawString(font, "§7" + label, cx - lw / 2, y + 3, C_ACCENT, false);
         }
         sCY += 14;
     }
