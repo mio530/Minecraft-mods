@@ -219,8 +219,8 @@ public class VisionConfigScreen extends Screen {
 
         // Follow a dragged panel; release it when the left button is no longer held
         // (avoids overriding the version-sensitive mouseDragged/mouseReleased signatures).
-        if (dragCat != null && minecraft != null) {
-            long win = minecraft.getWindow().getWindow();
+        if (dragCat != null) {
+            long win = GLFW.glfwGetCurrentContext();
             if (GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
                 dragCat = null;
             } else {
