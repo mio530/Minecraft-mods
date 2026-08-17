@@ -199,8 +199,13 @@ public final class CombatHacks {
             return;
         }
         if (stunSlamCooldown > 0) { stunSlamCooldown--; return; }
-        if (mc.player.onGround()) return;
-        if (mc.player.fallDistance < cfg.stunSlamMinFall) return;
+
+        // Full slam needs the airborne fall. If that isn't given, optionally fall back to
+        // a plain axe hit, which still disables the shield — just without the slam bonus.
+        boolean canSlam = !mc.player.onGround() && mc.player.fallDistance >= cfg.stunSlamMinFall;
+        if (!canSlam && !cfg.stunSlamShieldFallback) return;
+        // A fallback hit is only worth it against an actually raised shield.
+        boolean requireBlocking = cfg.stunSlamOnlyBlocking || !canSlam;
 
         double range = cfg.stunSlamRange;
         int lead = cfg.stunSlamPredict ? Math.max(0, cfg.stunSlamPredictTicks) : 0;
@@ -214,7 +219,7 @@ public final class CombatHacks {
                 e -> {
                     if (e == mc.player || !e.isAlive()) return false;
                     if (!(e instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs)) return false;
-                    if (cfg.stunSlamOnlyBlocking && !isShieldBlocking(e)) return false;
+                    if (requireBlocking && !isShieldBlocking(e)) return false;
                     // Range measured against the PREDICTED positions of both parties.
                     return selfAt.distanceTo(predictedEye(e, lead)) <= range;
                 });
@@ -268,16 +273,20 @@ public final class CombatHacks {
             mc.player.setYRot(yaw);
             mc.player.setXRot(Mth.clamp(pitch, -90f, 90f));
         }
-        // Tell the server we're sprinting BEFORE the attack packet, otherwise the
-        // sprint-state command is only sent on the player's next tick and the server
-        // processes this slam as a non-sprint hit (losing the sprint knockback).
-        mc.player.setSprinting(true);
-        if (mc.player.connection != null) {
-            mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket(
-                    mc.player, net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket.Action.START_SPRINTING));
+        if (canSlam) {
+            // Tell the server we're sprinting BEFORE the attack packet, otherwise the
+            // sprint-state command is only sent on the player's next tick and the server
+            // processes this slam as a non-sprint hit (losing the sprint knockback).
+            mc.player.setSprinting(true);
+            if (mc.player.connection != null) {
+                mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket(
+                        mc.player, net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket.Action.START_SPRINTING));
+            }
         }
+        // Fallback path deliberately skips the sprint boost: the goal there is only the
+        // axe hit that breaks the shield, not the knockback of a full slam.
         mc.gameMode.attack(mc.player, target);
-        stunSlamCooldown = Math.max(1, cfg.stunSlamCooldown);
+        stunSlamCooldown = Math.max(1, canSlam ? cfg.stunSlamCooldown : cfg.stunSlamFallbackCooldown);
     }
 
     /** Eye position of an entity extrapolated `ticks` ahead along its current motion. */

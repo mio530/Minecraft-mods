@@ -619,6 +619,13 @@ public class VisionConfigScreen extends Screen {
                 () -> { c.stunSlamPredictTicks = Math.max(0, c.stunSlamPredictTicks - 1); save(); },
                 () -> { c.stunSlamPredictTicks = Math.min(6, c.stunSlamPredictTicks + 1); save(); });
             sToggle(g, "Ziel anvisieren", c.stunSlamRotate, () -> { c.stunSlamRotate = !c.stunSlamRotate; save(); });
+            sSep(g, "Fallback");
+            sToggle(g, "Nur Schild brechen", c.stunSlamShieldFallback, () -> { c.stunSlamShieldFallback = !c.stunSlamShieldFallback; save(); });
+            sDesc(g, "Kein Fall möglich? Dann nur der Axt-Hit,");
+            sDesc(g, "der das Schild deaktiviert — ohne Slam.");
+            sInt(g, "Fallback-Cooldown", c.stunSlamFallbackCooldown, "t", 1, 100,
+                () -> { c.stunSlamFallbackCooldown = Math.max(1,   c.stunSlamFallbackCooldown - 5); save(); },
+                () -> { c.stunSlamFallbackCooldown = Math.min(100, c.stunSlamFallbackCooldown + 5); save(); });
             sSep(g, "Timing");
             sInt(g, "Cooldown", c.stunSlamCooldown, "t", 1, 60,
                 () -> { c.stunSlamCooldown = Math.max(1,  c.stunSlamCooldown - 1); save(); },

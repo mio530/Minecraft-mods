@@ -120,6 +120,8 @@ public class VisionConfig {
     public boolean stunSlamPredict    = true;    // lead the target's movement
     public int     stunSlamPredictTicks = 2;     // how many ticks ahead to aim
     public boolean stunSlamRotate     = true;    // face the (predicted) target
+    public boolean stunSlamShieldFallback = true; // no fall? still axe-hit to break the shield
+    public int     stunSlamFallbackCooldown = 30; // ticks between fallback shield breaks
     public int     stunSlamCooldown   = 20;      // ticks between slams
     public int     stunSlamRestoreDelay = 3;     // ticks before switching the slot back
     public boolean autoMaceEnabled    = false;
