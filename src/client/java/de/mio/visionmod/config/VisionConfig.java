@@ -113,6 +113,15 @@ public class VisionConfig {
     public float   autoLogHp          = 6.0f;
     public boolean stunSlamEnabled    = false;
     public float   stunSlamMinFall    = 3.0f;  // min fallDistance blocks to trigger
+    public float   stunSlamRange      = 4.5f;  // own reach (no longer tied to KillAura)
+    public float   stunSlamFov        = 360f;  // only target what's in front of you
+    public String  stunSlamPriority   = "Blocking"; // Nearest, LowestHP, Blocking
+    public boolean stunSlamOnlyBlocking = true;  // require a raised shield
+    public boolean stunSlamPredict    = true;    // lead the target's movement
+    public int     stunSlamPredictTicks = 2;     // how many ticks ahead to aim
+    public boolean stunSlamRotate     = true;    // face the (predicted) target
+    public int     stunSlamCooldown   = 20;      // ticks between slams
+    public int     stunSlamRestoreDelay = 3;     // ticks before switching the slot back
     public boolean autoMaceEnabled    = false;
     public float   autoMaceRange      = 5.0f;
     public float   autoMaceSpeed      = 25.0f; // max degrees turned per tick (lower = smoother)

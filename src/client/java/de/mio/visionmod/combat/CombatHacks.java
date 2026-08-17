@@ -202,13 +202,43 @@ public final class CombatHacks {
         if (mc.player.onGround()) return;
         if (mc.player.fallDistance < cfg.stunSlamMinFall) return;
 
-        double range = cfg.killAuraRange;
-        LivingEntity target = mc.level.getEntitiesOfClass(LivingEntity.class,
-                mc.player.getBoundingBox().inflate(range),
-                e -> e != mc.player && e.isAlive() && e.isBlocking()
-                        && mc.player.distanceTo(e) <= range
-                        && (e instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs))
-                .stream().min(Comparator.comparingDouble(mc.player::distanceTo)).orElse(null);
+        double range = cfg.stunSlamRange;
+        int lead = cfg.stunSlamPredict ? Math.max(0, cfg.stunSlamPredictTicks) : 0;
+        Vec3 selfEye = mc.player.getEyePosition();
+        // Predict where WE will be too: during a slam the player is falling fast, so
+        // using the current position underestimates the reach at impact time.
+        Vec3 selfAt = selfEye.add(mc.player.getDeltaMovement().scale(lead));
+
+        List<LivingEntity> candidates = mc.level.getEntitiesOfClass(LivingEntity.class,
+                mc.player.getBoundingBox().inflate(range + 3.0),
+                e -> {
+                    if (e == mc.player || !e.isAlive()) return false;
+                    if (!(e instanceof Player ? cfg.killAuraPlayers : cfg.killAuraMobs)) return false;
+                    if (cfg.stunSlamOnlyBlocking && !isShieldBlocking(e)) return false;
+                    // Range measured against the PREDICTED positions of both parties.
+                    return selfAt.distanceTo(predictedEye(e, lead)) <= range;
+                });
+
+        // FOV filter (eye-to-eye, same convention as KillAura)
+        if (cfg.stunSlamFov < 360f) {
+            Vec3 look = mc.player.getLookAngle();
+            float half = cfg.stunSlamFov / 2f;
+            candidates = candidates.stream().filter(e -> {
+                Vec3 to = predictedEye(e, lead).subtract(selfEye).normalize();
+                double ang = Math.toDegrees(Math.acos(Math.max(-1.0, Math.min(1.0, look.dot(to)))));
+                return ang <= half;
+            }).toList();
+        }
+
+        LivingEntity target = switch (cfg.stunSlamPriority) {
+            case "LowestHP" -> candidates.stream()
+                    .min(Comparator.comparingDouble(LivingEntity::getHealth)).orElse(null);
+            case "Blocking" -> candidates.stream()   // shielded first, then nearest
+                    .min(Comparator.<LivingEntity>comparingInt(e -> isShieldBlocking(e) ? 0 : 1)
+                            .thenComparingDouble(mc.player::distanceTo)).orElse(null);
+            default         -> candidates.stream()
+                    .min(Comparator.comparingDouble(mc.player::distanceTo)).orElse(null);
+        };
         if (target == null) return;
 
         // Find best axe in hotbar (prefer current slot)
@@ -225,8 +255,18 @@ public final class CombatHacks {
 
         if (axeSlot != cur) {
             stunSlamRestoreSlot = cur;
-            stunSlamRestoreTick = 3;
+            stunSlamRestoreTick = Math.max(1, cfg.stunSlamRestoreDelay);
             selectSlot(mc, axeSlot);
+        }
+
+        // Aim at where the target will be, so a running/jumping opponent is still hit.
+        if (cfg.stunSlamRotate) {
+            Vec3 aim = predictedEye(target, lead).subtract(mc.player.getEyePosition());
+            float yaw = (float) Math.toDegrees(Math.atan2(-aim.x, aim.z));
+            double horiz = Math.sqrt(aim.x * aim.x + aim.z * aim.z);
+            float pitch = (float) Math.toDegrees(-Math.atan2(aim.y, horiz));
+            mc.player.setYRot(yaw);
+            mc.player.setXRot(Mth.clamp(pitch, -90f, 90f));
         }
         // Tell the server we're sprinting BEFORE the attack packet, otherwise the
         // sprint-state command is only sent on the player's next tick and the server
@@ -237,7 +277,21 @@ public final class CombatHacks {
                     mc.player, net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket.Action.START_SPRINTING));
         }
         mc.gameMode.attack(mc.player, target);
-        stunSlamCooldown = 20;
+        stunSlamCooldown = Math.max(1, cfg.stunSlamCooldown);
+    }
+
+    /** Eye position of an entity extrapolated `ticks` ahead along its current motion. */
+    private static Vec3 predictedEye(LivingEntity e, int ticks) {
+        return ticks <= 0 ? e.getEyePosition() : e.getEyePosition().add(e.getDeltaMovement().scale(ticks));
+    }
+
+    /**
+     * True only for a genuinely raised SHIELD. LivingEntity.isBlocking() already honours
+     * the vanilla use-delay, but it is also true for other "blocking" use-items, so check
+     * the active item as well — slamming a target that is merely eating wastes the hit.
+     */
+    private static boolean isShieldBlocking(LivingEntity e) {
+        return e.isBlocking() && e.getUseItem().is(Items.SHIELD);
     }
 
     // ── Kill Aura ──────────────────────────────────────────────────────────────

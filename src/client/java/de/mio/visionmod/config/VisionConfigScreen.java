@@ -587,9 +587,47 @@ public class VisionConfigScreen extends Screen {
             sFloat(g, "Min. Fallhöhe",     c.stunSlamMinFall, 1f, 20f,
                 () -> { c.stunSlamMinFall = Math.max(1f,  c.stunSlamMinFall - 0.5f); save(); },
                 () -> { c.stunSlamMinFall = Math.min(20f, c.stunSlamMinFall + 0.5f); save(); });
-            sDesc(g, "Stunnt Schild wenn vom Angriff aus der Luft.");
+            sFloat(g, "Reichweite",        c.stunSlamRange, 2.0f, 8.0f,
+                () -> { c.stunSlamRange = Math.max(2.0f, c.stunSlamRange - 0.25f); save(); },
+                () -> { c.stunSlamRange = Math.min(8.0f, c.stunSlamRange + 0.25f); save(); });
+            sFloat(g, "FOV",               c.stunSlamFov, 10f, 360f,
+                () -> { c.stunSlamFov = Math.max(10f,  c.stunSlamFov - 10f); save(); },
+                () -> { c.stunSlamFov = Math.min(360f, c.stunSlamFov + 10f); save(); });
+            sSep(g, "Ziel");
+            sPriority(g, "Priorität", c.stunSlamPriority,
+                () -> {
+                    c.stunSlamPriority = switch (c.stunSlamPriority) {
+                        case "Blocking" -> "LowestHP";
+                        case "LowestHP" -> "Nearest";
+                        default         -> "Blocking";
+                    };
+                    save();
+                },
+                () -> {
+                    c.stunSlamPriority = switch (c.stunSlamPriority) {
+                        case "Blocking" -> "Nearest";
+                        case "Nearest"  -> "LowestHP";
+                        default         -> "Blocking";
+                    };
+                    save();
+                });
+            sToggle(g, "Nur blockende Ziele", c.stunSlamOnlyBlocking, () -> { c.stunSlamOnlyBlocking = !c.stunSlamOnlyBlocking; save(); });
+            sDesc(g, "Prüft echtes Schild — ignoriert Essen/Bogen.");
+            sSep(g, "Prediction");
+            sToggle(g, "Bewegung vorausberechnen", c.stunSlamPredict, () -> { c.stunSlamPredict = !c.stunSlamPredict; save(); });
+            sInt(g, "Vorhalte-Ticks", c.stunSlamPredictTicks, "t", 0, 6,
+                () -> { c.stunSlamPredictTicks = Math.max(0, c.stunSlamPredictTicks - 1); save(); },
+                () -> { c.stunSlamPredictTicks = Math.min(6, c.stunSlamPredictTicks + 1); save(); });
+            sToggle(g, "Ziel anvisieren", c.stunSlamRotate, () -> { c.stunSlamRotate = !c.stunSlamRotate; save(); });
+            sSep(g, "Timing");
+            sInt(g, "Cooldown", c.stunSlamCooldown, "t", 1, 60,
+                () -> { c.stunSlamCooldown = Math.max(1,  c.stunSlamCooldown - 1); save(); },
+                () -> { c.stunSlamCooldown = Math.min(60, c.stunSlamCooldown + 1); save(); });
+            sInt(g, "Slot-Rückgabe", c.stunSlamRestoreDelay, "t", 1, 20,
+                () -> { c.stunSlamRestoreDelay = Math.max(1,  c.stunSlamRestoreDelay - 1); save(); },
+                () -> { c.stunSlamRestoreDelay = Math.min(20, c.stunSlamRestoreDelay + 1); save(); });
+            sDesc(g, "Stunnt Schild beim Angriff aus der Luft.");
             sDesc(g, "Wechselt automatisch zur Axt im Hotbar.");
-            sDesc(g, "Danach wird vorheriger Slot wiederhergestellt.");
         }
         case "autoMace"   -> {
             sToggle(g, "Auto Mace",        c.autoMaceEnabled,    () -> { c.autoMaceEnabled    = !c.autoMaceEnabled;    save(); });
