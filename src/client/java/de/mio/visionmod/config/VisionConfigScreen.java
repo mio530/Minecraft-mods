@@ -153,8 +153,11 @@ public class VisionConfigScreen extends Screen {
 
     @Override
     protected void init() {
-        pw = Math.min(width - 16, 496);
-        ph = Math.min(height - 16, 284);
+        // Cap to a fraction of the screen (not just width-16) so the window always
+        // leaves a clear margin and never feels like it covers everything — matters at
+        // higher GUI scales where width-16 was almost the whole screen.
+        pw = Math.min((int) (width  * 0.80), 440);
+        ph = Math.min((int) (height * 0.78), 250);
         px = (width  - pw) / 2;
         py = (height - ph) / 2;
 
@@ -196,7 +199,7 @@ public class VisionConfigScreen extends Screen {
         hits.clear();
         hitActions.clear();
 
-        g.fill(0, 0, width, height, 0xA0000010);
+        g.fill(0, 0, width, height, 0x66000010); // lighter dim so the game stays visible behind
         g.fill(px + 3, py + 3, px + pw + 3, py + ph + 3, 0x60000018);
         g.fill(px - 1, py - 1, px + pw + 1, py + ph + 1, C_DIVIDER);
         g.fill(px, py, px + pw, py + ph, C_BG);
