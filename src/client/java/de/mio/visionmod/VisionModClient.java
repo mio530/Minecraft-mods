@@ -271,7 +271,7 @@ public class VisionModClient implements ClientModInitializer {
         } catch (Exception ignored) {}
     }
 
-    private static void toggleModule(VisionConfig c, String id) {
+    public static void toggleModule(VisionConfig c, String id) {
         switch (id) {
             case "entityEsp"     -> c.entityEspEnabled      = !c.entityEspEnabled;
             case "entityGlow"    -> c.entityGlowEnabled     = !c.entityGlowEnabled;

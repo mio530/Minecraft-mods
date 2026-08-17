@@ -1,6 +1,7 @@
 package de.mio.visionmod.config;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import de.mio.visionmod.VisionModClient;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -128,19 +129,28 @@ public class VisionConfigScreen extends Screen {
 
     private final Screen parent;
     private int    px, py, pw, ph;
-    private String selMod      = "entityEsp";
-    private int    leftScroll  = 0;
-    private int    rightScroll = 0;
+    private String selMod      = "";       // module whose settings popup is open ("" = none)
+    private int    rightScroll = 0;        // settings-popup scroll
     private int    maxRScroll  = 0;
-    private int    maxLScroll  = 0;
     private String rebindingKey = null;
-    private boolean hoverLeft  = false;
     private boolean settingsClip = false;
     private String searchQuery = "";
     private EditBox searchBox;
 
-    private final List<int[]>    hits       = new ArrayList<>();
-    private final List<Runnable> hitActions = new ArrayList<>();
+    // Meteor-style draggable category panels: cat -> {screenX, screenY}
+    private final Map<String,int[]> catPos = new HashMap<>();
+    private String dragCat = null;
+    private int    dragOffX, dragOffY;
+    // Fixed settings-popup rectangle (right side of the screen)
+    private int spX, spY, spW, spH;
+
+    private final List<int[]>    hits        = new ArrayList<>();
+    private final List<Runnable> hitActions  = new ArrayList<>();
+    private final List<int[]>    rHits       = new ArrayList<>(); // right-click zones (open settings)
+    private final List<Runnable> rHitActions = new ArrayList<>();
+
+    private static final int COL_W = 104;  // category column width
+    private static final int ROW_H = 12;   // module row height
 
     // ══════════════════════════════════════ LIFECYCLE ═════════════════════════
 
@@ -153,32 +163,40 @@ public class VisionConfigScreen extends Screen {
 
     @Override
     protected void init() {
-        // Cap to a fraction of the screen (not just width-16) so the window always
-        // leaves a clear margin and never feels like it covers everything — matters at
-        // higher GUI scales where width-16 was almost the whole screen.
-        pw = Math.min((int) (width  * 0.80), 440);
-        ph = Math.min((int) (height * 0.78), 250);
-        px = (width  - pw) / 2;
-        py = (height - ph) / 2;
+        // Fixed settings-popup rectangle on the right; also anchors the entityEsp filter box.
+        spW = 182;
+        spH = Math.min(height - 36, 232);
+        spX = width - spW - 8;
+        spY = 26;
 
-        // Search box at the top of the left module list.
-        searchBox = new EditBox(font, px + 3, py + HDR_H + 2, LEFT_W - 6, 12, Component.empty());
+        // Lay category panels left→right, wrapping to a new row when off-screen. Only on
+        // first init — rebuildWidgets() (which re-runs init) must not reset dragged panels.
+        if (catPos.isEmpty()) {
+            int cx = 6, cy = 26, rowMaxH = 0;
+            for (String cat : CATS) {
+                int count = 0;
+                for (ModDef m : MODS) if (m.cat().equals(cat)) count++;
+                int h = 13 + count * ROW_H;
+                if (cx + COL_W > spX - 6) { cx = 6; cy += rowMaxH + 8; rowMaxH = 0; }
+                catPos.put(cat, new int[]{cx, cy});
+                cx += COL_W + 6;
+                rowMaxH = Math.max(rowMaxH, h);
+            }
+        }
+
+        // Search box (top-right, above the settings popup).
+        searchBox = new EditBox(font, spX, 7, spW, 13, Component.empty());
         searchBox.setBordered(false);
         searchBox.setMaxLength(48);
         searchBox.setTextColor(C_TEXT);
         searchBox.setHint(Component.literal("§8Suchen..."));
         searchBox.setValue(searchQuery);
-        searchBox.setResponder(v -> {
-            searchQuery = v == null ? "" : v.toLowerCase(java.util.Locale.ROOT);
-            leftScroll = 0; // filtered results should start at the top, not off-screen
-        });
+        searchBox.setResponder(v -> searchQuery = v == null ? "" : v.toLowerCase(java.util.Locale.ROOT));
         addRenderableWidget(searchBox);
 
+        // entityEsp player filter — only while its settings popup is open.
         if ("entityEsp".equals(selMod)) {
-            int ex = px + LEFT_W + 5;
-            int ey = py + ph - 22;
-            int ew = pw - LEFT_W - 9;
-            EditBox nb = new EditBox(font, ex, ey, ew, 14, Component.empty());
+            EditBox nb = new EditBox(font, spX + 5, spY + spH - 18, spW - 10, 14, Component.empty());
             nb.setMaxLength(512);
             nb.setValue(String.join(",", VisionConfig.get().enabledPlayerNames));
             nb.setHint(Component.literal("§8Spieler-Filter (leer = alle)"));
@@ -196,88 +214,78 @@ public class VisionConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float delta) {
-        hits.clear();
-        hitActions.clear();
+        hits.clear();       hitActions.clear();
+        rHits.clear();      rHitActions.clear();
 
-        g.fill(0, 0, width, height, 0x66000010); // lighter dim so the game stays visible behind
-        g.fill(px + 3, py + 3, px + pw + 3, py + ph + 3, 0x60000018);
-        g.fill(px - 1, py - 1, px + pw + 1, py + ph + 1, C_DIVIDER);
-        g.fill(px, py, px + pw, py + ph, C_BG);
+        // Follow a dragged panel; release it when the left button is no longer held
+        // (avoids overriding the version-sensitive mouseDragged/mouseReleased signatures).
+        if (dragCat != null && minecraft != null) {
+            long win = minecraft.getWindow().getWindow();
+            if (GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
+                dragCat = null;
+            } else {
+                int[] p = catPos.get(dragCat);
+                if (p != null) {
+                    p[0] = Math.max(0, Math.min(width  - COL_W, mx - dragOffX));
+                    p[1] = Math.max(0, Math.min(height - 14,    my - dragOffY));
+                }
+            }
+        }
 
-        g.fill(px, py, px + pw, py + HDR_H, C_HDR);
-        g.fill(px, py + HDR_H - 1, px + pw, py + HDR_H, C_IND_ON);
-        g.drawString(font, "§l§2VISUAL §l§7IMPROVEMENT", px + 7, py + 6, C_ACCENT, false);
-        int active = countActive();
-        g.drawString(font, "§8[§a" + active + "§8]",
-                px + 14 + font.width("VISUAL IMPROVEMENT"), py + 6, C_DIM, false);
-        // PANIC quick button: disables every module instantly.
+        g.fill(0, 0, width, height, 0x66000010); // light dim; the game stays visible behind
+
+        // Top bar: client name + active count.
+        g.drawString(font, "§a§lVISION§f§lMOD §8v1.21.11", 8, 7, C_ACCENT, false);
+        g.drawString(font, "§7Module aktiv: §a" + countActive()
+                + "  §8[Links = An/Aus · Rechts = Settings · ESC = zu]", 8, 17, C_DIM, false);
         int pbW = 46;
-        int pbX = px + pw - 38 - pbW;
-        drawBtn(g, pbX, py + 3, pbW, 14, "§c§lPANIC", mx, my);
-        hit(pbX, py + 3, pbW, 14, () -> { VisionConfig.get().resetFeatureToggles(); VisionConfig.save(); });
-        g.drawString(font, "§8ESC", px + pw - font.width("ESC") - 8, py + 6, C_DIM, false);
-        hit(px + pw - 36, py, 36, HDR_H, () -> { VisionConfig.save(); onClose(); });
+        drawBtn(g, 8, 27, pbW, 13, "§c§lPANIC", mx, my);
+        hit(8, 27, pbW, 13, () -> { VisionConfig.get().resetFeatureToggles(); VisionConfig.save(); });
 
-        int iy = py + HDR_H;
-        int ih = ph - HDR_H;
+        // Search field backdrop (top-right; the EditBox itself is borderless).
+        g.fill(spX - 2, 5, spX + spW + 1, 21, C_DIVIDER);
+        g.fill(spX - 1, 6, spX + spW, 20, C_CAT_HDR);
 
-        g.fill(px, iy, px + LEFT_W, py + ph, C_LEFT_BG);
-        g.fill(px + LEFT_W, iy, px + LEFT_W + 1, py + ph, C_DIVIDER);
-        g.fill(px + LEFT_W + 1, iy, px + pw, py + ph, C_RIGHT_BG);
+        renderColumns(g, mx, my);
+        if (!selMod.isEmpty()) renderSettingsPopup(g, mx, my);
 
-        g.enableScissor(px, iy, px + LEFT_W, py + ph);
-        renderLeft(g, mx, my, px, iy, LEFT_W, ih);
-        g.disableScissor();
-
-        int rx = px + LEFT_W + 1, rw = pw - LEFT_W - 1;
-        g.enableScissor(rx, iy, rx + rw, py + ph);
-        renderRight(g, mx, my, rx, iy, rw, ih);
-        g.disableScissor();
-
-        hoverLeft = mx < px + LEFT_W;
         super.render(g, mx, my, delta);
     }
 
-    // ══════════════════════════════════════ LEFT PANEL ════════════════════════
+    // ══════════════════════════════════════ CATEGORY COLUMNS ══════════════════
 
-    private void renderLeft(GuiGraphics g, int mx, int my, int lx, int ly, int lw, int lh) {
-        int top = ly + SEARCH_H;
-        int vh  = lh - SEARCH_H;
-        int y = top - leftScroll;
+    private void renderColumns(GuiGraphics g, int mx, int my) {
         for (String cat : CATS) {
-            List<ModDef> catMods = new ArrayList<>();
-            for (ModDef m : MODS) if (m.cat().equals(cat) && matchesSearch(m)) catMods.add(m);
-            if (catMods.isEmpty()) continue;
+            int[] p = catPos.get(cat);
+            if (p == null) continue;
+            List<ModDef> mods = new ArrayList<>();
+            for (ModDef m : MODS) if (m.cat().equals(cat) && matchesSearch(m)) mods.add(m);
+            if (mods.isEmpty()) continue;
 
-            if (vis(y, CAT_H, top, vh)) {
-                g.fill(lx, y, lx + lw, y + CAT_H, C_CAT_HDR);
-                g.drawString(font, cat, lx + 6, y + 3, C_DIM, false);
+            int cx = p[0], cy = p[1];
+            // Header (also the drag handle — see mouseClicked).
+            g.fill(cx, cy, cx + COL_W, cy + 13, C_CAT_HDR);
+            g.fill(cx, cy, cx + COL_W, cy + 1, C_IND_ON);
+            g.drawString(font, "§f" + cat, cx + 5, cy + 3, C_ACCENT, false);
+
+            int ry = cy + 13;
+            for (ModDef m : mods) {
+                boolean on    = isOn(m.id());
+                boolean hover = inRect(mx, my, cx, ry, COL_W, ROW_H);
+                boolean sel   = m.id().equals(selMod);
+                if (on)         g.fill(cx, ry, cx + COL_W, ry + ROW_H, 0x3345E0A0);
+                else if (hover) g.fill(cx, ry, cx + COL_W, ry + ROW_H, 0x18FFFFFF);
+                g.fill(cx, ry, cx + 2, ry + ROW_H, on ? C_IND_ON : C_IND_OFF);
+                g.drawString(font, m.name(), cx + 6, ry + 2,
+                        on ? C_TEXT : (sel ? C_ACCENT : C_DIM), false);
+                final String mid = m.id();
+                hit(cx, ry, COL_W, ROW_H,
+                        () -> { VisionModClient.toggleModule(VisionConfig.get(), mid); save(); });
+                rHit(cx, ry, COL_W, ROW_H, () -> openSettings(mid));
+                ry += ROW_H;
             }
-            y += CAT_H;
-            for (ModDef m : catMods) {
-                if (vis(y, MOD_H, top, vh)) {
-                    boolean sel   = m.id().equals(selMod);
-                    boolean hover = inRect(mx, my, lx, Math.max(y, top), lw, MOD_H);
-                    boolean on    = isOn(m.id());
-                    if (sel)        g.fill(lx, y, lx + lw, y + MOD_H, C_SEL_BG);
-                    else if (hover) g.fill(lx, y, lx + lw, y + MOD_H, 0x18FFFFFF);
-                    g.fill(lx, y + 4, lx + 3, y + MOD_H - 4, on ? C_IND_ON : C_IND_OFF);
-                    g.drawString(font, m.name(), lx + 8, y + 7, on ? C_TEXT : C_DIM, false);
-                    final String mid = m.id();
-                    final int hy = Math.max(y, top);            // clamp click area below search bar
-                    hit(lx, hy, lw, y + MOD_H - hy, () -> selMod(mid));
-                }
-                y += MOD_H;
-            }
-            y += 3;
+            g.fill(cx, ry, cx + COL_W, ry + 1, C_DIVIDER);
         }
-
-        // Clamp bound for the left list so it can't be scrolled into empty space.
-        maxLScroll = Math.max(0, y + leftScroll - (ly + lh));
-
-        // Search-bar background, drawn last so scrolled rows are masked beneath it.
-        g.fill(lx, ly, lx + lw, ly + SEARCH_H, C_LEFT_BG);
-        g.fill(lx, ly + SEARCH_H - 1, lx + lw, ly + SEARCH_H, C_DIVIDER);
     }
 
     private int countActive() {
@@ -293,40 +301,37 @@ public class VisionConfigScreen extends Screen {
             || m.cat().toLowerCase(java.util.Locale.ROOT).contains(searchQuery);
     }
 
-    // ══════════════════════════════════════ RIGHT PANEL ═══════════════════════
+    // ══════════════════════════════════════ SETTINGS POPUP ════════════════════
 
     private int sX, sY, sW, sH, sMX, sMY, sCY;
 
-    private void renderRight(GuiGraphics g, int mx, int my, int rx, int ry, int rw, int rh) {
+    private void renderSettingsPopup(GuiGraphics g, int mx, int my) {
         ModDef m = MODS.stream().filter(md -> md.id().equals(selMod)).findFirst().orElse(null);
         if (m == null) return;
 
-        g.fill(rx, ry, rx + rw, ry + 16, 0xFF0B110C);
-        g.fill(rx, ry + 15, rx + rw, ry + 16, 0xFF1E3824);
+        g.fill(spX - 1, spY - 1, spX + spW + 1, spY + spH + 1, C_DIVIDER);
+        g.fill(spX, spY, spX + spW, spY + spH, C_BG);
+        g.fill(spX, spY, spX + spW, spY + 16, C_HDR);
+        g.fill(spX, spY + 15, spX + spW, spY + 16, C_IND_ON);
         String dot = isOn(m.id()) ? "§a●" : "§8●";
-        g.drawString(font, dot + " §f" + m.name(), rx + 6, ry + 4, C_TEXT, false);
-        g.drawString(font, "§8" + m.desc(),
-                rx + 6 + font.width("● " + m.name()) + 6, ry + 4, C_DIM, false);
+        g.drawString(font, dot + " §f" + m.name(), spX + 6, spY + 4, C_TEXT, false);
+        drawBtn(g, spX + spW - 15, spY + 2, 12, 12, "§c✕", mx, my);
+        hit(spX + spW - 15, spY + 2, 12, 12, this::closeSettings);
 
-        int cy = ry + 16;
-        int ch = rh - 16;
+        int cy = spY + 16;
+        int ch = spH - 16;
         int reserve = "entityEsp".equals(selMod) ? 20 : 0;
         ch -= reserve;
 
-        g.enableScissor(rx, cy, rx + rw, cy + ch);
-        sX = rx; sY = cy; sW = rw; sH = ch; sMX = mx; sMY = my;
+        g.enableScissor(spX, cy, spX + spW, cy + ch);
+        sX = spX; sY = cy; sW = spW; sH = ch; sMX = mx; sMY = my;
         sCY = cy - rightScroll;
         settingsClip = true;   // clamp settings-row hit rects to [sY, sY+sH] while drawing them
         drawSettings(g, m.id(), VisionConfig.get());
         settingsClip = false;
-        // Add rightScroll back (sCY was started at cy - rightScroll), else the bound
-        // shrinks as you scroll and the bottom of long panels becomes unreachable.
         maxRScroll = Math.max(0, sCY + rightScroll - (cy + ch));
         g.disableScissor();
-
-        if (reserve > 0) {
-            g.drawString(font, "§8Spieler-Filter:", rx + 5, cy + ch + 3, C_DIM, false);
-        }
+        // (entityEsp player-filter EditBox sits in the reserve strip; its hint labels it.)
     }
 
     // ══════════════════════════════════════ SETTINGS SWITCH ══════════════════
@@ -965,13 +970,28 @@ public class VisionConfigScreen extends Screen {
 
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
+        int mx = (int) click.x();
+        int my = (int) click.y();
         if (click.button() == 0) {
-            double mx = click.x();
-            double my = click.y();
+            for (String cat : CATS) {                  // grab a panel by its header to drag it
+                int[] p = catPos.get(cat);
+                if (p != null && inRect(mx, my, p[0], p[1], COL_W, 13)) {
+                    dragCat = cat; dragOffX = mx - p[0]; dragOffY = my - p[1];
+                    return true;
+                }
+            }
             for (int i = 0; i < hits.size(); i++) {
                 int[] z = hits.get(i);
                 if (mx >= z[0] && mx < z[0] + z[2] && my >= z[1] && my < z[1] + z[3]) {
                     hitActions.get(i).run();
+                    return true;
+                }
+            }
+        } else if (click.button() == 1) {              // right-click → toggle module settings
+            for (int i = 0; i < rHits.size(); i++) {
+                int[] z = rHits.get(i);
+                if (mx >= z[0] && mx < z[0] + z[2] && my >= z[1] && my < z[1] + z[3]) {
+                    rHitActions.get(i).run();
                     return true;
                 }
             }
@@ -982,8 +1002,10 @@ public class VisionConfigScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
         int delta = (int)(-sy * 14);
-        if (hoverLeft) leftScroll  = Math.max(0, Math.min(maxLScroll, leftScroll + delta));
-        else           rightScroll = Math.max(0, Math.min(maxRScroll, rightScroll + delta));
+        // Only the settings popup scrolls; category panels are moved by dragging.
+        if (!selMod.isEmpty() && inRect((int) mx, (int) my, spX, spY, spW, spH)) {
+            rightScroll = Math.max(0, Math.min(maxRScroll, rightScroll + delta));
+        }
         return true;
     }
 
@@ -1009,6 +1031,11 @@ public class VisionConfigScreen extends Screen {
             rebindingKey = null;
             return true;
         }
+        // ESC closes an open settings popup first, then (next press) the whole screen.
+        if (event.key() == GLFW.GLFW_KEY_ESCAPE && !selMod.isEmpty()) {
+            closeSettings();
+            return true;
+        }
         return super.keyPressed(event);
     }
 
@@ -1021,8 +1048,21 @@ public class VisionConfigScreen extends Screen {
 
     // ══════════════════════════════════════ UTILITIES ═════════════════════════
 
-    private void selMod(String id) {
-        if (!id.equals(selMod)) { selMod = id; rightScroll = 0; rebuildWidgets(); }
+    private void openSettings(String id) {
+        selMod = id.equals(selMod) ? "" : id;   // right-clicking the open module closes it
+        rightScroll = 0;
+        rebuildWidgets();
+    }
+
+    private void closeSettings() {
+        if (selMod.isEmpty()) return;
+        selMod = "";
+        rebuildWidgets();
+    }
+
+    private void rHit(int x, int y, int w, int h, Runnable action) {
+        rHits.add(new int[]{x, y, w, h});
+        rHitActions.add(action);
     }
 
     private void hit(int x, int y, int w, int h, Runnable action) {
