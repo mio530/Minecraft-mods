@@ -30,6 +30,8 @@ public final class CombatHacks {
     private static int     stunSlamRestoreSlot = -1;
     private static int     stunSlamRestoreTick = 0;
     private static boolean maceDmgLaunched   = false;
+    private static int          maceComboTick   = -1;   // ticks left before the mace follow-up
+    private static LivingEntity maceComboTarget = null;
     /** True while a mace-fall is in progress; FallHandlerMixin reads this to skip noFall. */
     public  static boolean suppressNoFall    = false;
 
@@ -43,6 +45,8 @@ public final class CombatHacks {
         stunSlamRestoreSlot = -1;
         stunSlamRestoreTick = 0;
         maceDmgLaunched     = false;
+        maceComboTick       = -1;
+        maceComboTarget     = null;
         suppressNoFall      = false;
     }
 
@@ -190,6 +194,25 @@ public final class CombatHacks {
             }
             return;
         }
+        // Pending axe->mace combo: wait out the delay so the mace attack is fully
+        // charged (a hit right after the swap would land at partial strength), then
+        // swap to the mace and follow up on the same target.
+        if (maceComboTick >= 0) {
+            if (--maceComboTick <= 0) {
+                maceComboTick = -1;
+                LivingEntity t = maceComboTarget;
+                maceComboTarget = null;
+                int maceSlot = findHotbar(mc, Items.MACE);
+                if (t != null && t.isAlive() && maceSlot >= 0
+                        && mc.player.distanceTo(t) <= cfg.stunSlamRange) {
+                    selectSlot(mc, maceSlot);
+                    mc.gameMode.attack(mc.player, t);
+                }
+                stunSlamRestoreTick = Math.max(1, cfg.stunSlamRestoreDelay);
+            }
+            return;
+        }
+
         // Restore slot after attack
         if (stunSlamRestoreSlot >= 0) {
             if (--stunSlamRestoreTick <= 0) {
@@ -287,6 +310,23 @@ public final class CombatHacks {
         // axe hit that breaks the shield, not the knockback of a full slam.
         mc.gameMode.attack(mc.player, target);
         stunSlamCooldown = Math.max(1, canSlam ? cfg.stunSlamCooldown : cfg.stunSlamFallbackCooldown);
+
+        // Queue the mace follow-up: the axe hit breaks the shield, the mace lands the
+        // damage once the attack has recharged.
+        if (cfg.stunSlamMaceCombo && findHotbar(mc, Items.MACE) >= 0) {
+            maceComboTarget = target;
+            maceComboTick   = Math.max(1, cfg.stunSlamAxeMaceDelay);
+            // Make sure we still end up back on the slot held before the axe swap.
+            if (stunSlamRestoreSlot < 0) stunSlamRestoreSlot = cur;
+        }
+    }
+
+    /** First hotbar slot holding `item`, or -1. */
+    private static int findHotbar(Minecraft mc, net.minecraft.world.item.Item item) {
+        for (int i = 0; i < 9; i++) {
+            if (mc.player.getInventory().getItem(i).is(item)) return i;
+        }
+        return -1;
     }
 
     /** Eye position of an entity extrapolated `ticks` ahead along its current motion. */

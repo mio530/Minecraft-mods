@@ -619,6 +619,13 @@ public class VisionConfigScreen extends Screen {
                 () -> { c.stunSlamPredictTicks = Math.max(0, c.stunSlamPredictTicks - 1); save(); },
                 () -> { c.stunSlamPredictTicks = Math.min(6, c.stunSlamPredictTicks + 1); save(); });
             sToggle(g, "Ziel anvisieren", c.stunSlamRotate, () -> { c.stunSlamRotate = !c.stunSlamRotate; save(); });
+            sSep(g, "Axt \u2192 Mace");
+            sToggle(g, "Mace-Kombo", c.stunSlamMaceCombo, () -> { c.stunSlamMaceCombo = !c.stunSlamMaceCombo; save(); });
+            sDesc(g, "Axt bricht das Schild, Mace macht Schaden.");
+            sInt(g, "Delay Axt/Mace", c.stunSlamAxeMaceDelay, "t", 1, 40,
+                () -> { c.stunSlamAxeMaceDelay = Math.max(1,  c.stunSlamAxeMaceDelay - 1); save(); },
+                () -> { c.stunSlamAxeMaceDelay = Math.min(40, c.stunSlamAxeMaceDelay + 1); save(); });
+            sDesc(g, "Zu kurz = Mace trifft halb aufgeladen.");
             sSep(g, "Fallback");
             sToggle(g, "Nur Schild brechen", c.stunSlamShieldFallback, () -> { c.stunSlamShieldFallback = !c.stunSlamShieldFallback; save(); });
             sDesc(g, "Kein Fall möglich? Dann nur der Axt-Hit,");
