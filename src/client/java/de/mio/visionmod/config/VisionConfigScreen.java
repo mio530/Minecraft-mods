@@ -622,10 +622,13 @@ public class VisionConfigScreen extends Screen {
             sSep(g, "Axt \u2192 Mace");
             sToggle(g, "Mace-Kombo", c.stunSlamMaceCombo, () -> { c.stunSlamMaceCombo = !c.stunSlamMaceCombo; save(); });
             sDesc(g, "Axt bricht das Schild, Mace macht Schaden.");
-            sInt(g, "Delay Axt/Mace", c.stunSlamAxeMaceDelay, "t", 1, 40,
-                () -> { c.stunSlamAxeMaceDelay = Math.max(1,  c.stunSlamAxeMaceDelay - 1); save(); },
-                () -> { c.stunSlamAxeMaceDelay = Math.min(40, c.stunSlamAxeMaceDelay + 1); save(); });
-            sDesc(g, "Zu kurz = Mace trifft halb aufgeladen.");
+            sInt(g, "Delay Axt/Mace", c.stunSlamAxeMaceDelay, "t", 0, 10,
+                () -> { c.stunSlamAxeMaceDelay = Math.max(0,  c.stunSlamAxeMaceDelay - 1); save(); },
+                () -> { c.stunSlamAxeMaceDelay = Math.min(10, c.stunSlamAxeMaceDelay + 1); save(); });
+            sDesc(g, "0 = selber Tick. Stun-Fenster ist winzig,");
+            sDesc(g, "die Mace trifft daher nicht voll geladen.");
+            sDesc(g, "Schild-Status wird erkannt: ist es schon");
+            sDesc(g, "gebrochen, geht es direkt auf die Mace.");
             sSep(g, "Fallback");
             sToggle(g, "Nur Schild brechen", c.stunSlamShieldFallback, () -> { c.stunSlamShieldFallback = !c.stunSlamShieldFallback; save(); });
             sDesc(g, "Kein Fall möglich? Dann nur der Axt-Hit,");

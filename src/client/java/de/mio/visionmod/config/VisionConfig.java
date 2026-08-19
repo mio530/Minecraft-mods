@@ -121,7 +121,7 @@ public class VisionConfig {
     public int     stunSlamPredictTicks = 2;     // how many ticks ahead to aim
     public boolean stunSlamRotate     = true;    // face the (predicted) target
     public boolean stunSlamMaceCombo   = false;  // axe breaks the shield, mace follows up
-    public int     stunSlamAxeMaceDelay = 12;    // ticks between the axe hit and the mace hit
+    public int     stunSlamAxeMaceDelay = 0;     // ticks axe->mace; 0 = same tick (stun window is tiny)
     public boolean stunSlamShieldFallback = true; // no fall? still axe-hit to break the shield
     public int     stunSlamFallbackCooldown = 30; // ticks between fallback shield breaks
     public int     stunSlamCooldown   = 20;      // ticks between slams

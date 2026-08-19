@@ -17,7 +17,9 @@ import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class CombatHacks {
     private CombatHacks() {}
@@ -31,6 +33,11 @@ public final class CombatHacks {
     private static int     stunSlamRestoreTick = 0;
     private static boolean maceDmgLaunched   = false;
     private static int          maceComboTick   = -1;   // ticks left before the mace follow-up
+    /** Vanilla keeps a shield disabled for 100 ticks after an axe hit. */
+    private static final int SHIELD_DISABLE_TICKS = 100;
+    /** entityId -> client tick at which we expect their shield to work again. */
+    private static final Map<Integer,Integer> shieldDisabledUntil = new HashMap<>();
+    private static int combatTick = 0;
     private static LivingEntity maceComboTarget = null;
     /** True while a mace-fall is in progress; FallHandlerMixin reads this to skip noFall. */
     public  static boolean suppressNoFall    = false;
@@ -46,6 +53,8 @@ public final class CombatHacks {
         stunSlamRestoreTick = 0;
         maceDmgLaunched     = false;
         maceComboTick       = -1;
+        shieldDisabledUntil.clear();
+        combatTick          = 0;
         maceComboTarget     = null;
         suppressNoFall      = false;
     }
@@ -63,6 +72,10 @@ public final class CombatHacks {
         if (mc.player == null || mc.level == null) return;
         VisionConfig cfg = VisionConfig.get();
         suppressNoFall = false; // each mace method sets it if needed this tick
+        combatTick++;
+        if (!shieldDisabledUntil.isEmpty() && combatTick % 20 == 0) {
+            shieldDisabledUntil.entrySet().removeIf(e -> combatTick >= e.getValue());
+        }
         tickMaceDmg(mc, cfg);
         tickMaceDmgClassic(mc, cfg);
         tickAutoMace(mc, cfg);
@@ -269,22 +282,35 @@ public final class CombatHacks {
         };
         if (target == null) return;
 
-        // Find best axe in hotbar (prefer current slot)
         int cur = mc.player.getInventory().selected;
-        int axeSlot = mc.player.getInventory().getItem(cur).getItem() instanceof AxeItem ? cur : -1;
-        if (axeSlot < 0) {
-            for (int i = 0; i < 9; i++) {
-                if (mc.player.getInventory().getItem(i).getItem() instanceof AxeItem) {
-                    axeSlot = i; break;
+        int maceSlot = findHotbar(mc, Items.MACE);
+        // Read the shield state BEFORE swinging: this also refreshes our disabled-tracking.
+        boolean wasBlocking = isShieldBlocking(target);
+        // Their shield is already broken from an earlier hit — a second axe swing would
+        // be wasted, so go straight to the mace instead of re-breaking nothing.
+        boolean maceFirst = cfg.stunSlamMaceCombo && maceSlot >= 0
+                && !wasBlocking && isShieldDisabled(target);
+
+        int useSlot;
+        if (maceFirst) {
+            useSlot = maceSlot;
+        } else {
+            // Best axe in hotbar (prefer current slot)
+            useSlot = mc.player.getInventory().getItem(cur).getItem() instanceof AxeItem ? cur : -1;
+            if (useSlot < 0) {
+                for (int i = 0; i < 9; i++) {
+                    if (mc.player.getInventory().getItem(i).getItem() instanceof AxeItem) {
+                        useSlot = i; break;
+                    }
                 }
             }
+            if (useSlot < 0) return;
         }
-        if (axeSlot < 0) return;
 
-        if (axeSlot != cur) {
+        if (useSlot != cur) {
             stunSlamRestoreSlot = cur;
             stunSlamRestoreTick = Math.max(1, cfg.stunSlamRestoreDelay);
-            selectSlot(mc, axeSlot);
+            selectSlot(mc, useSlot);
         }
 
         // Aim at where the target will be, so a running/jumping opponent is still hit.
@@ -311,13 +337,25 @@ public final class CombatHacks {
         mc.gameMode.attack(mc.player, target);
         stunSlamCooldown = Math.max(1, canSlam ? cfg.stunSlamCooldown : cfg.stunSlamFallbackCooldown);
 
-        // Queue the mace follow-up: the axe hit breaks the shield, the mace lands the
-        // damage once the attack has recharged.
-        if (cfg.stunSlamMaceCombo && findHotbar(mc, Items.MACE) >= 0) {
-            maceComboTarget = target;
-            maceComboTick   = Math.max(1, cfg.stunSlamAxeMaceDelay);
-            // Make sure we still end up back on the slot held before the axe swap.
-            if (stunSlamRestoreSlot < 0) stunSlamRestoreSlot = cur;
+        if (!maceFirst) {
+            // An axe hit only breaks a shield that was actually raised.
+            if (wasBlocking) markShieldDisabled(target);
+
+            // Mace follow-up. A stun slam has to land inside the stun window, so the
+            // default is near-instant and 0 means "same tick" — the mace then hits at
+            // partial attack charge on purpose, because waiting for a full charge would
+            // miss the window entirely.
+            if (cfg.stunSlamMaceCombo && maceSlot >= 0) {
+                if (stunSlamRestoreSlot < 0) stunSlamRestoreSlot = cur;
+                if (cfg.stunSlamAxeMaceDelay <= 0) {
+                    selectSlot(mc, maceSlot);
+                    mc.gameMode.attack(mc.player, target);
+                    stunSlamRestoreTick = Math.max(1, cfg.stunSlamRestoreDelay);
+                } else {
+                    maceComboTarget = target;
+                    maceComboTick   = cfg.stunSlamAxeMaceDelay;
+                }
+            }
         }
     }
 
@@ -340,7 +378,21 @@ public final class CombatHacks {
      * the active item as well — slamming a target that is merely eating wastes the hit.
      */
     private static boolean isShieldBlocking(LivingEntity e) {
-        return e.isBlocking() && e.getUseItem().is(Items.SHIELD);
+        boolean blocking = e.isBlocking() && e.getUseItem().is(Items.SHIELD);
+        // Raising the shield again proves it is NOT disabled — self-corrects a stale
+        // entry (they swapped shields, respawned, or the server disagreed with us).
+        if (blocking) shieldDisabledUntil.remove(e.getId());
+        return blocking;
+    }
+
+    /** True while we expect this target's shield to still be broken from our axe hit. */
+    private static boolean isShieldDisabled(LivingEntity e) {
+        Integer until = shieldDisabledUntil.get(e.getId());
+        return until != null && combatTick < until;
+    }
+
+    private static void markShieldDisabled(LivingEntity e) {
+        shieldDisabledUntil.put(e.getId(), combatTick + SHIELD_DISABLE_TICKS);
     }
 
     // ── Kill Aura ──────────────────────────────────────────────────────────────
