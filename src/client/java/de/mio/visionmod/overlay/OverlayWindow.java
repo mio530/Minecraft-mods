@@ -75,24 +75,21 @@ public final class OverlayWindow {
         ProjectionUtil.cachedCamY = cam.y;
         ProjectionUtil.cachedCamZ = cam.z;
 
-        // When drawing through walls we must NOT hold a long-lived lines buffer: each
-        // shape is flushed individually, which would leave that consumer stale.
-        boolean thru = cfg.espThroughWalls;
-        VertexConsumer vc = thru ? null : buf.getBuffer(RenderTypes.lines());
+        VertexConsumer vc = buf.getBuffer(RenderTypes.lines());
 
         // ── Entity ESP ──────────────────────────────────────────────────
         if (cfg.entityEspEnabled && !cfg.entityGlowEnabled) {
             for (EntityESP.EntityData e : EntityESP.snapshot) {
-                box(ps, buf, vc, cam,
+                drawBox(ps, vc, cam,
                         e.minX(), e.minY(), e.minZ(),
-                        e.maxX(), e.maxY(), e.maxZ(), e.boxColor(), thru);
+                        e.maxX(), e.maxY(), e.maxZ(), e.boxColor());
 
                 // Tracer line: camera → entity centre
                 if (e.showLine()) {
                     double cx = (e.minX() + e.maxX()) * 0.5;
                     double cy = (e.minY() + e.maxY()) * 0.5;
                     double cz = (e.minZ() + e.maxZ()) * 0.5;
-                    line(ps, buf, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, e.lineColor(), thru);
+                    drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, e.lineColor());
                 }
             }
         }
@@ -101,12 +98,12 @@ public final class OverlayWindow {
         if (cfg.oreEspEnabled) {
             for (OreESP.OreData o : OreESP.snapshot) {
                 double cx = o.x(), cy = o.y(), cz = o.z();
-                box(ps, buf, vc, cam,
+                drawBox(ps, vc, cam,
                         cx - 0.5, cy - 0.5, cz - 0.5,
-                        cx + 0.5, cy + 0.5, cz + 0.5, o.boxColor(), thru);
+                        cx + 0.5, cy + 0.5, cz + 0.5, o.boxColor());
 
                 if (o.showLine()) {
-                    line(ps, buf, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, o.lineColor(), thru);
+                    drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, o.lineColor());
                 }
             }
         }
@@ -114,14 +111,14 @@ public final class OverlayWindow {
         // ── Item ESP ─────────────────────────────────────────────────────
         if (cfg.itemEspEnabled) {
             for (ItemESP.ItemData it : ItemESP.snapshot) {
-                box(ps, buf, vc, cam,
+                drawBox(ps, vc, cam,
                         it.minX(), it.minY(), it.minZ(),
-                        it.maxX(), it.maxY(), it.maxZ(), it.color(), thru);
+                        it.maxX(), it.maxY(), it.maxZ(), it.color());
                 if (cfg.globalLinesEnabled) {
                     double cx = (it.minX() + it.maxX()) * 0.5;
                     double cy = (it.minY() + it.maxY()) * 0.5;
                     double cz = (it.minZ() + it.maxZ()) * 0.5;
-                    line(ps, buf, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, it.color(), thru);
+                    drawLine(ps, vc, cam, cam.x, cam.y, cam.z, cx, cy, cz, it.color());
                 }
             }
         }
@@ -129,9 +126,9 @@ public final class OverlayWindow {
         // ── Storage (Container) ESP ──────────────────────────────────────
         if (cfg.storageEspEnabled) {
             for (StorageESP.StorageData st : StorageESP.snapshot) {
-                box(ps, buf, vc, cam,
+                drawBox(ps, vc, cam,
                         st.x() - 0.5, st.y() - 0.5, st.z() - 0.5,
-                        st.x() + 0.5, st.y() + 0.5, st.z() + 0.5, st.color(), thru);
+                        st.x() + 0.5, st.y() + 0.5, st.z() + 0.5, st.color());
             }
         }
 
@@ -144,7 +141,35 @@ public final class OverlayWindow {
                         : VisionConfig.parseColor(cfg.chunkBorderColor);
                 double bx = chunk.chunkX() * 16.0;
                 double bz = chunk.chunkZ() * 16.0;
-                box(ps, buf, vc, cam, bx, py - 1, bz, bx + 16, py + 3, bz + 16, color, thru);
+                drawBox(ps, vc, cam, bx, py - 1, bz, bx + 16, py + 3, bz + 16, color);
+            }
+        }
+
+        // ── See-through fill ─────────────────────────────────────────────
+        // Own pass AFTER all outlines: switching render type flushes the lines buffer,
+        // so these must not be interleaved with the box/line loops above.
+        if (cfg.espThroughWalls) {
+            VertexConsumer q = buf.getBuffer(RenderTypes.debugQuads());
+            int a = Math.max(8, Math.min(160, cfg.espThroughWallsAlpha));
+            if (cfg.entityEspEnabled && !cfg.entityGlowEnabled) {
+                for (EntityESP.EntityData e : EntityESP.snapshot)
+                    drawBoxFaces(ps, q, cam, e.minX(), e.minY(), e.minZ(),
+                            e.maxX(), e.maxY(), e.maxZ(), e.boxColor(), a);
+            }
+            if (cfg.oreEspEnabled) {
+                for (OreESP.OreData o : OreESP.snapshot)
+                    drawBoxFaces(ps, q, cam, o.x() - 0.5, o.y() - 0.5, o.z() - 0.5,
+                            o.x() + 0.5, o.y() + 0.5, o.z() + 0.5, o.boxColor(), a);
+            }
+            if (cfg.itemEspEnabled) {
+                for (ItemESP.ItemData it : ItemESP.snapshot)
+                    drawBoxFaces(ps, q, cam, it.minX(), it.minY(), it.minZ(),
+                            it.maxX(), it.maxY(), it.maxZ(), it.color(), a);
+            }
+            if (cfg.storageEspEnabled) {
+                for (StorageESP.StorageData st : StorageESP.snapshot)
+                    drawBoxFaces(ps, q, cam, st.x() - 0.5, st.y() - 0.5, st.z() - 0.5,
+                            st.x() + 0.5, st.y() + 0.5, st.z() + 0.5, st.color(), a);
             }
         }
 
@@ -188,64 +213,29 @@ public final class OverlayWindow {
     // ── Helpers ──────────────────────────────────────────────────────────
 
     /**
-     * The non-depth-tested line type. RenderTypes.debugLineStrip(double) does not exist
-     * in 1.21.11, so this is a placeholder until the real name is known — the build log
-     * task `dumpRenderTypes` prints the available factory methods.
+     * Translucent box faces drawn with the debug QUADS type, which is NOT depth tested —
+     * this is what makes ESP visible through terrain. RenderTypes.lines() IS depth
+     * tested, so outlines alone are culled inside blocks, which is why ore boxes never
+     * showed while player boxes (out in the open) did. 1.21.11 has no non-depth LINE
+     * type (see the RenderTypes dump), so the fill provides the see-through layer and
+     * the outline stays for the crisp look where nothing occludes it.
      */
-    private static net.minecraft.client.renderer.rendertype.RenderType seeThroughLines() {
-        return RenderTypes.lines();
-    }
-
-    /**
-     * Box that can optionally ignore the depth buffer. RenderTypes.lines() is depth
-     * tested, so a box inside terrain (every ore, containers in walls) is culled and
-     * never appears — which is exactly why Ore ESP showed nothing while player boxes,
-     * standing in the open, rendered fine. The debug line-strip type is not depth
-     * tested, so it draws through blocks.
-     */
-    private static void box(PoseStack ps, MultiBufferSource.BufferSource buf, VertexConsumer vc,
-                            Vec3 cam, double minX, double minY, double minZ,
-                            double maxX, double maxY, double maxZ, int color, boolean seeThrough) {
-        if (!seeThrough) { drawBox(ps, vc, cam, minX, minY, minZ, maxX, maxY, maxZ, color); return; }
-        drawBoxStrip(ps, buf.getBuffer(seeThroughLines()), cam,
-                minX, minY, minZ, maxX, maxY, maxZ, color);
-        // Flush per shape: a strip would otherwise connect to the next box.
-        buf.endBatch();
-    }
-
-    private static void line(PoseStack ps, MultiBufferSource.BufferSource buf, VertexConsumer vc,
-                             Vec3 cam, double x1, double y1, double z1,
-                             double x2, double y2, double z2, int color, boolean seeThrough) {
-        if (!seeThrough) { drawLine(ps, vc, cam, x1, y1, z1, x2, y2, z2, color); return; }
-        VertexConsumer sv = buf.getBuffer(seeThroughLines());
-        PoseStack.Pose pose = ps.last();
-        int r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF, a = (color >>> 24) & 0xFF;
-        sv.addVertex(pose, (float)(x1 - cam.x), (float)(y1 - cam.y), (float)(z1 - cam.z)).setColor(r, g, b, a);
-        sv.addVertex(pose, (float)(x2 - cam.x), (float)(y2 - cam.y), (float)(z2 - cam.z)).setColor(r, g, b, a);
-        buf.endBatch();
-    }
-
-    /**
-     * The 12 box edges as ONE continuous strip (16 segments; 4 edges are retraced,
-     * because a cube's corners all have odd degree so no path covers each edge once).
-     */
-    private static void drawBoxStrip(PoseStack ps, VertexConsumer vc, Vec3 cam,
+    private static void drawBoxFaces(PoseStack ps, VertexConsumer vc, Vec3 cam,
                                      double minX, double minY, double minZ,
-                                     double maxX, double maxY, double maxZ, int color) {
-        int r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF, a = (color >>> 24) & 0xFF;
+                                     double maxX, double maxY, double maxZ, int color, int alpha) {
+        int r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
         float x1 = (float)(minX - cam.x), y1 = (float)(minY - cam.y), z1 = (float)(minZ - cam.z);
         float x2 = (float)(maxX - cam.x), y2 = (float)(maxY - cam.y), z2 = (float)(maxZ - cam.z);
         PoseStack.Pose pose = ps.last();
-        float[][] path = {
-            {x1,y1,z1},{x2,y1,z1},{x2,y1,z2},{x1,y1,z2},{x1,y1,z1},   // bottom face
-            {x1,y2,z1},                                                // up
-            {x2,y2,z1},{x2,y2,z2},{x1,y2,z2},{x1,y2,z1},               // top face
-            {x1,y1,z1},{x2,y1,z1},{x2,y2,z1},{x2,y2,z2},{x2,y1,z2},    // remaining verticals
-            {x1,y1,z2},{x1,y2,z2}
+        float[][] v = {
+            {x1,y1,z1},{x2,y1,z1},{x2,y1,z2},{x1,y1,z2},   // bottom
+            {x1,y2,z1},{x1,y2,z2},{x2,y2,z2},{x2,y2,z1},   // top
+            {x1,y1,z1},{x1,y2,z1},{x2,y2,z1},{x2,y1,z1},   // -Z
+            {x1,y1,z2},{x2,y1,z2},{x2,y2,z2},{x1,y2,z2},   // +Z
+            {x1,y1,z1},{x1,y1,z2},{x1,y2,z2},{x1,y2,z1},   // -X
+            {x2,y1,z1},{x2,y2,z1},{x2,y2,z2},{x2,y1,z2},   // +X
         };
-        for (float[] pt : path) {
-            vc.addVertex(pose, pt[0], pt[1], pt[2]).setColor(r, g, b, a);
-        }
+        for (float[] pt : v) vc.addVertex(pose, pt[0], pt[1], pt[2]).setColor(r, g, b, alpha);
     }
 
     /** Billboarded, see-through text at a world position (nametag-style), camera-relative. */

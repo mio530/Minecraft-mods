@@ -27,7 +27,8 @@ public class VisionConfig {
     public boolean entityGlowEnabled = false;
     public boolean oreEspEnabled    = false;
     public boolean globalLinesEnabled = true;
-    public boolean espThroughWalls    = true;  // draw ESP boxes ignoring the depth buffer
+    public boolean espThroughWalls    = true;  // translucent fill so boxes show through blocks
+    public int     espThroughWallsAlpha = 70;  // 8..160 opacity of that fill
     public boolean espLabels          = true;  // show name/coords/distance text on entity & ore ESP
 
     // --- Entity config ---

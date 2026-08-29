@@ -52,27 +52,3 @@ jar {
     }
 }
 
-// TEMPORARY diagnostic: print the RenderType factory methods available in this
-// Minecraft version, so the see-through (non-depth-tested) line type can be picked
-// by name instead of guessed. Remove once the correct type is wired up.
-tasks.register('dumpRenderTypes') {
-    doLast {
-        def urls = sourceSets.client.compileClasspath.files.collect { it.toURI().toURL() } as URL[]
-        def cl = new URLClassLoader(urls, ClassLoader.systemClassLoader.parent)
-        ['net.minecraft.client.renderer.rendertype.RenderTypes',
-         'net.minecraft.client.renderer.RenderType'].each { name ->
-            try {
-                def c = Class.forName(name, false, cl)
-                println "RTDUMP class ${name}"
-                c.declaredMethods
-                        .findAll { java.lang.reflect.Modifier.isPublic(it.modifiers) }
-                        .collect { "${it.name}(${it.parameterTypes*.simpleName.join(',')})" }
-                        .unique().sort()
-                        .each { println "RTDUMP   ${it}" }
-            } catch (Throwable t) {
-                println "RTDUMP class ${name} UNAVAILABLE: ${t}"
-            }
-        }
-    }
-}
-tasks.named('build') { dependsOn 'dumpRenderTypes' }
