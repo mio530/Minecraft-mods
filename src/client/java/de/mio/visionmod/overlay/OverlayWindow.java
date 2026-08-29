@@ -188,6 +188,15 @@ public final class OverlayWindow {
     // ── Helpers ──────────────────────────────────────────────────────────
 
     /**
+     * The non-depth-tested line type. RenderTypes.debugLineStrip(double) does not exist
+     * in 1.21.11, so this is a placeholder until the real name is known — the build log
+     * task `dumpRenderTypes` prints the available factory methods.
+     */
+    private static net.minecraft.client.renderer.rendertype.RenderType seeThroughLines() {
+        return RenderTypes.lines();
+    }
+
+    /**
      * Box that can optionally ignore the depth buffer. RenderTypes.lines() is depth
      * tested, so a box inside terrain (every ore, containers in walls) is culled and
      * never appears — which is exactly why Ore ESP showed nothing while player boxes,
@@ -198,7 +207,7 @@ public final class OverlayWindow {
                             Vec3 cam, double minX, double minY, double minZ,
                             double maxX, double maxY, double maxZ, int color, boolean seeThrough) {
         if (!seeThrough) { drawBox(ps, vc, cam, minX, minY, minZ, maxX, maxY, maxZ, color); return; }
-        drawBoxStrip(ps, buf.getBuffer(RenderTypes.debugLineStrip(2.0)), cam,
+        drawBoxStrip(ps, buf.getBuffer(seeThroughLines()), cam,
                 minX, minY, minZ, maxX, maxY, maxZ, color);
         // Flush per shape: a strip would otherwise connect to the next box.
         buf.endBatch();
@@ -208,7 +217,7 @@ public final class OverlayWindow {
                              Vec3 cam, double x1, double y1, double z1,
                              double x2, double y2, double z2, int color, boolean seeThrough) {
         if (!seeThrough) { drawLine(ps, vc, cam, x1, y1, z1, x2, y2, z2, color); return; }
-        VertexConsumer sv = buf.getBuffer(RenderTypes.debugLineStrip(2.0));
+        VertexConsumer sv = buf.getBuffer(seeThroughLines());
         PoseStack.Pose pose = ps.last();
         int r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF, a = (color >>> 24) & 0xFF;
         sv.addVertex(pose, (float)(x1 - cam.x), (float)(y1 - cam.y), (float)(z1 - cam.z)).setColor(r, g, b, a);
