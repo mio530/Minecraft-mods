@@ -417,6 +417,8 @@ public class VisionConfigScreen extends Screen {
             hit(sX + 9 + bw,            sCY + 1, bw, 14,
                     () -> { c.enabledOres.clear(); save(); });
             sCY += 17;
+            sToggle(g, "Durch Waende", c.espThroughWalls, () -> { c.espThroughWalls = !c.espThroughWalls; save(); });
+            sDesc(g, "Aus = Boxen werden von Bloecken verdeckt.");
             sToggle(g, "Nur freiliegende Erze", c.oreEspExposedOnly, () -> { c.oreEspExposedOnly = !c.oreEspExposedOnly; save(); });
             sDesc(g, "An = nur Erze an Luft/Höhlen. Aus = auch vergrabene.");
             sToggle(g, "Info-Text (Koord)", c.espLabels, () -> { c.espLabels = !c.espLabels; save(); });
