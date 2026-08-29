@@ -173,8 +173,18 @@ public class VisionConfigScreen extends Screen {
         // Lay category panels left→right, wrapping to a new row when off-screen. Only on
         // first init — rebuildWidgets() (which re-runs init) must not reset dragged panels.
         if (catPos.isEmpty()) {
+            // Restore saved positions first; anything missing gets laid out below.
+            for (Map.Entry<String,int[]> e : VisionConfig.get().guiPanelPos.entrySet()) {
+                int[] v = e.getValue();
+                if (CATS.contains(e.getKey()) && v != null && v.length == 2) {
+                    catPos.put(e.getKey(), new int[]{
+                            Math.max(0, Math.min(width  - COL_W, v[0])),
+                            Math.max(0, Math.min(height - 14,    v[1]))});
+                }
+            }
             int cx = 6, cy = 26, rowMaxH = 0;
             for (String cat : CATS) {
+                if (catPos.containsKey(cat)) continue;
                 int count = 0;
                 for (ModDef m : MODS) if (m.cat().equals(cat)) count++;
                 int h = 13 + count * ROW_H;
@@ -231,6 +241,7 @@ public class VisionConfigScreen extends Screen {
             long win = GLFW.glfwGetCurrentContext();
             if (GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
                 dragCat = null;
+                savePanelPositions();   // keep the layout across sessions
             } else {
                 int[] p = catPos.get(dragCat);
                 if (p != null) {
@@ -384,6 +395,19 @@ public class VisionConfigScreen extends Screen {
             sRadius(g, "Radius",       c.oreEspRadius,     1,  8,
                 () -> { c.oreEspRadius = Math.max(1, c.oreEspRadius-1); save(); },
                 () -> { c.oreEspRadius = Math.min(8, c.oreEspRadius+1); save(); });
+            // Live status: without this it's impossible to tell "scan found nothing"
+            // from "no ore types ticked" — the usual reason Ore ESP looks broken.
+            sDesc(g, "§7Aktiviert: §f" + c.enabledOres.size() + "§7 Erze  ·  gefunden: §a"
+                    + de.mio.visionmod.esp.OreESP.snapshot.size());
+            if (c.enabledOres.isEmpty()) sDesc(g, "§cKein Erz ausgewählt — unten anhaken!");
+            int bw = (sW - 14) / 2;
+            drawBtn(g, sX + 5,          sCY + 1, bw, 14, "§aAlle an",  sMX, sMY);
+            hit(sX + 5,                 sCY + 1, bw, 14,
+                    () -> { c.enabledOres.addAll(VisionConfig.ALL_ORES); save(); });
+            drawBtn(g, sX + 9 + bw,     sCY + 1, bw, 14, "§cAlle aus", sMX, sMY);
+            hit(sX + 9 + bw,            sCY + 1, bw, 14,
+                    () -> { c.enabledOres.clear(); save(); });
+            sCY += 17;
             sToggle(g, "Nur freiliegende Erze", c.oreEspExposedOnly, () -> { c.oreEspExposedOnly = !c.oreEspExposedOnly; save(); });
             sDesc(g, "An = nur Erze an Luft/Höhlen. Aus = auch vergrabene.");
             sToggle(g, "Info-Text (Koord)", c.espLabels, () -> { c.espLabels = !c.espLabels; save(); });
@@ -1153,6 +1177,15 @@ public class VisionConfigScreen extends Screen {
         if (selMod.isEmpty()) return;
         selMod = "";
         rebuildWidgets();
+    }
+
+    private void savePanelPositions() {
+        VisionConfig c = VisionConfig.get();
+        c.guiPanelPos.clear();
+        for (Map.Entry<String,int[]> e : catPos.entrySet()) {
+            c.guiPanelPos.put(e.getKey(), new int[]{e.getValue()[0], e.getValue()[1]});
+        }
+        VisionConfig.save();
     }
 
     private void rHit(int x, int y, int w, int h, Runnable action) {

@@ -54,6 +54,8 @@ public class VisionConfig {
     public int  entityEspRadius = 4;   // chunk radius for entity ESP
     public int  oreEspRadius    = 3;   // chunk radius for ore ESP
     public boolean oreEspExposedOnly = false; // only show ores touching air (cave-exposed)
+    /** ClickGUI category panel positions: category -> {x, y}. */
+    public Map<String, int[]> guiPanelPos = new LinkedHashMap<>();
     public int  susChunksRadius = 4;   // chunk radius for sus chunk scan
     public boolean fillBoxes    = false;
 
@@ -462,10 +464,18 @@ public class VisionConfig {
         for (String id : DEFAULT_ORE_BOX.keySet()) {
             oreLineColors.put(id, DEFAULT_ORE_BOX.get(id));
         }
+        // Include the common ores as well — with only the rare ones enabled, switching
+        // Ore ESP on near the surface shows nothing at all and looks broken.
         enabledOres.addAll(Arrays.asList(
                 "minecraft:diamond_ore", "minecraft:deepslate_diamond_ore",
                 "minecraft:emerald_ore", "minecraft:deepslate_emerald_ore",
-                "minecraft:ancient_debris"
+                "minecraft:ancient_debris",
+                "minecraft:gold_ore", "minecraft:deepslate_gold_ore",
+                "minecraft:iron_ore", "minecraft:deepslate_iron_ore",
+                "minecraft:redstone_ore", "minecraft:deepslate_redstone_ore",
+                "minecraft:lapis_ore", "minecraft:deepslate_lapis_ore",
+                "minecraft:copper_ore", "minecraft:deepslate_copper_ore",
+                "minecraft:coal_ore", "minecraft:deepslate_coal_ore"
         ));
         oreLinesEnabled.addAll(Arrays.asList("minecraft:diamond_ore", "minecraft:deepslate_diamond_ore",
                 "minecraft:emerald_ore", "minecraft:deepslate_emerald_ore", "minecraft:ancient_debris"));
