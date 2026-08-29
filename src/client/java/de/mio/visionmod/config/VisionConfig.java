@@ -92,6 +92,7 @@ public class VisionConfig {
     public boolean maceDmgClassicEnabled  = false;
     public boolean killAuraEnabled        = false;
     public float   killAuraRange      = 4.5f;
+    public boolean useWeaponReach     = true;  // honour a weapon's extra reach in auto-hit
     public boolean killAuraPlayers    = true;
     public boolean killAuraMobs       = true;
     public int     killAuraCps        = 12;

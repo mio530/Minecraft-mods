@@ -144,6 +144,8 @@ public class VisionConfigScreen extends Screen {
     private int    dragOffX, dragOffY;
     // Fixed settings-popup rectangle (right side of the screen)
     private int spX, spY, spW, spH;
+    /** Index in hits/rHits where the settings popup's own zones start. */
+    private int popupHitStart = Integer.MAX_VALUE;
 
     private final List<int[]>    hits        = new ArrayList<>();
     private final List<Runnable> hitActions  = new ArrayList<>();
@@ -257,6 +259,12 @@ public class VisionConfigScreen extends Screen {
         g.drawString(font, "§a§lVISION§f§lMOD §8v1.21.11", 8, 7, C_ACCENT, false);
         g.drawString(font, "§7Module aktiv: §a" + countActive()
                 + "  §8[Links = An/Aus · Rechts = Settings · ESC = zu]", 8, 17, C_DIM, false);
+        // Live ESP counts: tells "found nothing" apart from "not rendering".
+        g.drawString(font, "§8ESP  Mobs §7" + de.mio.visionmod.esp.EntityESP.snapshot.size()
+                + "  §8Erze §7" + de.mio.visionmod.esp.OreESP.snapshot.size()
+                + "  §8Items §7" + de.mio.visionmod.esp.ItemESP.snapshot.size()
+                + "  §8Kisten §7" + de.mio.visionmod.esp.StorageESP.snapshot.size(),
+                8 + 52 + font.width("Module aktiv: " + countActive()), 27, C_DIM, false);
         int pbW = 46;
         drawBtn(g, 8, 27, pbW, 13, "§c§lPANIC", mx, my);
         hit(8, 27, pbW, 13, () -> { VisionConfig.get().resetFeatureToggles(); VisionConfig.save(); });
@@ -266,6 +274,7 @@ public class VisionConfigScreen extends Screen {
         g.fill(spX - 1, 6, spX + spW, 20, C_CAT_HDR);
 
         renderColumns(g, mx, my);
+        popupHitStart = hits.size();   // everything after this belongs to the popup
         if (!selMod.isEmpty()) renderSettingsPopup(g, mx, my);
 
         super.render(g, mx, my, delta);
@@ -446,6 +455,9 @@ public class VisionConfigScreen extends Screen {
                 () -> { c.killAuraCps = Math.max(1,  c.killAuraCps - 1); save(); },
                 () -> { c.killAuraCps = Math.min(20, c.killAuraCps + 1); save(); });
             sToggle(g, "Rotation",         c.killAuraRotate,     () -> { c.killAuraRotate     = !c.killAuraRotate;     save(); });
+            sToggle(g, "Waffen-Reichweite", c.useWeaponReach, () -> { c.useWeaponReach = !c.useWeaponReach; save(); });
+            sDesc(g, "Nutzt die echte Reichweite der Waffe,");
+            sDesc(g, "wenn sie groesser ist als der Wert oben.");
             sToggle(g, "Smooth Aim",       c.killAuraSmooth,     () -> { c.killAuraSmooth     = !c.killAuraSmooth;     save(); });
             sInt(g, "Aim-Speed", c.killAuraRotateSpeed, "°/t", 2, 90,
                 () -> { c.killAuraRotateSpeed = Math.max(2,  c.killAuraRotateSpeed - 2); save(); },
@@ -1091,23 +1103,33 @@ public class VisionConfigScreen extends Screen {
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         int mx = (int) click.x();
         int my = (int) click.y();
+        // The settings popup sits ON TOP of the category panels. Without this, a click
+        // inside the popup also hit whatever panel row happened to be behind it.
+        boolean inPopup = !selMod.isEmpty() && inRect(mx, my, spX, spY, spW, spH);
+
         if (click.button() == 0) {
-            for (String cat : CATS) {                  // grab a panel by its header to drag it
-                int[] p = catPos.get(cat);
-                if (p != null && inRect(mx, my, p[0], p[1], COL_W, 13)) {
-                    dragCat = cat; dragOffX = mx - p[0]; dragOffY = my - p[1];
-                    return true;
+            if (!inPopup) {
+                for (String cat : CATS) {              // grab a panel by its header to drag it
+                    int[] p = catPos.get(cat);
+                    if (p != null && inRect(mx, my, p[0], p[1], COL_W, 13)) {
+                        dragCat = cat; dragOffX = mx - p[0]; dragOffY = my - p[1];
+                        return true;
+                    }
                 }
             }
-            for (int i = 0; i < hits.size(); i++) {
+            // Walk topmost-first so the front-most element wins an overlap.
+            for (int i = hits.size() - 1; i >= 0; i--) {
+                if (inPopup && i < popupHitStart) break;   // popup swallows the click
                 int[] z = hits.get(i);
                 if (mx >= z[0] && mx < z[0] + z[2] && my >= z[1] && my < z[1] + z[3]) {
                     hitActions.get(i).run();
                     return true;
                 }
             }
+            if (inPopup) return true;                  // empty popup area: consume, don't fall through
         } else if (click.button() == 1) {              // right-click → toggle module settings
-            for (int i = 0; i < rHits.size(); i++) {
+            if (inPopup) return true;
+            for (int i = rHits.size() - 1; i >= 0; i--) {
                 int[] z = rHits.get(i);
                 if (mx >= z[0] && mx < z[0] + z[2] && my >= z[1] && my < z[1] + z[3]) {
                     rHitActions.get(i).run();

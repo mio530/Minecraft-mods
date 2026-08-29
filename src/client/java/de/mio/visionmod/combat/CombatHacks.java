@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
@@ -57,6 +58,21 @@ public final class CombatHacks {
         combatTick          = 0;
         maceComboTarget     = null;
         suppressNoFall      = false;
+    }
+
+    /**
+     * Effective attack reach. A weapon that grants extra reach (and our own Reach
+     * module) raises the player's ENTITY_INTERACTION_RANGE attribute, so read the real
+     * value instead of only trusting the configured number — otherwise auto-hit stops
+     * short of what the weapon can actually hit.
+     */
+    private static double attackRange(Minecraft mc, double configured) {
+        if (!VisionConfig.get().useWeaponReach) return configured;
+        try {
+            return Math.max(configured, mc.player.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE));
+        } catch (Exception e) {
+            return configured;   // attribute missing on this version: keep the config value
+        }
     }
 
     /** Switches the held hotbar slot AND tells the server, so it doesn't desync. */
@@ -124,7 +140,7 @@ public final class CombatHacks {
         if (maceDmgLaunched) {
             suppressNoFall = true;
             if (motion.y < -0.5) {
-                double range = cfg.killAuraRange;
+                double range = attackRange(mc, cfg.killAuraRange);
                 List<LivingEntity> cands = mc.level.getEntitiesOfClass(LivingEntity.class,
                         mc.player.getBoundingBox().inflate(range),
                         e -> e != mc.player && e.isAlive()
@@ -150,7 +166,7 @@ public final class CombatHacks {
         if (!mc.player.getMainHandItem().is(Items.MACE)) return;
         if (mc.player.getDeltaMovement().y >= -0.3) return;
         suppressNoFall = true; // let server accumulate fallDistance
-        double range = cfg.killAuraRange;
+        double range = attackRange(mc, cfg.killAuraRange);
         mc.level.getEntitiesOfClass(LivingEntity.class,
                 mc.player.getBoundingBox().inflate(range),
                 e -> e != mc.player && e.isAlive()
@@ -243,7 +259,7 @@ public final class CombatHacks {
         // A fallback hit is only worth it against an actually raised shield.
         boolean requireBlocking = cfg.stunSlamOnlyBlocking || !canSlam;
 
-        double range = cfg.stunSlamRange;
+        double range = attackRange(mc, cfg.stunSlamRange);
         int lead = cfg.stunSlamPredict ? Math.max(0, cfg.stunSlamPredictTicks) : 0;
         Vec3 selfEye = mc.player.getEyePosition();
         // Predict where WE will be too: during a slam the player is falling fast, so
@@ -406,7 +422,7 @@ public final class CombatHacks {
         float atkStrength = mc.player.getAttackStrengthScale(0f);
         if (atkStrength < 0.9f) return;
 
-        double range = cfg.killAuraRange;
+        double range = attackRange(mc, cfg.killAuraRange);
         List<LivingEntity> candidates = mc.level.getEntitiesOfClass(LivingEntity.class,
                 mc.player.getBoundingBox().inflate(range),
                 e -> {
