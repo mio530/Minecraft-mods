@@ -57,3 +57,15 @@ Watson & Crick, Schlusssatz 1953: Die Basenpaarung deutet auf den Kopiermechanis
 
 ## Ablauf (dein Fahrplan)
 1. Notizen/Arbeitsblatt lesen. 2. Modell platzieren, Wetter/Zeit fixieren. 3. Szenen 0–8 in Reihenfolge filmen (je 2 Takes). 4. Voice-over einsprechen (≈ 8 Min.). 5. Schneiden, Text/Legende einblenden. 6. Probe vor der Klasse.
+
+## Stationen (einzelne Schematics, in `stationen/`)
+Jede Szene = eigene Datei, gleiche Orientierung (Eltern-DNA unten). Pro Station neu platzieren, filmen, löschen.
+| Station | Datei | Szene |
+|---|---|---|
+| 1 | station_1_eltern_dna | Aufbau der DNA |
+| 2 | station_2_topoisomerase | Ring entspannt die Helix |
+| 3 | station_3_helikase | Helikase öffnet, Replikationsgabel |
+| 4 | station_4_primase_primer | Primase, RNA-Primer |
+| 5 | station_5_polymerase | Leitstrang + 1. Okazaki-Fragment |
+| 6 | station_6_ligase | alle Fragmente, Ligase schließt Lücke |
+| 7 | station_7_ergebnis | zwei Tochter-Doppelstränge |

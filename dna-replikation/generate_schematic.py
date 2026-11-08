@@ -45,105 +45,120 @@ def helix(x0, x1, yc, n1, n2, base_of_strand1, rungs=True):
 
 Y = lambda x: min(13, R + max(0, x - 60))
 
-# 1) Eltern-Doppelhelix x 0..60 (alter Strang blau/cyan)
-helix(30, 60, 0, BB["A"], BB["B"], S)  # nur 1 Windung = uebersichtlicher
-# 2) Replikationsgabel + flache Zone x 61..95
-for x in range(61, 96):
-    bb(x, Y(x), 0, BB["A"]); bb(x, -Y(x) - 1, 0, BB["B"])
-for x in (63, 66, 69):  # offene Basen (Stummel)
-    k = x // 3
-    rung(x, (Y(x), 0), (-Y(x) - 1, 0), S(k), 1, 3)
-    rung(x, (Y(x), 0), (-Y(x) - 1, 0), S(k), 7, 9)
-# Helikase
-for x in range(61, 64):
-    for y in (-1, 0, 1):
-        for z in (-1, 0, 1): put(x, y, z, "gold_block")
-# Leitstrang (oben, rot) x>=72 durchgehend
-for x in range(72, 96): bb(x, 3, 0, BB["C"])
-for x in range(72, 96, 3):
-    if x % 3 == 0: rung(x, (Y(x), 0), (3, 0), S(x // 3))
-# Folgestrang (unten, orange) in Stuecken, Luecken 79-81, Ligase 89-90
-for lo, hi in ((72, 78), (82, 88), (91, 95)):
-    for x in range(lo, hi + 1): bb(x, -4, 0, BB["D"])
-for x in (89, 90):
-    for dy in (0, 1):
-        for dz in (0, 1): put(x, -4 + dy, dz, "sea_lantern")
-for x in (72, 75, 78, 84, 87, 90, 93):
-    # unten: Strang1 = neuer Strang D (y=-3), Strang2 = alter B
-    rung(x, (-3, 0), (-Y(x) - 1, 0), S(x // 3))
-# offene Stelle in der Luecke (x=81): Stummel vom alten Strang B
-rung(81, (-3, 0), (-Y(81) - 1, 0), S(27), 7, 9)
-# Polymerasen (vor der Ebene, z=2..4)
-for x in range(70, 75):
-    for y in range(5, 12):
-        for z in (2, 3, 4): put(x, y, z, "emerald_block")
-for x in range(73, 78):
-    for y in range(-12, -5):
-        for z in (2, 3, 4): put(x, y, z, "emerald_block")
-# Topoisomerase (Ring um die Eltern-Helix), Primase, RNA-Primer (wie im Vorbild-Bild)
-for x in (50, 51):
-    for y in range(-11, 12):
-        for z in range(-11, 12):
-            if 7.5 <= math.hypot(y + .5, z + .5) <= 10: put(x, y, z, "crying_obsidian")
-for x in (64, 65):
-    for y in (-5, -4, -3):
-        for z in (2, 3): put(x, y, z, "diamond_block")
-for lo in (72, 82, 91):
-    for x in (lo, lo + 1): bb(x, -4, 0, "white_concrete")
-# 3) Tochter-Doppelhelices x 96..126 (alt = blau/cyan, neu = rot/orange)
-helix(96, 126, 8, BB["A"], BB["C"], S)                       # oben: A alt, C neu
-helix(96, 126, -8, BB["D"], BB["B"], S)                      # unten: D neu, B alt
+def write(out, name):
+    global blocks
+    # ---- hochkant drehen (Eltern-DNA unten, Tochterstraenge oben; reine Drehung) ----
+    YM = max(y for _, y, _ in blocks)
+    blocks = {(YM - y, x, z): n for (x, y, z), n in blocks.items()}
 
-# ---- hochkant drehen (Eltern-DNA unten, Tochterstraenge oben; reine Drehung) ----
-YM = max(y for _, y, _ in blocks)
-blocks = {(YM - y, x, z): n for (x, y, z), n in blocks.items()}
+    # ---- Skalierung (jeder Block -> SCALE^3 Bloecke) ----
+    SCALE = 2
+    blocks = {(x * SCALE + a, y * SCALE + b, z * SCALE + c): n for (x, y, z), n in blocks.items()
+              for a in range(SCALE) for b in range(SCALE) for c in range(SCALE)}
 
-# ---- Skalierung (jeder Block -> SCALE^3 Bloecke) ----
-SCALE = 2
-blocks = {(x * SCALE + a, y * SCALE + b, z * SCALE + c): n for (x, y, z), n in blocks.items()
-          for a in range(SCALE) for b in range(SCALE) for c in range(SCALE)}
+    # ---- Litematic schreiben ----
+    xs, ys, zs = zip(*blocks)
+    mn = (min(xs), min(ys), min(zs)); mx = (max(xs), max(ys), max(zs))
+    sx, sy, sz = (mx[i] - mn[i] + 1 for i in range(3))
+    pal = ["minecraft:air"] + sorted(set(blocks.values()))
+    pid = {n: i for i, n in enumerate(pal)}
+    bits = max(2, (len(pal) - 1).bit_length())
+    big = 0
+    for (x, y, z), n in blocks.items():
+        idx = (y - mn[1]) * sz * sx + (z - mn[2]) * sx + (x - mn[0])
+        big |= pid[n] << (idx * bits)
+    nlongs = -(-sx * sy * sz * bits // 64)
+    longs = [((big >> (64 * i)) & (2**64 - 1)) for i in range(nlongs)]
+    longs = [v - 2**64 if v >= 2**63 else v for v in longs]
 
-# ---- Litematic schreiben ----
-xs, ys, zs = zip(*blocks)
-mn = (min(xs), min(ys), min(zs)); mx = (max(xs), max(ys), max(zs))
-sx, sy, sz = (mx[i] - mn[i] + 1 for i in range(3))
-pal = ["minecraft:air"] + sorted(set(blocks.values()))
-pid = {n: i for i, n in enumerate(pal)}
-bits = max(2, (len(pal) - 1).bit_length())
-big = 0
-for (x, y, z), n in blocks.items():
-    idx = (y - mn[1]) * sz * sx + (z - mn[2]) * sx + (x - mn[0])
-    big |= pid[n] << (idx * bits)
-nlongs = -(-sx * sy * sz * bits // 64)
-longs = [((big >> (64 * i)) & (2**64 - 1)) for i in range(nlongs)]
-longs = [v - 2**64 if v >= 2**63 else v for v in longs]
+    def s(v): b = v.encode(); return struct.pack(">H", len(b)) + b
+    def tag(t, name, payload): return bytes([t]) + s(name) + payload
+    def comp(items): return b"".join(items) + b"\0"
+    I = lambda n, v: tag(3, n, struct.pack(">i", v))
+    L = lambda n, v: tag(4, n, struct.pack(">q", v))
+    def vec(n, a, b, c): return tag(10, n, comp([I("x", a), I("y", b), I("z", c)]))
+    def lst(n, t, payloads): return tag(9, n, bytes([t]) + struct.pack(">i", len(payloads)) + b"".join(payloads))
+    now = int(time.time() * 1000)
+    palette = [comp([tag(8, "Name", s(n))]) for n in pal]
+    region = comp([
+        vec("Position", 0, 0, 0), vec("Size", sx, sy, sz),
+        lst("BlockStatePalette", 10, palette),
+        tag(12, "BlockStates", struct.pack(">i", len(longs)) + b"".join(struct.pack(">q", v) for v in longs)),
+        lst("TileEntities", 10, []), lst("Entities", 10, []),
+        lst("PendingBlockTicks", 10, []), lst("PendingFluidTicks", 10, []),
+    ])
+    meta = comp([tag(8, "Name", s(name)), tag(8, "Author", s("mio")),
+                 tag(8, "Description", s("DNA-Replikation: Helix, Gabel, Enzyme, Tochterstraenge")),
+                 L("TimeCreated", now), L("TimeModified", now), vec("EnclosingSize", sx, sy, sz),
+                 I("RegionCount", 1), I("TotalBlocks", len(blocks)), I("TotalVolume", sx * sy * sz)])
+    root = tag(10, "", comp([I("MinecraftDataVersion", 3955), I("Version", 6),
+                             tag(10, "Metadata", meta), tag(10, "Regions", comp([tag(10, "DNA", region)]))]))
+    with gzip.open(out, "wb") as f: f.write(root)
+    print(out, "Groesse", sx, sy, sz, "Bloecke", len(blocks), "Palette", len(pal), "bits", bits)
 
-def s(v): b = v.encode(); return struct.pack(">H", len(b)) + b
-def tag(t, name, payload): return bytes([t]) + s(name) + payload
-def comp(items): return b"".join(items) + b"\0"
-I = lambda n, v: tag(3, n, struct.pack(">i", v))
-L = lambda n, v: tag(4, n, struct.pack(">q", v))
-def vec(n, a, b, c): return tag(10, n, comp([I("x", a), I("y", b), I("z", c)]))
-def lst(n, t, payloads): return tag(9, n, bytes([t]) + struct.pack(">i", len(payloads)) + b"".join(payloads))
-now = int(time.time() * 1000)
-palette = [comp([tag(8, "Name", s(n))]) for n in pal]
-region = comp([
-    vec("Position", 0, 0, 0), vec("Size", sx, sy, sz),
-    lst("BlockStatePalette", 10, palette),
-    tag(12, "BlockStates", struct.pack(">i", len(longs)) + b"".join(struct.pack(">q", v) for v in longs)),
-    lst("TileEntities", 10, []), lst("Entities", 10, []),
-    lst("PendingBlockTicks", 10, []), lst("PendingFluidTicks", 10, []),
-])
-meta = comp([tag(8, "Name", s("DNA-Replikation")), tag(8, "Author", s("mio")),
-             tag(8, "Description", s("DNA-Replikation: Helix, Gabel, Enzyme, Tochterstraenge")),
-             L("TimeCreated", now), L("TimeModified", now), vec("EnclosingSize", sx, sy, sz),
-             I("RegionCount", 1), I("TotalBlocks", len(blocks)), I("TotalVolume", sx * sy * sz)])
-root = tag(10, "", comp([I("MinecraftDataVersion", 3955), I("Version", 6),
-                         tag(10, "Metadata", meta), tag(10, "Regions", comp([tag(10, "DNA-Replikation", region)]))]))
-with gzip.open("dna_replikation_v6.litematic", "wb") as f: f.write(root)
-print("Groesse", sx, sy, sz, "Bloecke", len(blocks), "Palette", len(pal), "bits", bits)
-# Seitenansicht (Y-Schnitt z=0..1) zur Kontrolle
-if __import__("sys").argv[-1] == "view":
-    ch = {n: c for n, c in zip(pal[1:], "ABCDEFGHIJKLMNOPQRS")}
-    for y in range(mx[1], mn[1] - 1, -1):
-        print("".join(ch[blocks[(x, y, 0)].split(":")[1] and blocks[(x, y, 0)]] if (x, y, 0) in blocks else "." for x in range(mn[0], mx[0] + 1)))
+def build(parent=True, ring=False, fork=False, primase=False, primers=(), leading=False,
+          frags=(), poly=False, ligase=False, daughters=False, parent_only_daughters=False):
+    blocks.clear()
+    if parent and not parent_only_daughters:
+        helix(30, 60, 0, BB["A"], BB["B"], S)
+    if ring:
+        for x in (50, 51):
+            for y in range(-11, 12):
+                for z in range(-11, 12):
+                    if 7.5 <= math.hypot(y + .5, z + .5) <= 10: put(x, y, z, "crying_obsidian")
+    if fork:
+        for x in range(61, 96):
+            bb(x, Y(x), 0, BB["A"]); bb(x, -Y(x) - 1, 0, BB["B"])
+        for x in range(61, 64):
+            for y in (-1, 0, 1):
+                for z in (-1, 0, 1): put(x, y, z, "gold_block")
+        if leading:
+            for x in range(72, 96): bb(x, 3, 0, BB["C"])
+        for lo, hi in frags:
+            for x in range(lo, hi + 1): bb(x, -4, 0, BB["D"])
+        if ligase:
+            for x in (89, 90):
+                for dy in (0, 1):
+                    for dz in (0, 1): put(x, -4 + dy, dz, "sea_lantern")
+        for x in range(63, 96, 3):
+            k = x // 3
+            up = leading and x >= 72
+            lo_new = any(lo <= x <= hi for lo, hi in frags) or (ligase and x == 90)
+            if up: rung(x, (Y(x), 0), (3, 0), S(k))
+            else: rung(x, (Y(x), 0), (-Y(x) - 1, 0), S(k), 1, 3)
+            if lo_new: rung(x, (-3, 0), (-Y(x) - 1, 0), S(k))
+            else: rung(x, (Y(x), 0), (-Y(x) - 1, 0), S(k), 7, 9)
+        if primase:
+            for x in (64, 65):
+                for y in (-5, -4, -3):
+                    for z in (2, 3): put(x, y, z, "diamond_block")
+        for lo in primers:
+            for x in (lo, lo + 1): bb(x, -4 if lo != 72 or not leading else -4, 0, "white_concrete")
+        if poly:
+            for x in range(70, 75):
+                for y in range(5, 12):
+                    for z in (2, 3, 4): put(x, y, z, "emerald_block")
+            for x in range(73, 78):
+                for y in range(-12, -5):
+                    for z in (2, 3, 4): put(x, y, z, "emerald_block")
+    if daughters:
+        helix(96, 126, 8, BB["A"], BB["C"], S)
+        helix(96, 126, -8, BB["D"], BB["B"], S)
+
+import os, sys
+STAT = [
+ ("station_1_eltern_dna", "1 Eltern-DNA", dict()),
+ ("station_2_topoisomerase", "2 Topoisomerase", dict(ring=True)),
+ ("station_3_helikase", "3 Helikase oeffnet", dict(ring=True, fork=True)),
+ ("station_4_primase_primer", "4 Primase und Primer", dict(ring=True, fork=True, primase=True, primers=(72, 82))),
+ ("station_5_polymerase", "5 Polymerase", dict(ring=True, fork=True, primase=True, leading=True, frags=((72, 78),), primers=(72,), poly=True)),
+ ("station_6_ligase", "6 Ligase", dict(ring=True, fork=True, primase=True, leading=True, frags=((72, 78), (82, 88), (91, 95)), ligase=True, poly=True, primers=(72, 82, 91))),
+ ("station_7_ergebnis", "7 Ergebnis", dict(parent_only_daughters=True, daughters=True)),
+]
+if __name__ == "__main__":
+    os.makedirs("stationen", exist_ok=True)
+    for fn, nm, cfg in STAT:
+        build(**cfg); write(f"stationen/{fn}.litematic", nm)
+    build(ring=True, fork=True, primase=True, leading=True, frags=((72, 78), (82, 88), (91, 95)), ligase=True,
+          poly=True, primers=(72, 82, 91), daughters=True)
+    write("dna_replikation_v6.litematic", "DNA-Replikation")
