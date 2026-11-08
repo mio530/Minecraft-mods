@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Erzeugt dna_replikation_v5.litematic (Litematica, MC 1.21.x). Nur stdlib."""
+"""Erzeugt dna_replikation_v6.litematic (Litematica, MC 1.21.x). Nur stdlib."""
 import gzip, math, struct, time
 
 R = 5
@@ -80,6 +80,16 @@ for x in range(70, 75):
 for x in range(73, 78):
     for y in range(-12, -5):
         for z in (2, 3, 4): put(x, y, z, "emerald_block")
+# Topoisomerase (Ring um die Eltern-Helix), Primase, RNA-Primer (wie im Vorbild-Bild)
+for x in (50, 51):
+    for y in range(-11, 12):
+        for z in range(-11, 12):
+            if 7.5 <= math.hypot(y + .5, z + .5) <= 10: put(x, y, z, "crying_obsidian")
+for x in (64, 65):
+    for y in (-5, -4, -3):
+        for z in (2, 3): put(x, y, z, "diamond_block")
+for lo in (72, 82, 91):
+    for x in (lo, lo + 1): bb(x, -4, 0, "white_concrete")
 # 3) Tochter-Doppelhelices x 96..126 (alt = blau/cyan, neu = rot/orange)
 helix(96, 126, 8, BB["A"], BB["C"], S)                       # oben: A alt, C neu
 helix(96, 126, -8, BB["D"], BB["B"], S)                      # unten: D neu, B alt
@@ -130,7 +140,7 @@ meta = comp([tag(8, "Name", s("DNA-Replikation")), tag(8, "Author", s("mio")),
              I("RegionCount", 1), I("TotalBlocks", len(blocks)), I("TotalVolume", sx * sy * sz)])
 root = tag(10, "", comp([I("MinecraftDataVersion", 3955), I("Version", 6),
                          tag(10, "Metadata", meta), tag(10, "Regions", comp([tag(10, "DNA-Replikation", region)]))]))
-with gzip.open("dna_replikation_v5.litematic", "wb") as f: f.write(root)
+with gzip.open("dna_replikation_v6.litematic", "wb") as f: f.write(root)
 print("Groesse", sx, sy, sz, "Bloecke", len(blocks), "Palette", len(pal), "bits", bits)
 # Seitenansicht (Y-Schnitt z=0..1) zur Kontrolle
 if __import__("sys").argv[-1] == "view":
