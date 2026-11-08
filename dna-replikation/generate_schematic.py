@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Erzeugt dna_replikation_v4.litematic (Litematica, MC 1.21.x). Nur stdlib."""
+"""Erzeugt dna_replikation_v5.litematic (Litematica, MC 1.21.x). Nur stdlib."""
 import gzip, math, struct, time
 
 R = 5
@@ -46,7 +46,7 @@ def helix(x0, x1, yc, n1, n2, base_of_strand1, rungs=True):
 Y = lambda x: min(13, R + max(0, x - 60))
 
 # 1) Eltern-Doppelhelix x 0..60 (alter Strang blau/cyan)
-helix(0, 60, 0, BB["A"], BB["B"], S)
+helix(30, 60, 0, BB["A"], BB["B"], S)  # nur 1 Windung = uebersichtlicher
 # 2) Replikationsgabel + flache Zone x 61..95
 for x in range(61, 96):
     bb(x, Y(x), 0, BB["A"]); bb(x, -Y(x) - 1, 0, BB["B"])
@@ -80,12 +80,6 @@ for x in range(70, 75):
 for x in range(73, 78):
     for y in range(-12, -5):
         for z in (2, 3, 4): put(x, y, z, "emerald_block")
-# freie Nucleotide (schweben, komplementaer zu den offenen Basen)
-for sy, k in ((1, 22), (-1, 22)):
-    b = COMP[S(k)] if sy == 1 else S(k)
-    y0 = 3 if sy == 1 else -4
-    bb(66, y0, 4, BB["C"] if sy == 1 else BB["D"])
-    for i in range(3): put(66, y0 + sy * (2 + i) if sy == 1 else y0 - 1 - i, 4, BASE[b])
 # 3) Tochter-Doppelhelices x 96..126 (alt = blau/cyan, neu = rot/orange)
 helix(96, 126, 8, BB["A"], BB["C"], S)                       # oben: A alt, C neu
 helix(96, 126, -8, BB["D"], BB["B"], S)                      # unten: D neu, B alt
@@ -136,7 +130,7 @@ meta = comp([tag(8, "Name", s("DNA-Replikation")), tag(8, "Author", s("mio")),
              I("RegionCount", 1), I("TotalBlocks", len(blocks)), I("TotalVolume", sx * sy * sz)])
 root = tag(10, "", comp([I("MinecraftDataVersion", 3955), I("Version", 6),
                          tag(10, "Metadata", meta), tag(10, "Regions", comp([tag(10, "DNA-Replikation", region)]))]))
-with gzip.open("dna_replikation_v4.litematic", "wb") as f: f.write(root)
+with gzip.open("dna_replikation_v5.litematic", "wb") as f: f.write(root)
 print("Groesse", sx, sy, sz, "Bloecke", len(blocks), "Palette", len(pal), "bits", bits)
 # Seitenansicht (Y-Schnitt z=0..1) zur Kontrolle
 if __import__("sys").argv[-1] == "view":

@@ -1,10 +1,10 @@
 # DNA-Replikation – Minecraft-Video (8 Min.)
 
 ## Setup
-- Java 1.21.x, Litematica + Fabric. `dna_replikation_v4.litematic` nach `.minecraft/schematics/`.
+- Java 1.21.x, Litematica + Fabric. `dna_replikation_v5.litematic` nach `.minecraft/schematics/`.
 - Superflat-Welt, Creative. Befehle: `/time set day`, `/gamerule doDaylightCycle false`, `/gamerule doWeatherCycle false`.
 - Litematica: `M` → *Load Schematics* → laden → *Place* auf freier Fläche. Dann im Schematic-Menü *Paste Schematic in World* (Creative nötig) oder Blöcke abbauen/nachbauen.
-- Größe: 58 breit × 254 hoch × 24 tief (hochkant, Eltern-DNA unten).
+- Größe: ca. 58 breit × 194 hoch × 24 tief (hochkant, Eltern-DNA unten).
 - Aufnahme: OBS, 1080p, 30 fps, Fenster-/Spielaufnahme. HUD aus (`F1`). Flug: Creative-Flug (2× Leertaste), langsam, `Ctrl` weg.
 - Text separat als Voice-over einsprechen (Audio-Spur), dann schneiden.
 
