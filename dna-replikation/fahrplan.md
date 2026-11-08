@@ -1,7 +1,7 @@
 # DNA-Replikation – Minecraft-Video (8 Min.)
 
 ## Setup
-- Java 1.21.x, Litematica + Fabric. `dna_replikation.litematic` nach `.minecraft/schematics/`.
+- Java 1.21.x, Litematica + Fabric. `dna_replikation_v3.litematic` nach `.minecraft/schematics/`.
 - Superflat-Welt, Creative. Befehle: `/time set day`, `/gamerule doDaylightCycle false`, `/gamerule doWeatherCycle false`.
 - Litematica: `M` → *Load Schematics* → laden → *Place* auf freier Fläche. Dann im Schematic-Menü *Paste Schematic in World* (Creative nötig) oder Blöcke abbauen/nachbauen.
 - Größe: 127 × 29 × 12 Blöcke. Start links (Eltern-DNA), Ende rechts (Tochter-Doppelstränge).

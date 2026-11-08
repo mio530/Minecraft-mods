@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Erzeugt dna_replikation.litematic (Litematica, MC 1.21.x). Nur stdlib."""
+"""Erzeugt dna_replikation_v3.litematic (Litematica, MC 1.21.x). Nur stdlib."""
 import gzip, math, struct, time
 
 R = 5
@@ -131,7 +131,7 @@ meta = comp([tag(8, "Name", s("DNA-Replikation")), tag(8, "Author", s("mio")),
              I("RegionCount", 1), I("TotalBlocks", len(blocks)), I("TotalVolume", sx * sy * sz)])
 root = tag(10, "", comp([I("MinecraftDataVersion", 3955), I("Version", 6),
                          tag(10, "Metadata", meta), tag(10, "Regions", comp([tag(10, "DNA-Replikation", region)]))]))
-with gzip.open("dna_replikation.litematic", "wb") as f: f.write(root)
+with gzip.open("dna_replikation_v3.litematic", "wb") as f: f.write(root)
 print("Groesse", sx, sy, sz, "Bloecke", len(blocks), "Palette", len(pal), "bits", bits)
 # Seitenansicht (Y-Schnitt z=0..1) zur Kontrolle
 if __import__("sys").argv[-1] == "view":
