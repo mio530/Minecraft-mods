@@ -90,6 +90,10 @@ for sy, k in ((1, 22), (-1, 22)):
 helix(96, 126, 8, BB["A"], BB["C"], S)                       # oben: A alt, C neu
 helix(96, 126, -8, BB["D"], BB["B"], S)                      # unten: D neu, B alt
 
+# ---- hochkant drehen (Eltern-DNA oben, Tochterstraenge unten; reine Drehung) ----
+XM = max(x for x, _, _ in blocks)
+blocks = {(y, XM - x, z): n for (x, y, z), n in blocks.items()}
+
 # ---- Litematic schreiben ----
 xs, ys, zs = zip(*blocks)
 mn = (min(xs), min(ys), min(zs)); mx = (max(xs), max(ys), max(zs))
