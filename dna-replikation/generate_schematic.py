@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Erzeugt dna_replikation_v3.litematic (Litematica, MC 1.21.x). Nur stdlib."""
+"""Erzeugt dna_replikation_v4.litematic (Litematica, MC 1.21.x). Nur stdlib."""
 import gzip, math, struct, time
 
 R = 5
@@ -94,6 +94,11 @@ helix(96, 126, -8, BB["D"], BB["B"], S)                      # unten: D neu, B a
 YM = max(y for _, y, _ in blocks)
 blocks = {(YM - y, x, z): n for (x, y, z), n in blocks.items()}
 
+# ---- Skalierung (jeder Block -> SCALE^3 Bloecke) ----
+SCALE = 2
+blocks = {(x * SCALE + a, y * SCALE + b, z * SCALE + c): n for (x, y, z), n in blocks.items()
+          for a in range(SCALE) for b in range(SCALE) for c in range(SCALE)}
+
 # ---- Litematic schreiben ----
 xs, ys, zs = zip(*blocks)
 mn = (min(xs), min(ys), min(zs)); mx = (max(xs), max(ys), max(zs))
@@ -131,7 +136,7 @@ meta = comp([tag(8, "Name", s("DNA-Replikation")), tag(8, "Author", s("mio")),
              I("RegionCount", 1), I("TotalBlocks", len(blocks)), I("TotalVolume", sx * sy * sz)])
 root = tag(10, "", comp([I("MinecraftDataVersion", 3955), I("Version", 6),
                          tag(10, "Metadata", meta), tag(10, "Regions", comp([tag(10, "DNA-Replikation", region)]))]))
-with gzip.open("dna_replikation_v3.litematic", "wb") as f: f.write(root)
+with gzip.open("dna_replikation_v4.litematic", "wb") as f: f.write(root)
 print("Groesse", sx, sy, sz, "Bloecke", len(blocks), "Palette", len(pal), "bits", bits)
 # Seitenansicht (Y-Schnitt z=0..1) zur Kontrolle
 if __import__("sys").argv[-1] == "view":
