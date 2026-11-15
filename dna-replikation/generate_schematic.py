@@ -249,7 +249,7 @@ def preview(path, blocks):
 
 # ---------------- Datapack-Export (/function; baut alle Stationen mit Abstand) ----------------
 # Weltkoordinaten: erste Station bei ORIGIN, weitere entlang +X mit GAP Abstand (Boden bei y=BASE_Y).
-BASE_Y, GAP, ORIGIN_X, ORIGIN_Z = -60, 60, 0, 0
+BASE_Y, GAP, ORIGIN_X, ORIGIN_Z = -60, 100, 0, 0
 
 def _norm(blocks):
     xs, ys, zs = zip(*blocks)
@@ -257,8 +257,9 @@ def _norm(blocks):
     nb = {(x - mn[0], y - mn[1], z - mn[2]): n for (x, y, z), n in blocks.items()}
     return nb, (max(xs) - mn[0] + 1, max(ys) - mn[1] + 1, max(zs) - mn[2] + 1)
 
-def _fills(blocks, ox, oy, oz):
-    """Blöcke zu /fill-Reihen entlang X zusammenfassen (gleicher Block, lückenlos)."""
+def _fills(blocks):
+    """Blöcke zu /fill-Reihen entlang X zusammenfassen, RELATIV (~) zum Aufrufpunkt.
+    Station-lokale Koordinaten; platziert wird per `execute positioned <x> <y> <z> run function dna:..`."""
     rows = {}
     for (x, y, z), n in blocks.items(): rows.setdefault((y, z), []).append((x, n))
     cmds = []
@@ -268,11 +269,11 @@ def _fills(blocks, ox, oy, oz):
         while i < len(lst):
             j = i
             while j + 1 < len(lst) and lst[j + 1][0] == lst[j][0] + 1 and lst[j + 1][1] == lst[i][1]: j += 1
-            n = lst[i][1]; wy, wz = oy + y, oz + z
+            n = lst[i][1]
             if lst[i][0] == lst[j][0]:
-                cmds.append(f"setblock {ox+lst[i][0]} {wy} {wz} {n}")
+                cmds.append(f"setblock ~{lst[i][0]} ~{y} ~{z} {n}")
             else:
-                cmds.append(f"fill {ox+lst[i][0]} {wy} {wz} {ox+lst[j][0]} {wy} {wz} {n}")
+                cmds.append(f"fill ~{lst[i][0]} ~{y} ~{z} ~{lst[j][0]} ~{y} ~{z} {n}")
             i = j + 1
     return cmds
 
@@ -283,51 +284,45 @@ def datapack():
     if os.path.isdir(root): shutil.rmtree(root)
     os.makedirs(fdir)
     with open(os.path.join(root, "pack.mcmeta"), "w", encoding="utf-8") as f:
-        json.dump({"pack": {"description": "DNA-Replikation: alle Stationen bauen",
+        json.dump({"pack": {"description": "DNA-Replikation: Stationen (relativ platzierbar)",
                             "pack_format": 81, "supported_formats": [48, 81]}}, f, indent=2)
-    build, clear, labels, ox, total = [], [], [], ORIGIN_X, 0
+    sizes, total = {}, 0
     for fn, name, fdef in STATIONEN:
         B.clear(); fdef(); nb, (sx, sy, sz) = _norm(final_blocks())
-        cmds = _fills(nb, ox, BASE_Y, ORIGIN_Z)
+        cmds = _fills(nb)
         total += len(cmds)
         with open(os.path.join(fdir, fn + ".mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(cmds) + "\n")
-        build.append(fn)
-        clear.append(f"fill {ox} {BASE_Y} {ORIGIN_Z} {ox+sx-1} {BASE_Y+sy-1} {ORIGIN_Z+sz-1} minecraft:air")
-        lx, ly, lz = ox + sx // 2, BASE_Y + sy + 3, ORIGIN_Z + sz + 1   # mittig, knapp über + vor der Station
-        txt = name.replace('"', '\\"')
-        labels.append('summon text_display %d %d %d {Tags:["dna_label"],text:\'{"text":"%s",'
-                       '"color":"white","bold":true}\',billboard:"center",see_through:1b,background:0,'
-                       'transformation:{scale:[3f,3f,3f],left_rotation:[0f,0f,0f,1f],'
-                       'right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f]}}' % (lx, ly, lz, txt))
-        print(f"  dna:{fn}  @x={ox}  {sx}x{sy}x{sz}  {len(cmds)} Befehle  Label@({lx},{ly},{lz})")
+        sizes[fn] = (sx, sy, sz)
+        print(f"  dna:{fn}  {sx}x{sy}x{sz}  {len(cmds)} Befehle (relativ)")
+    # build_row: platziert alle Stationen ab der AUFRUF-Position mit Abstand GAP, alle in einem Tick.
+    # Bei niedrigem maxCommandChainLength stattdessen pro Station einzeln:
+    #   execute positioned <x> <y> <z> run function dna:0N
+    ox, placing = 0, []
+    for fn, name, fdef in STATIONEN:
+        sx, sy, sz = sizes[fn]
+        placing.append(f"execute positioned ~{ox} ~ ~ run function dna:{fn}")
         ox += sx + GAP
-    with open(os.path.join(fdir, "labels.mcfunction"), "w", encoding="utf-8") as f:
-        f.write("kill @e[tag=dna_label]\n" + "\n".join(labels) + "\n")
-    with open(os.path.join(fdir, "labels_clear.mcfunction"), "w", encoding="utf-8") as f:
-        f.write("kill @e[tag=dna_label]\n")
-    if "labels" in sys.argv:   # Summon-Zeilen einzeln ausgeben (fuer Konsole)
-        print("\n=== LABELS ===")
-        for l in labels: print(l)
-    with open(os.path.join(fdir, "build_all.mcfunction"), "w", encoding="utf-8") as f:
-        # Jede Station in einen eigenen Tick (schedule), sonst reisst maxCommandChainLength alles > ~1 Tick ab.
-        ls = ["say [DNA] Baue alle Stationen (eine pro Tick) ..."]
-        for i, fn in enumerate(build):
-            ls.append(f"function dna:{fn}" if i == 0 else f"schedule function dna:{fn} {i}t")
-        ls.append(f"schedule function dna:_done {len(build)}t")
-        f.write("\n".join(ls) + "\n")
-    with open(os.path.join(fdir, "_done.mcfunction"), "w", encoding="utf-8") as f:
-        f.write("say [DNA] Fertig.\n")
-    with open(os.path.join(fdir, "clear_all.mcfunction"), "w", encoding="utf-8") as f:
-        f.write("\n".join(clear) + "\n")
-    zp = "dna_datapack.zip"
+    with open(os.path.join(fdir, "build_row.mcfunction"), "w", encoding="utf-8") as f:
+        f.write("\n".join(placing) + "\n")
+    # wipe: raeumt eine grosszuegige Flaeche (alte wie neue Builds) in <32768er Scheiben.
+    X0, X1, Y1, Z0, Z1, step = -2, 1240, BASE_Y + 150, -2, 46, 400
+    wipe = []
+    for yy in range(BASE_Y, Y1 + 1):
+        x = X0
+        while x <= X1:
+            x2 = min(x + step - 1, X1)
+            wipe.append(f"fill {x} {yy} {Z0} {x2} {yy} {Z1} minecraft:air")
+            x = x2 + 1
+    with open(os.path.join(fdir, "wipe.mcfunction"), "w", encoding="utf-8") as f:
+        f.write("\n".join(wipe) + "\n")
+    zp = "dna_build.zip"
     with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
         for dp, _, files in os.walk(root):
             for fl in files:
                 full = os.path.join(dp, fl)
                 z.write(full, os.path.relpath(full, root))
-    print(f"{zp}: Datapack geschrieben, {total} Befehle gesamt (build_all).")
-    print(f"Gesamtbreite in X: {ox - GAP} Blöcke (ORIGIN_X={ORIGIN_X}, GAP={GAP}, BASE_Y={BASE_Y})")
+    print(f"{zp}: Datapack (relativ) geschrieben, {total} Befehle gesamt. wipe={len(wipe)} fills.")
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))

@@ -1,6 +1,6 @@
 {
   "pack": {
-    "description": "DNA-Replikation: alle Stationen bauen",
+    "description": "DNA-Replikation: Stationen (relativ platzierbar)",
     "pack_format": 81,
     "supported_formats": [
       48,
