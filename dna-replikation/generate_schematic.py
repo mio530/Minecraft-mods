@@ -285,7 +285,7 @@ def datapack():
     with open(os.path.join(root, "pack.mcmeta"), "w", encoding="utf-8") as f:
         json.dump({"pack": {"description": "DNA-Replikation: alle Stationen bauen",
                             "pack_format": 81, "supported_formats": [48, 81]}}, f, indent=2)
-    build, clear, ox, total = [], [], ORIGIN_X, 0
+    build, clear, labels, ox, total = [], [], [], ORIGIN_X, 0
     for fn, name, fdef in STATIONEN:
         B.clear(); fdef(); nb, (sx, sy, sz) = _norm(final_blocks())
         cmds = _fills(nb, ox, BASE_Y, ORIGIN_Z)
@@ -294,8 +294,21 @@ def datapack():
             f.write("\n".join(cmds) + "\n")
         build.append(fn)
         clear.append(f"fill {ox} {BASE_Y} {ORIGIN_Z} {ox+sx-1} {BASE_Y+sy-1} {ORIGIN_Z+sz-1} minecraft:air")
-        print(f"  dna:{fn}  @x={ox}  {sx}x{sy}x{sz}  {len(cmds)} Befehle")
+        lx, ly, lz = ox + sx // 2, BASE_Y + sy + 3, ORIGIN_Z + sz + 1   # mittig, knapp über + vor der Station
+        txt = name.replace('"', '\\"')
+        labels.append('summon text_display %d %d %d {Tags:["dna_label"],text:\'{"text":"%s",'
+                       '"color":"white","bold":true}\',billboard:"center",see_through:1b,background:0,'
+                       'transformation:{scale:[3f,3f,3f],left_rotation:[0f,0f,0f,1f],'
+                       'right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f]}}' % (lx, ly, lz, txt))
+        print(f"  dna:{fn}  @x={ox}  {sx}x{sy}x{sz}  {len(cmds)} Befehle  Label@({lx},{ly},{lz})")
         ox += sx + GAP
+    with open(os.path.join(fdir, "labels.mcfunction"), "w", encoding="utf-8") as f:
+        f.write("kill @e[tag=dna_label]\n" + "\n".join(labels) + "\n")
+    with open(os.path.join(fdir, "labels_clear.mcfunction"), "w", encoding="utf-8") as f:
+        f.write("kill @e[tag=dna_label]\n")
+    if "labels" in sys.argv:   # Summon-Zeilen einzeln ausgeben (fuer Konsole)
+        print("\n=== LABELS ===")
+        for l in labels: print(l)
     with open(os.path.join(fdir, "build_all.mcfunction"), "w", encoding="utf-8") as f:
         # Jede Station in einen eigenen Tick (schedule), sonst reisst maxCommandChainLength alles > ~1 Tick ab.
         ls = ["say [DNA] Baue alle Stationen (eine pro Tick) ..."]
