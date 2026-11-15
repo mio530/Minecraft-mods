@@ -18,4 +18,21 @@
 **Standbilder (📷)** nutzt du in DaVinci für ruhige Erklär-Momente (Legende, Basenpaar, Endergebnis) – stehen länger, kein Wackeln.
 **Bewegt (🎥)** ist der Normalfall: langsame, gleichmäßige Flüge.
 
-**Exakte `/tp`-Punkte:** Deine Stationen sind CW_90 gedreht – wenn du mir **einen** Eckblock einer Station in Weltkoordinaten (F3) nennst, rechne ich dir pro Station den genauen `/tp x y z yaw pitch` aus.
+## Kamera-Punkte (aus deinen Placements gerechnet)
+
+Von der +Z-Seite, Blick yaw 180, mittlere Höhe. Distanz = Startwert, per Flug justieren.
+
+| Station | `/tp @s x y z yaw pitch` |
+|---|---|
+| Totale (Intro/Outro) | `/tp @s -327 14 710 180 0` |
+| 00 Nukleotide | `/tp @s -46 -33 300 180 0` |
+| 01 Eltern-DNA | `/tp @s -97 -27 336 180 0` |
+| 02 Topoisomerase | `/tp @s -166 -27 350 180 0` |
+| 03 Helikase + Gabel | `/tp @s -249 14 430 180 0` |
+| 04 Primase + Primer | `/tp @s -340 14 430 180 0` |
+| 05 Polymerase | `/tp @s -425 14 430 180 0` |
+| 06 Okazaki + Ligase | `/tp @s -525 14 429 180 0` |
+| 07 Ergebnis | `/tp @s -609 -27 376 180 0` |
+
+- 00 (Rotation NONE) zeigt von +Z die breite Seite. CW_90-Stationen: breite Helix-Fläche von der −X-Seite (gleiche Mitte, `yaw -90`).
+- Hochschwenk (03–06): am Punkt starten, dann hochfliegen.
