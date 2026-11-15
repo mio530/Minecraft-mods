@@ -292,12 +292,19 @@ def datapack():
         total += len(cmds)
         with open(os.path.join(fdir, fn + ".mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(cmds) + "\n")
-        build.append(f"function dna:{fn}")
+        build.append(fn)
         clear.append(f"fill {ox} {BASE_Y} {ORIGIN_Z} {ox+sx-1} {BASE_Y+sy-1} {ORIGIN_Z+sz-1} minecraft:air")
         print(f"  dna:{fn}  @x={ox}  {sx}x{sy}x{sz}  {len(cmds)} Befehle")
         ox += sx + GAP
     with open(os.path.join(fdir, "build_all.mcfunction"), "w", encoding="utf-8") as f:
-        f.write("say [DNA] Baue alle Stationen ...\n" + "\n".join(build) + "\nsay [DNA] Fertig.\n")
+        # Jede Station in einen eigenen Tick (schedule), sonst reisst maxCommandChainLength alles > ~1 Tick ab.
+        ls = ["say [DNA] Baue alle Stationen (eine pro Tick) ..."]
+        for i, fn in enumerate(build):
+            ls.append(f"function dna:{fn}" if i == 0 else f"schedule function dna:{fn} {i}t")
+        ls.append(f"schedule function dna:_done {len(build)}t")
+        f.write("\n".join(ls) + "\n")
+    with open(os.path.join(fdir, "_done.mcfunction"), "w", encoding="utf-8") as f:
+        f.write("say [DNA] Fertig.\n")
     with open(os.path.join(fdir, "clear_all.mcfunction"), "w", encoding="utf-8") as f:
         f.write("\n".join(clear) + "\n")
     zp = "dna_datapack.zip"
