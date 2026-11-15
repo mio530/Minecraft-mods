@@ -1,0 +1,71 @@
+1
+00:00:00,500 --> 00:00:05,000
+DNA-Replikation
+
+2
+00:00:35,500 --> 00:00:45,000
+Nukleotid = Phosphat + Zucker + Base
+
+3
+00:00:55,000 --> 00:01:08,000
+Purine: Adenin, Guanin · Pyrimidine: Thymin, Cytosin
+
+4
+00:01:12,000 --> 00:01:20,000
+RNA: Ribose + Uracil (statt Thymin)
+
+5
+00:01:35,000 --> 00:01:50,000
+A–T: 2 Wasserstoffbrücken · G–C: 3 Wasserstoffbrücken
+
+6
+00:01:55,000 --> 00:02:12,000
+Antiparallel: 5' → 3' (Glowstone = 5', Froschlicht = 3')
+
+7
+00:02:35,000 --> 00:02:55,000
+Semikonservativ: je 1 alter + 1 neuer Strang
+
+8
+00:03:05,000 --> 00:03:30,000
+Topoisomerase: entspannt die DNA vor der Gabel
+
+9
+00:03:32,000 --> 00:03:50,000
+Helikase: spaltet Wasserstoffbrücken
+
+10
+00:03:50,000 --> 00:04:05,000
+Replikationsgabel
+
+11
+00:04:30,000 --> 00:05:05,000
+Primase setzt RNA-Primer (Startstück)
+
+12
+00:05:15,000 --> 00:05:35,000
+DNA-Polymerase: baut nur 5' → 3'
+
+13
+00:05:40,000 --> 00:05:55,000
+Leitstrang: kontinuierlich
+
+14
+00:06:15,000 --> 00:06:40,000
+Folgestrang: Okazaki-Fragmente
+
+15
+00:06:45,000 --> 00:07:00,000
+Ligase verbindet die Fragmente
+
+16
+00:07:10,000 --> 00:07:25,000
+2 identische DNA-Moleküle (semikonservativ)
+
+17
+00:07:35,000 --> 00:07:48,000
+Fehlerrate ≈ 1 : 1.000.000.000
+
+18
+00:07:48,000 --> 00:07:58,000
+Entspiralisieren → Öffnen → Primer → Synthese → Ligation
