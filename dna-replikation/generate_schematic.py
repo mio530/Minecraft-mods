@@ -283,8 +283,8 @@ def datapack():
     if os.path.isdir(root): shutil.rmtree(root)
     os.makedirs(fdir)
     with open(os.path.join(root, "pack.mcmeta"), "w", encoding="utf-8") as f:
-        json.dump({"pack": {"pack_format": 48, "description": "DNA-Replikation: alle Stationen bauen",
-                            "supported_formats": {"min_inclusive": 4, "max_inclusive": 9999}}}, f, indent=2)
+        json.dump({"pack": {"description": "DNA-Replikation: alle Stationen bauen",
+                            "pack_format": 81, "min_format": 48, "max_format": 999}}, f, indent=2)
     build, clear, ox, total = [], [], ORIGIN_X, 0
     for fn, name, fdef in STATIONEN:
         B.clear(); fdef(); nb, (sx, sy, sz) = _norm(final_blocks())
