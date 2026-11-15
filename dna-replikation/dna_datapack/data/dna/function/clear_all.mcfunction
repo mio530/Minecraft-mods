@@ -1,8 +1,8 @@
 fill 0 -60 0 11 -7 3 minecraft:air
-fill 22 -60 0 49 5 27 minecraft:air
-fill 60 -60 0 101 5 43 minecraft:air
-fill 112 -60 0 181 87 43 minecraft:air
-fill 192 -60 0 261 87 43 minecraft:air
-fill 272 -60 0 341 87 43 minecraft:air
-fill 352 -60 0 421 87 43 minecraft:air
-fill 432 -60 0 501 5 27 minecraft:air
+fill 72 -60 0 99 5 27 minecraft:air
+fill 160 -60 0 201 5 43 minecraft:air
+fill 262 -60 0 331 87 43 minecraft:air
+fill 392 -60 0 461 87 43 minecraft:air
+fill 522 -60 0 591 87 43 minecraft:air
+fill 652 -60 0 721 87 43 minecraft:air
+fill 782 -60 0 851 5 27 minecraft:air

@@ -249,7 +249,7 @@ def preview(path, blocks):
 
 # ---------------- Datapack-Export (/function; baut alle Stationen mit Abstand) ----------------
 # Weltkoordinaten: erste Station bei ORIGIN, weitere entlang +X mit GAP Abstand (Boden bei y=BASE_Y).
-BASE_Y, GAP, ORIGIN_X, ORIGIN_Z = -60, 10, 0, 0
+BASE_Y, GAP, ORIGIN_X, ORIGIN_Z = -60, 60, 0, 0
 
 def _norm(blocks):
     xs, ys, zs = zip(*blocks)
