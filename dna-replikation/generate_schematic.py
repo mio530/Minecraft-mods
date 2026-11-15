@@ -247,8 +247,72 @@ def preview(path, blocks):
             for j in range(px): im.putpixel(((x - x0) * px + i, (y1 - y) * px + j), c)
     im.save(path)
 
+# ---------------- Datapack-Export (/function; baut alle Stationen mit Abstand) ----------------
+# Weltkoordinaten: erste Station bei ORIGIN, weitere entlang +X mit GAP Abstand (Boden bei y=BASE_Y).
+BASE_Y, GAP, ORIGIN_X, ORIGIN_Z = -60, 10, 0, 0
+
+def _norm(blocks):
+    xs, ys, zs = zip(*blocks)
+    mn = (min(xs), min(ys), min(zs))
+    nb = {(x - mn[0], y - mn[1], z - mn[2]): n for (x, y, z), n in blocks.items()}
+    return nb, (max(xs) - mn[0] + 1, max(ys) - mn[1] + 1, max(zs) - mn[2] + 1)
+
+def _fills(blocks, ox, oy, oz):
+    """Blöcke zu /fill-Reihen entlang X zusammenfassen (gleicher Block, lückenlos)."""
+    rows = {}
+    for (x, y, z), n in blocks.items(): rows.setdefault((y, z), []).append((x, n))
+    cmds = []
+    for (y, z), lst in sorted(rows.items()):
+        lst.sort()
+        i = 0
+        while i < len(lst):
+            j = i
+            while j + 1 < len(lst) and lst[j + 1][0] == lst[j][0] + 1 and lst[j + 1][1] == lst[i][1]: j += 1
+            n = lst[i][1]; wy, wz = oy + y, oz + z
+            if lst[i][0] == lst[j][0]:
+                cmds.append(f"setblock {ox+lst[i][0]} {wy} {wz} {n}")
+            else:
+                cmds.append(f"fill {ox+lst[i][0]} {wy} {wz} {ox+lst[j][0]} {wy} {wz} {n}")
+            i = j + 1
+    return cmds
+
+def datapack():
+    import shutil, zipfile, json
+    root = "dna_datapack"
+    fdir = os.path.join(root, "data", "dna", "function")
+    if os.path.isdir(root): shutil.rmtree(root)
+    os.makedirs(fdir)
+    with open(os.path.join(root, "pack.mcmeta"), "w", encoding="utf-8") as f:
+        json.dump({"pack": {"pack_format": 48, "description": "DNA-Replikation: alle Stationen bauen",
+                            "supported_formats": {"min_inclusive": 4, "max_inclusive": 9999}}}, f, indent=2)
+    build, clear, ox, total = [], [], ORIGIN_X, 0
+    for fn, name, fdef in STATIONEN:
+        B.clear(); fdef(); nb, (sx, sy, sz) = _norm(final_blocks())
+        cmds = _fills(nb, ox, BASE_Y, ORIGIN_Z)
+        total += len(cmds)
+        with open(os.path.join(fdir, fn + ".mcfunction"), "w", encoding="utf-8") as f:
+            f.write("\n".join(cmds) + "\n")
+        build.append(f"function dna:{fn}")
+        clear.append(f"fill {ox} {BASE_Y} {ORIGIN_Z} {ox+sx-1} {BASE_Y+sy-1} {ORIGIN_Z+sz-1} minecraft:air")
+        print(f"  dna:{fn}  @x={ox}  {sx}x{sy}x{sz}  {len(cmds)} Befehle")
+        ox += sx + GAP
+    with open(os.path.join(fdir, "build_all.mcfunction"), "w", encoding="utf-8") as f:
+        f.write("say [DNA] Baue alle Stationen ...\n" + "\n".join(build) + "\nsay [DNA] Fertig.\n")
+    with open(os.path.join(fdir, "clear_all.mcfunction"), "w", encoding="utf-8") as f:
+        f.write("\n".join(clear) + "\n")
+    zp = "dna_datapack.zip"
+    with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
+        for dp, _, files in os.walk(root):
+            for fl in files:
+                full = os.path.join(dp, fl)
+                z.write(full, os.path.relpath(full, root))
+    print(f"{zp}: Datapack geschrieben, {total} Befehle gesamt (build_all).")
+    print(f"Gesamtbreite in X: {ox - GAP} Blöcke (ORIGIN_X={ORIGIN_X}, GAP={GAP}, BASE_Y={BASE_Y})")
+
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    if "datapack" in sys.argv:
+        datapack(); sys.exit(0)
     os.makedirs("stationen", exist_ok=True)
     pv = "preview" in sys.argv
     if pv: os.makedirs("vorschau", exist_ok=True)
