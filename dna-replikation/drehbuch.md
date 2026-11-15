@@ -9,7 +9,7 @@
 ## Setup Minecraft
 - Fabric 1.21.x + Litematica, Superflat, Creative
 - `/time set noon`, `/gamerule doDaylightCycle false`, `/gamerule doWeatherCycle false`
-- Litematica: `M` → *Load Schematics* → *Paste* (Creative). Pro Station: platzieren, filmen, löschen (`M` → *Loaded Schematics* → entfernen + Blöcke weg mit `//undo` bzw. neue Fläche nutzen)
+- Litematica: `M` → *Load Schematics* → *Paste* (Creative). Jede Station an eigener Stelle einfügen (nichts löschen nötig)
 - Tipp: alle 8 Stationen nebeneinander auf Abstand 100 Blöcke einfügen, dann ohne Umbau filmen
 - Aufnahme: OBS 1080p/30 fps, `F1` (HUD aus), FOV 70, langsam fliegen. Vorderseite = Seite mit den Enzymen
 - Jede Einstellung 2× aufnehmen, 3 s Ruhe am Anfang/Ende (Schnittreserve)
