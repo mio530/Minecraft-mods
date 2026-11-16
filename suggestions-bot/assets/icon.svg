@@ -1,53 +1,86 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#26282d"/>
-      <stop offset="1" stop-color="#17181b"/>
+      <stop offset="0" stop-color="#1d1535"/>
+      <stop offset="1" stop-color="#110b21"/>
     </linearGradient>
-    <linearGradient id="bubble" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#43c46b"/>
-      <stop offset="1" stop-color="#2e9850"/>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a1f45"/>
+      <stop offset="1" stop-color="#1a1230"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.6">
-      <stop offset="0" stop-color="#3ba55d" stop-opacity="0.45"/>
-      <stop offset="1" stop-color="#3ba55d" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.35"/>
-    </filter>
   </defs>
 
-  <!-- background -->
-  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
-  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#glow)"/>
-  <rect x="3" y="3" width="506" height="506" rx="110" fill="none" stroke="#3ba55d" stroke-opacity="0.25" stroke-width="3"/>
+  <!-- frame + background -->
+  <rect x="0" y="0" width="512" height="512" rx="40" fill="#0a0813"/>
+  <rect x="16" y="16" width="480" height="480" rx="28" fill="url(#bg)"/>
 
-  <!-- suggestion speech bubble -->
-  <g filter="url(#soft)">
-    <path d="M150 120 h212 a40 40 0 0 1 40 40 v150 a40 40 0 0 1 -40 40 h-150 l-62 54 v-54 h0 a40 40 0 0 1 -40 -40 v-150 a40 40 0 0 1 40 -40 z"
-          fill="url(#bubble)"/>
+  <!-- pixel stars -->
+  <g fill="#ffffff">
+    <rect x="70" y="70" width="4" height="4" opacity="0.8"/>
+    <rect x="150" y="48" width="3" height="3" opacity="0.5"/>
+    <rect x="235" y="60" width="4" height="4" opacity="0.7"/>
+    <rect x="330" y="52" width="3" height="3" opacity="0.5"/>
+    <rect x="410" y="78" width="4" height="4" opacity="0.8"/>
+    <rect x="450" y="150" width="3" height="3" opacity="0.5"/>
+    <rect x="60" y="150" width="3" height="3" opacity="0.6"/>
+    <rect x="110" y="120" width="2" height="2" opacity="0.5"/>
+    <rect x="390" y="130" width="2" height="2" opacity="0.5"/>
+    <rect x="430" y="300" width="3" height="3" opacity="0.5"/>
+    <rect x="78" y="300" width="3" height="3" opacity="0.5"/>
+    <rect x="250" y="40" width="2" height="2" opacity="0.4"/>
+    <rect x="300" y="100" width="2" height="2" opacity="0.4"/>
+    <rect x="180" y="95" width="2" height="2" opacity="0.4"/>
   </g>
 
-  <!-- isometric Minecraft cube inside the bubble -->
-  <g transform="translate(256 205)">
-    <!-- top face -->
-    <polygon points="0,-78 78,-39 0,0 -78,-39" fill="#eafff0"/>
-    <!-- left face -->
-    <polygon points="-78,-39 0,0 0,88 -78,49" fill="#9be6b4"/>
-    <!-- right face -->
-    <polygon points="78,-39 0,0 0,88 78,49" fill="#c4f2d4"/>
-    <!-- pixel grid hints (top) -->
-    <polyline points="-39,-58 39,-19" fill="none" stroke="#bfe9cc" stroke-width="3" stroke-opacity="0.55"/>
-    <polyline points="39,-58 -39,-19" fill="none" stroke="#bfe9cc" stroke-width="3" stroke-opacity="0.55"/>
-    <!-- edge accents -->
-    <polyline points="-78,-39 0,0 78,-39" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3"/>
-    <polyline points="0,0 0,88" fill="none" stroke="#2e9850" stroke-opacity="0.5" stroke-width="3"/>
+  <!-- ===== card fan (pivot ~256,520) ===== -->
+  <!-- left green -->
+  <g transform="rotate(-28 256 540)" style="filter:drop-shadow(0 0 5px #3ddc84)">
+    <rect x="208" y="184" width="96" height="256" rx="16" fill="url(#card)" stroke="#3ddc84" stroke-width="4"/>
+    <polygon points="256,232 284,258 256,300 228,258" fill="#3ddc84"/>
+  </g>
+  <!-- orange -->
+  <g transform="rotate(-14 256 540)" style="filter:drop-shadow(0 0 5px #ff8a3d)">
+    <rect x="208" y="184" width="96" height="256" rx="16" fill="url(#card)" stroke="#ff8a3d" stroke-width="4"/>
+    <path d="M256 222 c16 18 24 30 24 46 a24 24 0 0 1 -48 0 c0 -10 6 -18 12 -24 c2 8 8 10 8 10 c-4 -14 4 -26 4 -32 z" fill="#ff8a3d"/>
+  </g>
+  <!-- right blue -->
+  <g transform="rotate(28 256 540)" style="filter:drop-shadow(0 0 5px #3db6ff)">
+    <rect x="208" y="184" width="96" height="256" rx="16" fill="url(#card)" stroke="#3db6ff" stroke-width="4"/>
+    <rect x="246" y="232" width="20" height="60" rx="6" transform="rotate(32 256 262)" fill="#3db6ff"/>
+  </g>
+  <!-- right pink -->
+  <g transform="rotate(14 256 540)" style="filter:drop-shadow(0 0 5px #ff4d6d)">
+    <rect x="208" y="184" width="96" height="256" rx="16" fill="url(#card)" stroke="#ff4d6d" stroke-width="4"/>
+    <path d="M256 300 c-26 -18 -34 -34 -34 -48 a18 18 0 0 1 34 -8 a18 18 0 0 1 34 8 c0 14 -8 30 -34 48 z" fill="#ff4d6d"/>
+  </g>
+  <!-- center yellow (highlighted, suggestion card) -->
+  <g transform="translate(0 -14)" style="filter:drop-shadow(0 0 9px #ffd23d)">
+    <rect x="206" y="172" width="100" height="262" rx="18" fill="url(#card)" stroke="#ffd23d" stroke-width="5"/>
+    <!-- suggestion bubble + upvote -->
+    <path d="M222 214 h68 a14 14 0 0 1 14 14 v40 a14 14 0 0 1 -14 14 h-30 l-20 18 v-18 h-18 a14 14 0 0 1 -14 -14 v-40 a14 14 0 0 1 14 -14 z" fill="#ffd23d"/>
+    <path d="M256 228 l20 22 h-12 v16 h-16 v-16 h-12 z" fill="#1a1230"/>
   </g>
 
-  <!-- upvote badge (bottom-right) -->
-  <g transform="translate(372 372)">
-    <circle r="66" fill="#17181b"/>
-    <circle r="66" fill="none" stroke="#3ba55d" stroke-width="5"/>
-    <path d="M0 -30 L30 8 H12 V34 H-12 V8 H-30 Z" fill="#43c46b"/>
+  <!-- ===== wordmark ===== -->
+  <text x="256" y="372" text-anchor="middle"
+        font-family="'Arial Black','Arial',sans-serif" font-weight="900"
+        font-size="124" fill="#ffffff" style="letter-spacing:2px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.5))">RYZE</text>
+  <text x="256" y="432" text-anchor="middle"
+        font-family="'Arial Black','Arial',sans-serif" font-weight="900"
+        font-size="52" fill="#ff4d6d" style="letter-spacing:16px">SMP</text>
+
+  <!-- ===== pixel ground ===== -->
+  <g>
+    <rect x="16" y="470" width="480" height="26" fill="#2b2048"/>
+    <g fill="#3a2b5e">
+      <rect x="16" y="458" width="40" height="20"/>
+      <rect x="86" y="462" width="44" height="18"/>
+      <rect x="160" y="456" width="40" height="22"/>
+      <rect x="232" y="462" width="48" height="18"/>
+      <rect x="312" y="458" width="40" height="20"/>
+      <rect x="384" y="462" width="44" height="18"/>
+      <rect x="452" y="458" width="44" height="20"/>
+    </g>
+    <rect x="16" y="486" width="480" height="10" fill="#241a3a"/>
   </g>
 </svg>
