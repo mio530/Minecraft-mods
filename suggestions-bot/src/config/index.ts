@@ -6,6 +6,11 @@ export interface BotConfig {
     clientId: string;
     guildId: string;
   };
+  /**
+   * Optional channel IDs from the environment. These act as a fallback only;
+   * the authoritative IDs are stored in the database once `/suggestion setup`
+   * has run, so members never need to copy IDs manually.
+   */
   channels: {
     submission: string;
     voting: string;
@@ -85,9 +90,9 @@ export function loadConfig(): BotConfig {
       guildId: req('DISCORD_GUILD_ID'),
     },
     channels: {
-      submission: req('SUBMISSION_CHANNEL_ID'),
-      voting: req('VOTING_CHANNEL_ID'),
-      log: req('LOG_CHANNEL_ID'),
+      submission: opt('SUBMISSION_CHANNEL_ID', ''),
+      voting: opt('VOTING_CHANNEL_ID', ''),
+      log: opt('LOG_CHANNEL_ID', ''),
     },
     staffRoleIds: list('STAFF_ROLE_IDS'),
     ai: {

@@ -12,6 +12,8 @@ import { AiService } from '../services/ai/index.js';
 import { ModerationService } from '../services/moderation/moderationService.js';
 import { SuggestionService } from '../services/suggestions/suggestionService.js';
 import { VotingService } from '../services/voting/votingService.js';
+import { SetupService } from '../services/setup/setupService.js';
+import type { ChannelKind } from '../types/index.js';
 import { buildVoteButtons, buildVotingEmbed } from './components/embeds.js';
 
 /**
@@ -23,6 +25,7 @@ export class BotContext {
   readonly suggestions: SuggestionService;
   readonly voting: VotingService;
   readonly moderation: ModerationService;
+  readonly setup: SetupService;
 
   constructor(
     readonly client: Client,
@@ -33,10 +36,27 @@ export class BotContext {
     this.suggestions = new SuggestionService(config, store, this.ai);
     this.voting = new VotingService(store);
     this.moderation = new ModerationService(config, store);
+    this.setup = new SetupService(config, store);
   }
 
   authorTag(userId: string): string {
     return `<@${userId}>`;
+  }
+
+  /**
+   * Resolve a channel id: database (set by `/suggestion setup`) takes
+   * precedence, with the environment variable as a fallback. Returns '' when
+   * neither is configured yet.
+   */
+  channelId(kind: ChannelKind): string {
+    const s = this.store.getGuildSettings(this.config.discord.guildId);
+    const fromDb =
+      kind === 'submission'
+        ? s?.submissionChannelId
+        : kind === 'voting'
+          ? s?.votingChannelId
+          : s?.logChannelId;
+    return fromDb ?? this.config.channels[kind] ?? '';
   }
 
   private async textChannel(id: string): Promise<TextChannel | null> {
@@ -50,7 +70,8 @@ export class BotContext {
   }
 
   async log(...embeds: EmbedBuilder[]): Promise<void> {
-    const ch = await this.textChannel(this.config.channels.log);
+    const logId = this.channelId('log');
+    const ch = logId ? await this.textChannel(logId) : null;
     if (!ch) {
       logger.warn('Log channel unavailable; skipping log message');
       return;
@@ -67,8 +88,9 @@ export class BotContext {
     return globalLocks.run(`publish:${s.id}`, async () => {
       const fresh = this.store.getSuggestion(s.id) ?? s;
       if (fresh.votingMessageId) return fresh; // already published
-      const ch = await this.textChannel(this.config.channels.voting);
-      if (!ch) throw new Error('Voting channel unavailable');
+      const votingId = this.channelId('voting');
+      const ch = votingId ? await this.textChannel(votingId) : null;
+      if (!ch) throw new Error('Voting channel unavailable (run /suggestion setup)');
 
       const totals = this.store.getTotals(fresh.id);
       const msg = await ch.send({

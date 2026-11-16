@@ -66,3 +66,14 @@ export interface AiResult {
   summary: string;
   status: AiStatus;
 }
+
+export type ChannelKind = 'submission' | 'voting' | 'log';
+
+export interface GuildSettings {
+  guildId: string;
+  categoryId: string | null;
+  submissionChannelId: string | null;
+  votingChannelId: string | null;
+  logChannelId: string | null;
+  updatedAt: number;
+}

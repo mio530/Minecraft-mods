@@ -41,15 +41,22 @@ Voting results are **decision helpers only** — the bot never auto-approves.
   `apt-get install -y python3 make g++`). Prebuilt binaries cover most
   platforms, so this is usually not needed.
 
-### Discord setup (manual, one time)
+### Discord setup (one time)
 1. Create an application at <https://discord.com/developers/applications>.
 2. **Bot** tab → add a bot, copy the **token**.
 3. Enable the **Message Content Intent** (needed to read forum post bodies).
 4. Invite the bot with the `bot` + `applications.commands` scopes and these
-   permissions in all three channels: **View Channel, Send Messages,
-   Embed Links, Read Message History**.
-5. Create the three channels (a **Forum** channel for submissions, two text
-   channels) and copy their IDs (Developer Mode → right-click → Copy ID).
+   permissions: **Manage Channels, Manage Roles, View Channel, Send Messages,
+   Embed Links, Read Message History, Manage Threads**.
+   (Manage Channels + Manage Roles are required so the bot can create the
+   channels and set their permissions during `/suggestion setup`.)
+5. Start the bot, then run **`/suggestion setup`** in your server. The bot
+   creates the category and all three channels, sets permissions, adds forum
+   tags, and stores the IDs automatically — **you never copy channel IDs**.
+
+> Prefer to use existing channels? Put their IDs in `.env`
+> (`SUBMISSION_CHANNEL_ID`, …). Database values from `/suggestion setup` always
+> take precedence over the environment fallback.
 
 ---
 
@@ -57,12 +64,15 @@ Voting results are **decision helpers only** — the bot never auto-approves.
 
 ```bash
 cd suggestions-bot
-cp .env.example .env        # fill in the values (see below)
+cp .env.example .env        # fill in DISCORD_* values (channels optional)
 npm install
 npm run build
-npm run deploy-commands:prod   # register slash commands (run once / after changes)
-npm start
+npm start                   # commands auto-register on startup
 ```
+
+Then in Discord run **`/suggestion setup`** (as staff) to create the channels.
+`npm run deploy-commands:prod` still exists if you prefer manual registration,
+but it is no longer required — the bot registers its guild commands on start.
 
 Development mode (auto-reload, TypeScript directly):
 
@@ -82,9 +92,9 @@ The SQLite database and its schema are created automatically on first start
 | `DISCORD_TOKEN` | ✅ | Bot token |
 | `DISCORD_CLIENT_ID` | ✅ | Application (client) ID |
 | `DISCORD_GUILD_ID` | ✅ | Server ID |
-| `SUBMISSION_CHANNEL_ID` | ✅ | Forum channel (Channel A) |
-| `VOTING_CHANNEL_ID` | ✅ | Voting text channel (Channel B) |
-| `LOG_CHANNEL_ID` | ✅ | Staff log channel (Channel C) |
+| `SUBMISSION_CHANNEL_ID` | – | Optional fallback; auto-set by `/suggestion setup` |
+| `VOTING_CHANNEL_ID` | – | Optional fallback; auto-set by `/suggestion setup` |
+| `LOG_CHANNEL_ID` | – | Optional fallback; auto-set by `/suggestion setup` |
 | `STAFF_ROLE_IDS` | – | Comma-separated staff role IDs. If empty, moderation needs the **Manage Server** permission. |
 | `AI_PROVIDER` | – | `openai` \| `anthropic` \| `none` (default `none`) |
 | `AI_API_KEY` | if provider≠none | API key (**env only — never in code/logs**) |
@@ -109,7 +119,9 @@ The SQLite database and its schema are created automatically on first start
 
 | Subcommand | Access | Description |
 |---|---|---|
-| `setup` | staff | Show channel setup & required permissions |
+| `setup` | staff | **Automatically create & configure** the category + 3 channels |
+| `setup-status` | staff | Check whether channels & permissions are correct |
+| `setup-repair` | staff | Create missing channels & fix permissions |
 | `config` | staff | Show current configuration (no secrets) |
 | `stats` | all | Suggestion statistics |
 | `leaderboard` | all | Most popular suggestions |
@@ -125,6 +137,28 @@ change or withdraw it. Buttons keep working after a restart.
 
 ---
 
+## Automatic setup (`/suggestion setup`)
+
+Creates (idempotently — never duplicates, never deletes existing suggestions):
+
+- **Category `💡 SUGGESTIONS`**
+- **`💡・suggestion-submissions`** (Forum) — members can create & comment on
+  posts; tags **Gameplay, Events, PvP, Economy, Other**; bot can read/process.
+- **`📊・suggestion-voting`** (Text) — members can view & vote (buttons) but
+  **cannot send messages**; only the bot posts.
+- **`📋・suggestion-logs`** (Text, private) — visible to **staff + bot only**.
+
+Channel IDs are stored in the database, so members never copy IDs. Re-running
+is safe: missing channels are created, existing ones are kept, and
+`setup-repair` re-applies the correct permission overwrites. If Discord blocks
+part of the setup (e.g. a rate limit), simply run it again — it resumes.
+
+Minimal permission overwrites are applied for `@everyone`, the bot, and each
+configured staff role. Voting buttons work even though members cannot post,
+because Discord interactions do not require send permission.
+
+---
+
 ## Hosting on Pterodactyl
 
 Use a **Node.js egg** (Node 20+). Upload the `suggestions-bot` folder (or clone
@@ -132,7 +166,7 @@ the repo) into the server's root.
 
 **Install / build** (run once, e.g. via the egg's install script or console):
 ```bash
-npm ci && npm run build && npm run deploy-commands:prod
+npm ci && npm run build
 ```
 
 **Startup command:**
@@ -142,10 +176,14 @@ node dist/index.js
 
 Recommended panel settings:
 - **Startup command:** `node dist/index.js`
-- Add the environment variables from the table above in the panel's
-  *Startup / Variables* (or upload a `.env` file next to the app).
-- Keep the `data/` directory on persistent storage so the database survives
-  restarts and reinstalls.
+- **Required env variables:** only `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`,
+  `DISCORD_GUILD_ID` (plus `STAFF_ROLE_IDS` and any `AI_*`). Channel IDs are
+  **not** needed — run `/suggestion setup` after the bot starts.
+- Slash commands register themselves on startup (no deploy step).
+- **Required Discord bot permissions:** Manage Channels, Manage Roles,
+  View Channel, Send Messages, Embed Links, Read Message History, Manage Threads.
+- Keep the `data/` directory on persistent storage so the database (channel IDs,
+  suggestions, votes) survives restarts and reinstalls.
 - If `npm run build` can't run on startup, build locally and upload `dist/`.
 
 The bot handles `SIGINT`/`SIGTERM` for clean shutdowns (Pterodactyl stop/restart).
@@ -161,7 +199,9 @@ npm run test:watch
 
 Covered: suggestion creation, AI fallback, duplicate detection, up/down votes,
 vote changes & removal, duplicate events (idempotency), moderation rights &
-status changes, restart recovery, and automatic evaluation.
+status changes, restart recovery, automatic evaluation, **automatic channel
+setup (create/idempotency/resume/permission-guard)**, and **channel-ID
+resolution (DB-first, env fallback)**.
 
 ---
 
@@ -178,6 +218,7 @@ suggestions-bot/
 │   │   ├── suggestions/         # create-from-forum pipeline
 │   │   ├── voting/              # vote logic (one vote/user, change, remove)
 │   │   ├── moderation/          # staff decisions
+│   │   ├── setup/              # automatic channel creation & repair
 │   │   └── evaluation.ts        # non-binding result hints
 │   ├── bot/
 │   │   ├── client.ts            # discord.js client + wiring

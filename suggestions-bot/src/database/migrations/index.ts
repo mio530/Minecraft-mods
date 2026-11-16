@@ -81,4 +81,20 @@ export const migrations: Migration[] = [
       `);
     },
   },
+  {
+    version: 2,
+    name: 'guild_settings',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS guild_settings (
+          guild_id             TEXT PRIMARY KEY,
+          category_id          TEXT,
+          submission_channel_id TEXT,
+          voting_channel_id    TEXT,
+          log_channel_id       TEXT,
+          updated_at           INTEGER NOT NULL
+        );
+      `);
+    },
+  },
 ];

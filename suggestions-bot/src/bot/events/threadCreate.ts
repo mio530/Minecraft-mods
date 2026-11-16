@@ -7,7 +7,7 @@ export async function onThreadCreate(
   thread: AnyThreadChannel,
   ctx: BotContext,
 ): Promise<void> {
-  if (thread.parentId !== ctx.config.channels.submission) return;
+  if (thread.parentId !== ctx.channelId('submission')) return;
   try {
     await processForumThread(ctx, thread);
   } catch (err) {

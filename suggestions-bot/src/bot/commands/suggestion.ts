@@ -11,11 +11,20 @@ import { isStaff, memberFrom } from '../permissions.js';
 import { applyModeration } from '../flows.js';
 import type { ModerationAction } from '../../services/moderation/moderationService.js';
 import { SuggestionNotFoundError } from '../../services/moderation/moderationService.js';
+import type { SetupMode, SetupReport, StepResult } from '../../services/setup/setupService.js';
 
 export const data = new SlashCommandBuilder()
   .setName('suggestion')
   .setDescription('RyzeSMP suggestion system')
-  .addSubcommand((s) => s.setName('setup').setDescription('Show setup & channel configuration'))
+  .addSubcommand((s) =>
+    s.setName('setup').setDescription('Create & configure all channels automatically (staff)'),
+  )
+  .addSubcommand((s) =>
+    s.setName('setup-status').setDescription('Check whether channels & permissions are set up (staff)'),
+  )
+  .addSubcommand((s) =>
+    s.setName('setup-repair').setDescription('Create missing channels & fix permissions (staff)'),
+  )
   .addSubcommand((s) => s.setName('config').setDescription('Show the current configuration'))
   .addSubcommand((s) => s.setName('stats').setDescription('Show suggestion statistics'))
   .addSubcommand((s) =>
@@ -58,15 +67,33 @@ export async function execute(
 ): Promise<void> {
   const sub = interaction.options.getSubcommand();
 
-  if (sub === 'setup' || sub === 'config') {
+  if (sub === 'setup' || sub === 'setup-status' || sub === 'setup-repair') {
     if (!isStaff(ctx.config, memberFrom(interaction))) {
       await deny(interaction);
       return;
     }
-    await interaction.reply({
-      embeds: [sub === 'setup' ? setupEmbed(ctx) : configEmbed(ctx)],
-      flags: MessageFlags.Ephemeral,
-    });
+    if (!interaction.guild) {
+      await interaction.reply({ content: 'Run this in a server.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+    const mode: SetupMode =
+      sub === 'setup' ? 'ensure' : sub === 'setup-repair' ? 'repair' : 'status';
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    try {
+      const report = await ctx.setup.run(interaction.guild, mode);
+      await interaction.editReply({ embeds: [setupReportEmbed(report)] });
+    } catch (err) {
+      await interaction.editReply(`Setup failed: ${String(err)}`);
+    }
+    return;
+  }
+
+  if (sub === 'config') {
+    if (!isStaff(ctx.config, memberFrom(interaction))) {
+      await deny(interaction);
+      return;
+    }
+    await interaction.reply({ embeds: [configEmbed(ctx)], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -130,30 +157,57 @@ async function deny(interaction: ChatInputCommandInteraction): Promise<void> {
   });
 }
 
-function setupEmbed(ctx: BotContext): EmbedBuilder {
-  const c = ctx.config.channels;
-  return new EmbedBuilder()
-    .setColor(BRAND.color)
-    .setTitle('⚙️ RyzeSMP Suggestions — Setup')
-    .setDescription(
-      [
-        '**Channel A — Submissions (forum):** members post suggestions here.',
-        '**Channel B — Voting (text):** the bot posts voting messages here.',
-        '**Channel C — Logs (staff):** new suggestions, results and decisions.',
-      ].join('\n'),
-    )
-    .addFields(
-      { name: 'Submission channel', value: `<#${c.submission}>`, inline: false },
-      { name: 'Voting channel', value: `<#${c.voting}>`, inline: false },
-      { name: 'Log channel', value: `<#${c.log}>`, inline: false },
-      {
-        name: 'Required bot permissions',
-        value:
-          'View Channels, Send Messages, Embed Links, Read Message History in all three channels.',
-        inline: false,
-      },
-    )
+const STEP_ICON: Record<StepResult['status'], string> = {
+  ok: '✅',
+  created: '🆕',
+  repaired: '🔧',
+  missing: '❌',
+  error: '⚠️',
+};
+
+function stepLine(s: StepResult): string {
+  const icon = STEP_ICON[s.status];
+  const ref = s.id ? ` <#${s.id}>` : '';
+  const perm = s.permissionsOk === false ? ' · ⚠️ permissions' : '';
+  const detail = s.detail ? ` — ${s.detail}` : '';
+  return `${icon} **${s.name}**${ref} (${s.status})${perm}${detail}`;
+}
+
+function setupReportEmbed(report: SetupReport): EmbedBuilder {
+  const title =
+    report.mode === 'status'
+      ? '🔎 Setup status'
+      : report.mode === 'repair'
+        ? '🔧 Setup repair'
+        : '⚙️ Automatic setup';
+  const lines = [stepLine(report.category), ...report.channels.map(stepLine)];
+  const embed = new EmbedBuilder()
+    .setColor(report.ok ? 0x2ecc71 : report.errors.length ? 0xe74c3c : 0xf1c40f)
+    .setTitle(title)
+    .setDescription(lines.join('\n'))
     .setFooter({ text: BRAND.footer });
+
+  if (report.missingPermissions.length) {
+    embed.addFields({
+      name: '⛔ Missing bot permissions',
+      value: report.missingPermissions.map((p) => `• ${p}`).join('\n'),
+    });
+  }
+  if (report.errors.length) {
+    embed.addFields({
+      name: 'Errors',
+      value: report.errors.map((e) => `• ${e}`).join('\n').slice(0, 1000),
+    });
+  }
+  embed.addFields({
+    name: 'Result',
+    value: report.ok
+      ? '✅ Everything is set up. Members can post in the forum now.'
+      : report.mode === 'status'
+        ? 'ℹ️ Not fully set up — run `/suggestion setup`.'
+        : 'Some steps need attention — fix the above and re-run (setup is resumable).',
+  });
+  return embed;
 }
 
 function configEmbed(ctx: BotContext): EmbedBuilder {

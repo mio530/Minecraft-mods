@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import BetterSqlite3 from 'better-sqlite3';
 import { logger } from '../utils/logger.js';
 import type {
+  GuildSettings,
   ModerationLog,
   Suggestion,
   SuggestionStatus,
@@ -377,6 +378,69 @@ export class SqliteStore implements SuggestionStore {
       reason: r.reason,
       createdAt: r.created_at,
     }));
+  }
+
+  getGuildSettings(guildId: string): GuildSettings | null {
+    const r = this.db
+      .prepare('SELECT * FROM guild_settings WHERE guild_id = ?')
+      .get(guildId) as
+      | {
+          guild_id: string;
+          category_id: string | null;
+          submission_channel_id: string | null;
+          voting_channel_id: string | null;
+          log_channel_id: string | null;
+          updated_at: number;
+        }
+      | undefined;
+    if (!r) return null;
+    return {
+      guildId: r.guild_id,
+      categoryId: r.category_id,
+      submissionChannelId: r.submission_channel_id,
+      votingChannelId: r.voting_channel_id,
+      logChannelId: r.log_channel_id,
+      updatedAt: r.updated_at,
+    };
+  }
+
+  saveGuildSettings(
+    guildId: string,
+    patch: Partial<Omit<GuildSettings, 'guildId' | 'updatedAt'>>,
+  ): GuildSettings {
+    const tx = this.db.transaction(() => {
+      const current = this.getGuildSettings(guildId);
+      const merged: GuildSettings = {
+        guildId,
+        categoryId: patch.categoryId ?? current?.categoryId ?? null,
+        submissionChannelId: patch.submissionChannelId ?? current?.submissionChannelId ?? null,
+        votingChannelId: patch.votingChannelId ?? current?.votingChannelId ?? null,
+        logChannelId: patch.logChannelId ?? current?.logChannelId ?? null,
+        updatedAt: Date.now(),
+      };
+      this.db
+        .prepare(
+          `INSERT INTO guild_settings
+             (guild_id, category_id, submission_channel_id, voting_channel_id, log_channel_id, updated_at)
+           VALUES (?,?,?,?,?,?)
+           ON CONFLICT (guild_id) DO UPDATE SET
+             category_id = excluded.category_id,
+             submission_channel_id = excluded.submission_channel_id,
+             voting_channel_id = excluded.voting_channel_id,
+             log_channel_id = excluded.log_channel_id,
+             updated_at = excluded.updated_at`,
+        )
+        .run(
+          merged.guildId,
+          merged.categoryId,
+          merged.submissionChannelId,
+          merged.votingChannelId,
+          merged.logChannelId,
+          merged.updatedAt,
+        );
+      return merged;
+    });
+    return tx();
   }
 
   close(): void {

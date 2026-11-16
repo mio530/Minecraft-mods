@@ -1,4 +1,5 @@
 import type {
+  GuildSettings,
   ModerationLog,
   Suggestion,
   SuggestionStatus,
@@ -64,6 +65,13 @@ export interface SuggestionStore {
 
   addModLog(entry: ModerationLog): void;
   listModLogs(suggestionId: string): ModerationLog[];
+
+  getGuildSettings(guildId: string): GuildSettings | null;
+  /** Upsert the given fields; omitted/undefined fields are left unchanged. */
+  saveGuildSettings(
+    guildId: string,
+    patch: Partial<Omit<GuildSettings, 'guildId' | 'updatedAt'>>,
+  ): GuildSettings;
 
   close(): void;
 }

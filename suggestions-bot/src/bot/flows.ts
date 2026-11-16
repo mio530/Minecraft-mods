@@ -17,7 +17,7 @@ export async function processForumThread(
   ctx: BotContext,
   thread: AnyThreadChannel,
 ): Promise<Suggestion | null> {
-  if (thread.parentId !== ctx.config.channels.submission) return null;
+  if (thread.parentId !== ctx.channelId('submission')) return null;
 
   let description = '';
   try {

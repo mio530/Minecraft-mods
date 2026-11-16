@@ -1,18 +1,34 @@
 import { ChannelType, type Client } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { processForumThread } from '../flows.js';
+import { commandJson } from '../commands/index.js';
 import type { BotContext } from '../context.js';
 
 /**
- * Startup recovery: catch forum posts created while the bot was offline and
- * ensure every suggestion has its voting message. Persistent buttons keep
- * working automatically thanks to stable custom IDs.
+ * Startup recovery: register slash commands, catch forum posts created while
+ * the bot was offline, and ensure every suggestion has its voting message.
+ * Persistent buttons keep working thanks to stable custom IDs.
  */
 export async function onReady(client: Client<true>, ctx: BotContext): Promise<void> {
   logger.info(`Logged in as ${client.user.tag} (AI provider: ${ctx.ai.providerName})`);
 
+  // Register guild slash commands automatically so /suggestion setup is usable
+  // on first start without a manual deploy step.
   try {
-    const channel = await client.channels.fetch(ctx.config.channels.submission);
+    const guild = await client.guilds.fetch(ctx.config.discord.guildId);
+    await guild.commands.set(commandJson());
+    logger.info('Slash commands registered for guild.');
+  } catch (err) {
+    logger.error('Automatic command registration failed (use npm run deploy-commands):', String(err));
+  }
+
+  const submissionId = ctx.channelId('submission');
+  if (!submissionId) {
+    logger.info('No submission channel configured yet — run /suggestion setup. Skipping recovery.');
+    return;
+  }
+  try {
+    const channel = await client.channels.fetch(submissionId);
     if (channel && channel.type === ChannelType.GuildForum) {
       const active = await channel.threads.fetchActive().catch(() => null);
       const archived = await channel.threads.fetchArchived({ limit: 50 }).catch(() => null);
