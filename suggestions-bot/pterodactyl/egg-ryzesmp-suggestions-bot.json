@@ -1,0 +1,253 @@
+{
+    "_comment": "RyzeSMP Suggestions Bot egg - derived from parkervcp 'node.js generic'. Installs ONLY the suggestions-bot/ subfolder; builds TypeScript and the native better-sqlite3 module in the Node.js 22 runtime to avoid ABI mismatches.",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-11-16T16:00:00+01:00",
+    "name": "RyzeSMP Suggestions Bot",
+    "author": "noreply@ryzesmp.local",
+    "description": "Automated AI suggestions & voting Discord bot for the RyzeSMP Minecraft server. Clones the suggestions-bot/ subfolder from a public GitHub repo, installs dependencies with npm ci --include=dev and builds with npm run build in the Node.js 22 runtime. SQLite data in ./data persists across restarts and code updates.",
+    "features": null,
+    "tags": [],
+    "docker_images": {
+        "Nodejs 22": "ghcr.io/ptero-eggs/yolks:nodejs_22"
+    },
+    "file_denylist": [],
+    "startup": "cd /home/container; if [ ! -d node_modules ]; then /usr/local/bin/npm ci --include=dev || /usr/local/bin/npm install; fi; if [ ! -d dist ]; then /usr/local/bin/npm run build; fi; /usr/local/bin/node /home/container/${MAIN_FILE} ${NODE_ARGS}",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": [\r\n        \"Logged in as\"\r\n    ]\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\n# RyzeSMP Suggestions Bot - installation script\n# Installs ONLY the suggestions-bot/ subfolder from the repo.\n# Dependencies + build run on first START (Node.js 22 runtime) to keep the\n# native better-sqlite3 binary ABI-compatible.\n# Server Files: /mnt/server\n\napt update\napt install -y git curl ca-certificates\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nif [ \"${USER_UPLOAD}\" == \"true\" ] || [ \"${USER_UPLOAD}\" == \"1\" ]; then\n    echo \"USER_UPLOAD enabled - skipping git clone.\"\n    exit 0\nfi\n\nGIT_ADDRESS=\"${GIT_ADDRESS:-https://github.com/mio530/Minecraft-mods}\"\nif [[ ${GIT_ADDRESS} != *.git ]]; then\n    GIT_ADDRESS=\"${GIT_ADDRESS}.git\"\nfi\nBRANCH=\"${BRANCH:-claude/ryzesmp-suggestions-bot-ezzqro}\"\n\n# Optional auth (public repo => not required)\nif [ -n \"${USERNAME}\" ] && [ -n \"${ACCESS_TOKEN}\" ]; then\n    GIT_ADDRESS=\"https://${USERNAME}:${ACCESS_TOKEN}@$(echo -e ${GIT_ADDRESS} | cut -d/ -f3-)\"\nfi\n\necho \"Cloning branch ${BRANCH} ...\"\nrm -rf /tmp/rsbot\ngit clone --depth 1 --single-branch --branch \"${BRANCH}\" \"${GIT_ADDRESS}\" /tmp/rsbot\n\nif [ ! -d /tmp/rsbot/suggestions-bot ]; then\n    echo \"ERROR: suggestions-bot/ not found in branch ${BRANCH}.\"\n    exit 1\nfi\n\n# Copy only the bot. Existing data/ and node_modules (not in repo) are kept.\ncp -a /tmp/rsbot/suggestions-bot/. /mnt/server/\n# Drop the old build so the next start rebuilds the current code automatically.\nrm -rf /mnt/server/dist\nrm -rf /tmp/rsbot\n\necho \"Install complete. Dependencies + TypeScript build run on first start.\"\nexit 0",
+            "container": "node:22-trixie-slim",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Git Repo Address",
+            "description": "Public GitHub repo to clone. Leave as default for RyzeSMP.",
+            "env_variable": "GIT_ADDRESS",
+            "default_value": "https://github.com/mio530/Minecraft-mods",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Install Branch",
+            "description": "Branch that contains suggestions-bot/.",
+            "env_variable": "BRANCH",
+            "default_value": "claude/ryzesmp-suggestions-bot-ezzqro",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Main file",
+            "description": "Entry file started with node. Max 16 characters.",
+            "env_variable": "MAIN_FILE",
+            "default_value": "dist/index.js",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:16",
+            "field_type": "text"
+        },
+        {
+            "name": "Discord Bot Token",
+            "description": "Bot token from the Discord Developer Portal (Bot > Reset Token). Keep secret.",
+            "env_variable": "DISCORD_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Discord Client ID",
+            "description": "Application (Client) ID from General Information.",
+            "env_variable": "DISCORD_CLIENT_ID",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Discord Guild ID",
+            "description": "Your Discord server (guild) ID.",
+            "env_variable": "DISCORD_GUILD_ID",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Staff Role IDs",
+            "description": "Comma-separated staff role IDs. Empty = fall back to Manage Guild permission.",
+            "env_variable": "STAFF_ROLE_IDS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Submission Channel ID",
+            "description": "Optional. Leave empty and run /suggestion setup to auto-create channels.",
+            "env_variable": "SUBMISSION_CHANNEL_ID",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Voting Channel ID",
+            "description": "Optional. Leave empty and run /suggestion setup to auto-create channels.",
+            "env_variable": "VOTING_CHANNEL_ID",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Log Channel ID",
+            "description": "Optional. Leave empty and run /suggestion setup to auto-create channels.",
+            "env_variable": "LOG_CHANNEL_ID",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "AI Provider",
+            "description": "openai | anthropic | none. 'none' uses the deterministic fallback (no API, no tokens).",
+            "env_variable": "AI_PROVIDER",
+            "default_value": "none",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:openai,anthropic,none",
+            "field_type": "text"
+        },
+        {
+            "name": "AI API Key",
+            "description": "API key for the chosen AI provider. Only needed if AI_PROVIDER is not 'none'.",
+            "env_variable": "AI_API_KEY",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "AI Model",
+            "description": "Model name, e.g. gpt-4o-mini (openai) or claude-haiku-4-5 (anthropic).",
+            "env_variable": "AI_MODEL",
+            "default_value": "gpt-4o-mini",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Voting Duration (days)",
+            "description": "Auto-close voting after this many days. 0 = never.",
+            "env_variable": "VOTING_DURATION_DAYS",
+            "default_value": "7",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer",
+            "field_type": "text"
+        },
+        {
+            "name": "Minimum Votes",
+            "description": "Minimum total votes considered meaningful in the evaluation summary.",
+            "env_variable": "MINIMUM_VOTES",
+            "default_value": "10",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer",
+            "field_type": "text"
+        },
+        {
+            "name": "Log Level",
+            "description": "debug | info | warn | error",
+            "env_variable": "LOG_LEVEL",
+            "default_value": "info",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|in:debug,info,warn,error",
+            "field_type": "text"
+        },
+        {
+            "name": "Auto Update",
+            "description": "Not used by this egg (updates are done via Reinstall). Kept for compatibility.",
+            "env_variable": "AUTO_UPDATE",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "User Uploaded Files",
+            "description": "1 = skip git clone (you upload files yourself). 0 = clone from GitHub (default).",
+            "env_variable": "USER_UPLOAD",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Node packages",
+            "description": "Extra npm packages to install (space separated). Normally empty.",
+            "env_variable": "NODE_PACKAGES",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Username",
+            "description": "Only for private repos. Leave empty - RyzeSMP repo is public.",
+            "env_variable": "USERNAME",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Access Token",
+            "description": "Only for private repos. Leave empty - RyzeSMP repo is public.",
+            "env_variable": "ACCESS_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Arguments",
+            "description": "Extra arguments passed to node. Normally empty.",
+            "env_variable": "NODE_ARGS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:64",
+            "field_type": "text"
+        }
+    ]
+}

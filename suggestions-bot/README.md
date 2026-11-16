@@ -161,8 +161,12 @@ because Discord interactions do not require send permission.
 
 ## Hosting on Pterodactyl
 
-Use a **Node.js egg** (Node 20+). Upload the `suggestions-bot` folder (or clone
-the repo) into the server's root.
+**Easiest:** import the ready-made egg `pterodactyl/egg-ryzesmp-suggestions-bot.json`
+(Admin → Nests → Import Egg). It clones only this subfolder, builds in the
+Node.js 22 runtime, and exposes all Discord/AI settings as panel variables.
+
+Otherwise, use a generic **Node.js egg** (Node 20+) and upload the
+`suggestions-bot` folder (or clone the repo) into the server's root.
 
 **Install / build** (run once, e.g. via the egg's install script or console):
 ```bash
