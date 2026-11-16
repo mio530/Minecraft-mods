@@ -7,6 +7,7 @@ import type { BotConfig } from '../config/index.js';
 import type { SuggestionStore } from '../database/index.js';
 import type { Suggestion } from '../types/index.js';
 import { logger } from '../utils/logger.js';
+import { globalLocks } from '../utils/locks.js';
 import { AiService } from '../services/ai/index.js';
 import { ModerationService } from '../services/moderation/moderationService.js';
 import { SuggestionService } from '../services/suggestions/suggestionService.js';
@@ -57,19 +58,26 @@ export class BotContext {
     await ch.send({ embeds }).catch((e) => logger.error('Log send failed:', String(e)));
   }
 
-  /** Create the voting message for a suggestion and persist its id. */
+  /**
+   * Create the voting message for a suggestion and persist its id. Idempotent
+   * and locked per suggestion so concurrent triggers (ThreadCreate event +
+   * startup recovery) can never post two voting messages for the same id.
+   */
   async publishVoting(s: Suggestion): Promise<Suggestion> {
-    if (s.votingMessageId) return s; // already published (idempotent)
-    const ch = await this.textChannel(this.config.channels.voting);
-    if (!ch) throw new Error('Voting channel unavailable');
+    return globalLocks.run(`publish:${s.id}`, async () => {
+      const fresh = this.store.getSuggestion(s.id) ?? s;
+      if (fresh.votingMessageId) return fresh; // already published
+      const ch = await this.textChannel(this.config.channels.voting);
+      if (!ch) throw new Error('Voting channel unavailable');
 
-    const totals = this.store.getTotals(s.id);
-    const msg = await ch.send({
-      embeds: [buildVotingEmbed(s, totals, this.authorTag(s.authorId))],
-      components: [buildVoteButtons(s.id, s.votingClosed === 1)],
+      const totals = this.store.getTotals(fresh.id);
+      const msg = await ch.send({
+        embeds: [buildVotingEmbed(fresh, totals, this.authorTag(fresh.authorId))],
+        components: [buildVoteButtons(fresh.id, fresh.votingClosed === 1)],
+      });
+      this.store.setVotingMessage(fresh.id, ch.id, msg.id);
+      return this.store.getSuggestion(fresh.id)!;
     });
-    this.store.setVotingMessage(s.id, ch.id, msg.id);
-    return this.store.getSuggestion(s.id)!;
   }
 
   /** Re-render the voting message after a vote or moderation change. */
