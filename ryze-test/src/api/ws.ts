@@ -31,10 +31,12 @@ export async function registerWs(app: FastifyInstance): Promise<void> {
     const onObs = (obs: Observation) => send({ type: 'observation', obs, svg: schematicSvg(obs) });
     const onApprovalReq = (a: unknown) => send({ type: 'approval_requested', approval: a });
     const onApprovalRes = (a: unknown) => send({ type: 'approval_resolved', approval: a });
+    const onBotError = (e: unknown) => send({ type: 'botError', error: e, ts: Date.now() });
 
     sessions.on('observation', onObs);
     sessions.on('approval_requested', onApprovalReq);
     sessions.on('approval_resolved', onApprovalRes);
+    sessions.on('bot_error', onBotError);
 
     // send an immediate snapshot if a session exists
     const cur = sessions.current();
@@ -70,6 +72,7 @@ export async function registerWs(app: FastifyInstance): Promise<void> {
       sessions.off('observation', onObs);
       sessions.off('approval_requested', onApprovalReq);
       sessions.off('approval_resolved', onApprovalRes);
+      sessions.off('bot_error', onBotError);
     });
   });
 }

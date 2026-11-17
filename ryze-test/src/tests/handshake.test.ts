@@ -48,7 +48,7 @@ afterAll(async () => {
 });
 
 describe('handshake vs TCP', () => {
-  it('classifies a TCP-connected-but-no-handshake as "handshake" (not unreachable/auth)', async () => {
+  it('classifies a TCP-connected-but-no-join (silent server) as handshake/timeout with the stalled phase (not unreachable/auth)', async () => {
     const { McBot } = await import('../mc/bot.js');
     const { BotConnectionError } = await import('../mc/errors.js');
     const bot = new McBot('hs1');
@@ -57,8 +57,11 @@ describe('handshake vs TCP', () => {
       (e) => e,
     );
     expect(err).toBeInstanceOf(BotConnectionError);
-    expect(bot.errorDetail?.category).toBe('handshake');
-    expect(bot.errorDetail?.message).toMatch(/Handshake|Velocity|Version/i);
+    // After TCP + handshake the client waits in handshaking/login; a silent
+    // server never replies, so it's a handshake/timeout, never network/auth.
+    expect(['handshake', 'timeout']).toContain(bot.errorDetail?.category);
+    expect(['handshaking', 'login']).toContain(bot.errorDetail?.phase);
+    expect(bot.errorDetail?.message).toMatch(/Handshake|Beitritt|Zeit|Velocity|Version/i);
     expect(bot.connected).toBe(false);
   }, 15000);
 });

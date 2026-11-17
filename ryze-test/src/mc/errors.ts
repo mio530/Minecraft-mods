@@ -2,8 +2,9 @@ import { config } from '../config.js';
 
 /**
  * Classify a Minecraft bot connection/auth error into an actionable category
- * with a human-readable message. Never includes tokens or secrets — messages
- * are static templates plus a sanitized tail of the raw text.
+ * with a human-readable message and (when known) the protocol phase it failed
+ * in. Never includes tokens or secrets — messages are static templates plus a
+ * sanitized tail of the raw text.
  */
 export type BotErrorCategory =
   | 'network_server' // can't reach the Minecraft server/Velocity proxy
@@ -11,14 +12,21 @@ export type BotErrorCategory =
   | 'mojang_session' // can't reach/complete sessionserver.mojang.com join
   | 'invalid_auth' // Microsoft/Minecraft token invalid, expired, or no game ownership
   | 'kicked' // server actively kicked (whitelist / online-mode / plugin)
-  | 'timeout' // handshake stalled / connect timeout
+  | 'disconnect' // connection ended by the server/proxy before spawn, without a kick reason
+  | 'protocol_error' // packet (de)serialization / protocol mismatch during the session
+  | 'timeout' // handshake/login stalled, no response in time
   | 'unknown';
+
+/** Minecraft protocol phase, mapped from node-minecraft-protocol client state. */
+export type ProtocolPhase = 'handshaking' | 'status' | 'login' | 'configuration' | 'play' | 'unknown';
 
 export interface ClassifiedError {
   category: BotErrorCategory;
   message: string;
   /** true if retrying (same credentials) might succeed later. */
   retryable: boolean;
+  /** protocol phase the failure happened in, when reliably known. */
+  phase: ProtocolPhase;
 }
 
 /** Strip token-like strings so classified errors never leak secrets. */
@@ -29,22 +37,69 @@ export function sanitize(text: string): string {
     .slice(0, 300);
 }
 
-export function classifyBotError(err: unknown, kickReason?: unknown): ClassifiedError {
-  if (kickReason !== undefined) {
-    const reason = typeof kickReason === 'string' ? kickReason : JSON.stringify(kickReason);
+export function normalizePhase(state: unknown): ProtocolPhase {
+  const s = String(state ?? '').toLowerCase();
+  if (s === 'handshaking' || s === 'status' || s === 'login' || s === 'configuration' || s === 'play') return s;
+  return 'unknown';
+}
+
+/** Turn a Minecraft chat component (string, JSON string, or object tree) into
+ *  plain, sanitized text — used for kick/disconnect reasons. */
+export function chatToText(reason: unknown): string {
+  const visit = (node: any, depth = 0): string => {
+    if (node == null || depth > 12) return '';
+    if (typeof node === 'string') return node;
+    if (Array.isArray(node)) return node.map((n) => visit(n, depth + 1)).join('');
+    if (typeof node === 'object') {
+      let out = '';
+      if (typeof node.text === 'string') out += node.text;
+      if (typeof node.translate === 'string' && !node.text) out += node.translate;
+      if (Array.isArray(node.extra)) out += node.extra.map((n: any) => visit(n, depth + 1)).join('');
+      if (Array.isArray(node.with)) out += ' ' + node.with.map((n: any) => visit(n, depth + 1)).join(' ');
+      return out;
+    }
+    return String(node);
+  };
+  let text: string;
+  if (typeof reason === 'string') {
+    try {
+      text = visit(JSON.parse(reason));
+    } catch {
+      text = reason;
+    }
+  } else {
+    text = visit(reason);
+  }
+  text = text.replace(/\s+/g, ' ').trim();
+  return sanitize(text || (typeof reason === 'string' ? reason : JSON.stringify(reason))) || 'ohne Grund';
+}
+
+export interface ClassifyOpts {
+  kickReason?: unknown;
+  phase?: ProtocolPhase;
+  /** true when the error ended the connection before spawn without a kick. */
+  disconnect?: boolean;
+}
+
+export function classifyBotError(err: unknown, opts: ClassifyOpts = {}): ClassifiedError {
+  const phase: ProtocolPhase = opts.phase ?? 'unknown';
+  const target = `${config.MC_HOST}:${config.MC_PORT}`;
+  const phaseNote = phase !== 'unknown' ? ` (Phase: ${phase})` : '';
+
+  if (opts.kickReason !== undefined) {
     return {
       category: 'kicked',
-      message: `Vom Server abgewiesen: ${sanitize(reason)}. Prüfe, ob der Test-Account gewhitelistet und der Server online-mode/Velocity korrekt konfiguriert ist.`,
+      message: `Vom Server abgewiesen${phaseNote}: ${chatToText(opts.kickReason)}. Prüfe Whitelist/Ban, online-mode und Velocity/ViaVersion-Konfiguration.`,
       retryable: false,
+      phase,
     };
   }
 
   const raw = err instanceof Error ? err.message : String(err ?? '');
   const code = (err as any)?.code ?? (err as any)?.cause?.code ?? '';
   const hay = `${raw} ${code}`.toLowerCase();
-  const target = `${config.MC_HOST}:${config.MC_PORT}`;
 
-  // Mojang session join (the reported failure) — a network/egress or Mojang issue.
+  // Mojang session join — a network/egress or Mojang issue.
   if (
     hay.includes('sessionserver.mojang.com') ||
     hay.includes('session/minecraft/join') ||
@@ -56,9 +111,10 @@ export function classifyBotError(err: unknown, kickReason?: unknown): Classified
       category: 'mojang_session',
       message:
         'Mojang-Sessionserver konnte nicht erreicht/abgeschlossen werden (sessionserver.mojang.com). ' +
-        'Ursache ist meist, dass der Pterodactyl-Container keine ausgehenden HTTPS-Verbindungen zu Mojang/Microsoft herstellen kann (Firewall/Egress), oder eine Mojang-Störung. ' +
+        'Meist: der Container kann keine ausgehenden HTTPS-Verbindungen zu Mojang/Microsoft herstellen, oder Mojang-Störung. ' +
         `Details: ${sanitize(raw)}`,
       retryable: true,
+      phase,
     };
   }
 
@@ -68,13 +124,13 @@ export function classifyBotError(err: unknown, kickReason?: unknown): Classified
     hay.includes('etimedout') ||
     hay.includes('ehostunreach') ||
     hay.includes('enetunreach') ||
-    hay.includes('enotfound') ||
-    hay.includes('econnreset')
+    hay.includes('enotfound')
   ) {
     return {
       category: 'network_server',
       message: `Minecraft-Server/Proxy ${target} nicht erreichbar (${code || 'Netzwerkfehler'}). Läuft der Server und stimmen MC_HOST/MC_PORT?`,
       retryable: true,
+      phase,
     };
   }
 
@@ -94,34 +150,83 @@ export function classifyBotError(err: unknown, kickReason?: unknown): Classified
       category: 'invalid_auth',
       message:
         'Microsoft/Minecraft-Anmeldung ungültig oder abgelaufen (oder der Account besitzt Minecraft nicht). ' +
-        'Bitte im Dashboard neu mit dem Test-Account anmelden. ' +
-        `Details: ${sanitize(raw)}`,
+        `Bitte im Dashboard neu anmelden. Details: ${sanitize(raw)}`,
       retryable: false,
+      phase,
+    };
+  }
+
+  // Packet (de)serialization / protocol mismatch during the session.
+  if (
+    hay.includes('partialreaderror') ||
+    hay.includes('deserializ') ||
+    hay.includes('serializ') ||
+    hay.includes('read error') ||
+    hay.includes('unknown packet') ||
+    hay.includes('missing packet') ||
+    hay.includes('chunk size') ||
+    hay.includes('protodef') ||
+    hay.includes('sizeof') ||
+    hay.includes('format_error')
+  ) {
+    return {
+      category: 'protocol_error',
+      message:
+        `Protokollfehler beim Verarbeiten eines Pakets${phaseNote}. Das deutet auf eine Client/Server-Protokoll-Inkompatibilität hin ` +
+        `(z. B. ViaVersion-Übersetzung oder eine mineflayer/minecraft-data-Lücke für diese Version). Details: ${sanitize(raw)}`,
+      retryable: false,
+      phase,
     };
   }
 
   if (hay.includes('timeout') || hay.includes('handshake stalled')) {
     return {
       category: 'timeout',
-      message: `Zeitüberschreitung beim Verbinden mit ${target} (Handshake blieb hängen). Server erreichbar, aber keine Antwort rechtzeitig.`,
+      message: `Zeitüberschreitung beim Verbinden mit ${target}${phaseNote}. Server erreichbar, aber keine Antwort rechtzeitig.`,
       retryable: true,
+      phase,
+    };
+  }
+
+  // Connection ended before spawn without a kick reason (e.g. socketClosed).
+  if (
+    opts.disconnect ||
+    hay.includes('socketclosed') ||
+    hay.includes('econnreset') ||
+    hay.includes('disconnected before spawn') ||
+    hay.includes('this.client.end') ||
+    hay.includes('connection reset')
+  ) {
+    return {
+      category: 'disconnect',
+      message:
+        `Verbindung vom Server/Proxy getrennt${phaseNote}, bevor der Spawn erreicht wurde. ` +
+        (phase === 'configuration'
+          ? 'Login war erfolgreich, aber die Configuration-Phase wurde nicht abgeschlossen (häufig ViaVersion/Registry oder eine Client-Protokoll-Lücke). '
+          : '') +
+        `Details: ${sanitize(raw) || 'kein Grund übermittelt'}`,
+      retryable: true,
+      phase,
     };
   }
 
   return {
     category: 'unknown',
-    message: `Verbindung fehlgeschlagen: ${sanitize(raw) || 'unbekannter Fehler'}.`,
+    message: `Verbindung fehlgeschlagen${phaseNote}: ${sanitize(raw) || 'unbekannter Fehler'}.`,
     retryable: true,
+    phase,
   };
 }
 
 export class BotConnectionError extends Error {
   category: BotErrorCategory;
   retryable: boolean;
+  phase: ProtocolPhase;
   constructor(classified: ClassifiedError) {
     super(classified.message);
     this.name = 'BotConnectionError';
     this.category = classified.category;
     this.retryable = classified.retryable;
+    this.phase = classified.phase;
   }
 }

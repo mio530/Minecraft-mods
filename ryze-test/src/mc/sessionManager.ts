@@ -80,8 +80,10 @@ export class SessionManager extends EventEmitter {
     // Consume 'botError' so an absent listener can never crash the process.
     bot.on('botError', (e: ClassifiedError) => {
       this._lastError = e;
-      logger.warn({ id, category: e.category, retryable: e.retryable }, 'bot error');
-      audit('system', id, 'session.bot_error', 'error', id, `${e.category}: ${e.message}`);
+      logger.warn({ id, category: e.category, phase: e.phase, retryable: e.retryable }, 'bot error');
+      audit('system', id, 'session.bot_error', 'error', id, `${e.category}/${e.phase}: ${e.message}`);
+      // Forward to the dashboard live console via the WS layer.
+      this.emit('bot_error', { sessionId: id, ...e });
     });
     bot.on('end', (reason: string) => {
       logger.warn({ id }, 'session bot ended');

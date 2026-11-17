@@ -63,9 +63,48 @@ describe('classifyBotError', () => {
     expect(classifyBotError(Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' })).category).toBe('network_server');
     expect(classifyBotError(new Error('Request failed 403 Forbidden invalid token')).category).toBe('invalid_auth');
     expect(classifyBotError(new Error('XSTS error: account does not own Minecraft')).category).toBe('invalid_auth');
-    expect(classifyBotError(undefined, 'You are not white-listed on this server!').category).toBe('kicked');
+    expect(classifyBotError(undefined, { kickReason: 'You are not white-listed on this server!' }).category).toBe('kicked');
     expect(classifyBotError(new Error('connection timeout: handshake stalled')).category).toBe('timeout');
     expect(classifyBotError(new Error('weird')).category).toBe('unknown');
+  });
+
+  it('parses a chat-component kick reason to plain text and records the phase', async () => {
+    const { classifyBotError } = await import('../mc/errors.js');
+    const c = classifyBotError(undefined, {
+      kickReason: { text: 'You are ', extra: [{ text: 'not whitelisted' }, { text: '!' }] },
+      phase: 'login',
+    });
+    expect(c.category).toBe('kicked');
+    expect(c.phase).toBe('login');
+    expect(c.message).toMatch(/You are not whitelisted!/);
+    expect(c.retryable).toBe(false);
+  });
+
+  it('classifies a packet (de)serialization failure as protocol_error with phase', async () => {
+    const { classifyBotError } = await import('../mc/errors.js');
+    const c = classifyBotError(new Error('PartialReadError: Read error for undefined'), { phase: 'configuration' });
+    expect(c.category).toBe('protocol_error');
+    expect(c.phase).toBe('configuration');
+  });
+
+  it('classifies a pre-spawn socket close as disconnect, highlighting the configuration phase', async () => {
+    const { classifyBotError } = await import('../mc/errors.js');
+    const c = classifyBotError(new Error('socketClosed'), { phase: 'configuration', disconnect: true });
+    expect(c.category).toBe('disconnect');
+    expect(c.phase).toBe('configuration');
+    expect(c.message).toMatch(/Configuration-Phase/);
+    expect(c.retryable).toBe(true);
+  });
+
+  it('every classified error carries a phase and is token-free', async () => {
+    const { classifyBotError } = await import('../mc/errors.js');
+    for (const c of [
+      classifyBotError(new Error('x'), { phase: 'play' }),
+      classifyBotError(new Error('connect ECONNREFUSED'), { phase: 'handshaking' }),
+      classifyBotError(undefined, { kickReason: 'bye', phase: 'play' }),
+    ]) {
+      expect(typeof c.phase).toBe('string');
+    }
   });
 
   it('redacts token-like strings from classified messages', async () => {

@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { botAuthOptions } from '../auth/microsoft.js';
-import { BotConnectionError, ClassifiedError, classifyBotError } from './errors.js';
+import { BotConnectionError, ClassifiedError, classifyBotError, normalizePhase, ProtocolPhase } from './errors.js';
 import {
   ActionRequest,
   ActionResult,
@@ -27,6 +27,8 @@ export class McBot extends EventEmitter {
   private _connected = false;
   private _error: string | null = null;
   private _errorDetail: ClassifiedError | null = null;
+  private _phase: ProtocolPhase = 'handshaking';
+  private _terminalReported = false;
 
   constructor(sessionId: string) {
     super();
@@ -41,6 +43,23 @@ export class McBot extends EventEmitter {
   }
   get errorDetail(): ClassifiedError | null {
     return this._errorDetail;
+  }
+  get phase(): ProtocolPhase {
+    return this._phase;
+  }
+
+  /**
+   * Record a classified error once. Dedups identical messages and, for a
+   * terminal (connection-ending) error, suppresses any follow-up so a single
+   * failure never produces duplicate dashboard messages or re-entrant crashes.
+   */
+  private captureError(c: ClassifiedError, terminal: boolean): ClassifiedError {
+    const duplicate = this._error === c.message;
+    if (terminal) this._terminalReported = true;
+    this._errorDetail = c;
+    this._error = c.message;
+    if (!duplicate) this.emit('botError', c);
+    return c;
   }
   get raw(): any {
     return this.bot;
@@ -75,20 +94,26 @@ export class McBot extends EventEmitter {
         ...auth,
       });
     } catch (err) {
-      const classified = classifyBotError(err);
+      const classified = classifyBotError(err, { phase: 'handshaking' });
       this._errorDetail = classified;
       this._error = classified.message;
       throw new BotConnectionError(classified);
     }
 
+    this._terminalReported = false;
+    this._phase = 'handshaking';
     this.wireEvents();
 
-    // Track whether the raw TCP socket connected, so a timeout can distinguish
-    // "server unreachable" from "TCP ok but Minecraft handshake never completed".
+    // Track the raw TCP connect and the protocol phase (login/configuration/
+    // play) from the underlying node-minecraft-protocol client state.
     let tcpConnected = false;
     try {
       this.bot._client?.on?.('connect', () => {
         tcpConnected = true;
+      });
+      if (this.bot._client?.state) this._phase = normalizePhase(this.bot._client.state);
+      this.bot._client?.on?.('state', (newState: string) => {
+        this._phase = normalizePhase(newState);
       });
     } catch {
       /* ignore */
@@ -102,17 +127,19 @@ export class McBot extends EventEmitter {
         } catch {
           /* ignore */
         }
-        const classified = tcpConnected
+        const classified: ClassifiedError = tcpConnected
           ? {
-              category: 'handshake' as const,
+              category: this._phase === 'login' || this._phase === 'configuration' ? 'timeout' : 'handshake',
               retryable: true,
+              phase: this._phase,
               message:
-                `TCP zu ${config.MC_HOST}:${config.MC_PORT} verbunden, aber der Minecraft-Handshake wurde nicht abgeschlossen (Zeitüberschreitung). ` +
-                'Mögliche Ursachen: Port ist nicht der Java-Entrypoint von Velocity, Versions-/Protokoll-Inkompatibilität (MC_VERSION muss die Server-Version sein, z. B. 1.21.11), oder Velocity online-mode/forwarding. Kein Auth-Problem.',
+                `TCP verbunden, aber der Beitritt wurde nicht abgeschlossen (Zeitüberschreitung, Phase: ${this._phase}). ` +
+                (this._phase === 'configuration'
+                  ? 'Login war erfolgreich, aber die Configuration-Phase hängt (häufig ViaVersion/Registry oder eine Client-Protokoll-Lücke).'
+                  : 'Mögliche Ursachen: falscher Java-Entrypoint, Protokoll-/Versionsproblem oder Velocity-Forwarding. Kein Auth-Problem.'),
             }
-          : classifyBotError(new Error(`connection timeout: ${config.MC_HOST}:${config.MC_PORT} antwortet nicht`));
-        this._errorDetail = classified;
-        this._error = classified.message;
+          : classifyBotError(new Error(`connection timeout: ${config.MC_HOST}:${config.MC_PORT} antwortet nicht`), { phase: this._phase });
+        this.captureError(classified, true);
         reject(new BotConnectionError(classified));
       }, config.CONNECT_TIMEOUT_MS);
       const onSpawn = () => {
@@ -121,19 +148,18 @@ export class McBot extends EventEmitter {
         resolve();
       };
       const onError = (err: Error) => {
-        const classified = classifyBotError(err);
-        this._errorDetail = classified;
-        this._error = classified.message;
+        const classified = classifyBotError(err, { phase: this._phase });
+        this.captureError(classified, true);
         cleanup();
-        reject(new BotConnectionError(classified));
+        reject(new BotConnectionError(this._errorDetail ?? classified));
       };
       const onEnd = (reason: string) => {
         if (!this._connected) {
-          const classified = classifyBotError(new Error(`disconnected before spawn: ${reason}`));
-          this._errorDetail = classified;
-          this._error = classified.message;
+          if (!this._terminalReported) {
+            this.captureError(classifyBotError(new Error(`disconnected before spawn: ${reason}`), { phase: this._phase, disconnect: true }), true);
+          }
           cleanup();
-          reject(new BotConnectionError(classified));
+          reject(new BotConnectionError(this._errorDetail ?? classifyBotError(new Error(String(reason)), { phase: this._phase, disconnect: true })));
         }
       };
       const cleanup = () => {
@@ -156,26 +182,26 @@ export class McBot extends EventEmitter {
       this.emit('chat', line);
     });
     this.bot.on('kicked', (reason: any) => {
-      const classified = classifyBotError(undefined, reason);
-      this._errorDetail = classified;
-      this._error = classified.message;
+      const classified = classifyBotError(undefined, { kickReason: reason, phase: this._phase });
       this._connected = false;
-      this.emit('botError', classified);
+      this.captureError(classified, true);
       this.emit('end', classified.message);
     });
     this.bot.on('end', (reason: string) => {
       this._connected = false;
+      // If nothing terminal was captured yet, this is a plain disconnect.
+      if (!this._terminalReported) {
+        this.captureError(classifyBotError(new Error(String(reason ?? 'socketClosed')), { phase: this._phase, disconnect: true }), true);
+      }
       this.emit('end', reason);
     });
     // IMPORTANT: emit 'botError', never the special 'error' event. An 'error'
     // event with no listener makes Node throw and would crash the whole
     // dashboard. 'botError' is safe even with no listeners.
     this.bot.on('error', (err: Error) => {
-      const classified = classifyBotError(err);
-      this._errorDetail = classified;
-      this._error = classified.message;
-      logger.warn({ category: classified.category }, 'bot error (non-fatal)');
-      this.emit('botError', classified);
+      const classified = classifyBotError(err, { phase: this._phase });
+      logger.warn({ category: classified.category, phase: classified.phase }, 'bot error (non-fatal)');
+      this.captureError(classified, false);
     });
     this.bot.on('health', () => this.emit('state'));
     this.bot.on('move', () => this.emit('state'));

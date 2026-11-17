@@ -139,6 +139,9 @@ function connectWs() {
       setConn(msg.obs.connected);
     } else if (msg.type === 'approval_requested' || msg.type === 'approval_resolved') {
       loadApprovals();
+    } else if (msg.type === 'botError') {
+      logConsole('error', fmtErr(msg.error));
+      showConnError(fmtErr(msg.error));
     }
   };
   ws.onclose = () => { setConn(false); };
@@ -176,6 +179,20 @@ $('btnStart').addEventListener('click', async () => {
     btn.disabled = false; btn.textContent = 'Session starten';
   }
 });
+function fmtErr(e) {
+  if (!e) return 'Unbekannter Fehler';
+  if (typeof e === 'string') return e;
+  var tag = (e.category || 'error') + (e.phase && e.phase !== 'unknown' ? '/' + e.phase : '');
+  return '[' + tag + '] ' + (e.message || '');
+}
+function logConsole(kind, text) {
+  var el = $('console'); if (!el) return;
+  var t = new Date().toLocaleTimeString();
+  el.textContent = (el.textContent ? el.textContent + '\n' : '') + t + '  ' + text;
+  // keep last ~40 lines
+  var lines = el.textContent.split('\n'); if (lines.length > 40) el.textContent = lines.slice(-40).join('\n');
+  el.scrollTop = el.scrollHeight;
+}
 function showConnError(msg) {
   const el = $('connErr');
   if (!el) return;
@@ -187,7 +204,7 @@ function showConnError(msg) {
 async function pollServerError() {
   try {
     const s = await api('/api/server');
-    if (!s.botConnected && s.lastError) showConnError(s.lastError.message);
+    if (!s.botConnected && s.lastError) showConnError(fmtErr(s.lastError));
     else if (s.botConnected) showConnError(null);
   } catch { /* ignore */ }
 }
