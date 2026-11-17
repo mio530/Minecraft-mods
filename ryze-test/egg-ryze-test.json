@@ -27,7 +27,8 @@
     { "name": "Branch", "description": "Branch that contains ryze-test/.", "env_variable": "BRANCH", "default_value": "claude/ryzesmp-web-minecraft-testing-9wsbkh", "user_viewable": true, "user_editable": true, "rules": "required|string" },
     { "name": "Dashboard Password", "description": "Owner login password for the web dashboard.", "env_variable": "DASHBOARD_PASSWORD", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "required|string|min:6" },
     { "name": "JWT Secret", "description": "Long random string used to sign dashboard sessions.", "env_variable": "JWT_SECRET", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "required|string|min:16" },
-    { "name": "MCP Token", "description": "Bearer token ChatGPT/MCP must present. Keep secret.", "env_variable": "MCP_TOKEN", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "required|string|min:8" },
+    { "name": "MCP Token", "description": "Bearer token every MCP client (Claude Code is primary) must present. Keep secret.", "env_variable": "MCP_TOKEN", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "required|string|min:8" },
+    { "name": "MCP Allow Sessions", "description": "true lets the primary AI MCP client (Claude Code) start/stop test sessions itself. Dangerous server commands still require owner approval.", "env_variable": "MCP_ALLOW_SESSIONS", "default_value": "true", "user_viewable": true, "user_editable": true, "rules": "required|string|in:true,false" },
     { "name": "Minecraft Host", "description": "Target server host.", "env_variable": "MC_HOST", "default_value": "203.0.113.10", "user_viewable": true, "user_editable": true, "rules": "required|string" },
     { "name": "Minecraft Port", "description": "Target server port (Velocity entrypoint).", "env_variable": "MC_PORT", "default_value": "25565", "user_viewable": true, "user_editable": true, "rules": "required|integer" },
     { "name": "Minecraft Version", "description": "Protocol version to use.", "env_variable": "MC_VERSION", "default_value": "1.21.11", "user_viewable": true, "user_editable": true, "rules": "required|string" },
@@ -35,7 +36,7 @@
     { "name": "Safety Mode", "description": "safe = dangerous commands need owner approval. open = no gate.", "env_variable": "SAFETY_MODE", "default_value": "safe", "user_viewable": true, "user_editable": true, "rules": "required|string|in:safe,open" },
     { "name": "Max Sessions", "description": "Concurrent test sessions.", "env_variable": "MAX_SESSIONS", "default_value": "1", "user_viewable": true, "user_editable": true, "rules": "required|integer|min:1|max:5" },
     { "name": "Action Rate / min", "description": "Max actions per minute per client.", "env_variable": "ACTION_RATE_PER_MIN", "default_value": "60", "user_viewable": true, "user_editable": true, "rules": "required|integer|min:10" },
-    { "name": "HTTP Port", "description": "Set this to the server's primary allocation port.", "env_variable": "PORT", "default_value": "25571", "user_viewable": true, "user_editable": true, "rules": "required|integer" },
+    { "name": "HTTP Port", "description": "Dashboard/MCP HTTP port. Leave EMPTY to auto-use the server's primary allocation port (recommended). Only set a number if you proxy a different internal port.", "env_variable": "PORT", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "nullable|integer" },
     { "name": "Viewer Enabled", "description": "true enables optional 3D render (needs native deps; heavier).", "env_variable": "VIEWER_ENABLED", "default_value": "false", "user_viewable": true, "user_editable": true, "rules": "required|string|in:true,false" }
   ]
 }

@@ -7,7 +7,9 @@ import { z } from 'zod';
  */
 const Env = z.object({
   // --- HTTP / dashboard ---
-  PORT: z.coerce.number().int().positive().default(25571),
+  // Falls PORT nicht gesetzt ist, nutze Pterodactyls primären Allocation-Port
+  // (SERVER_PORT) — verhindert den häufigsten Deployment-Fehler.
+  PORT: z.coerce.number().int().positive().default(Number(process.env.SERVER_PORT) || 25571),
   HOST: z.string().default('0.0.0.0'),
   PUBLIC_URL: z.string().default(''), // e.g. https://test.ryzesmp.org (used in docs/links)
 

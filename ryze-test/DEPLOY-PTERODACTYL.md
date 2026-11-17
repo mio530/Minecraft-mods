@@ -36,10 +36,11 @@ Nothing here changes the suggestions bot.
 |---|---|
 | `GIT_ADDRESS` | `https://github.com/mio530/Minecraft-mods` |
 | `BRANCH` | `claude/ryzesmp-web-minecraft-testing-9wsbkh` |
-| `PORT` | **the allocation port you assigned** (e.g. `25572`) |
-| `DASHBOARD_PASSWORD` | a strong password |
+| `PORT` | **leave EMPTY** — it auto-uses the primary allocation port |
+| `DASHBOARD_PASSWORD` | a strong password (min 6) |
 | `JWT_SECRET` | `openssl rand -hex 32` |
 | `MCP_TOKEN` | `openssl rand -hex 24` |
+| `MCP_ALLOW_SESSIONS` | `true` (lets Claude Code start sessions) |
 | `MC_HOST` / `MC_PORT` | `203.0.113.10` / `25565` (Velocity) |
 | `MC_VERSION` | `1.21.11` |
 | `MC_AUTH` | `microsoft` |
