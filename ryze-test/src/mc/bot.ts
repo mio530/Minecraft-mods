@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { botAuthOptions } from '../auth/microsoft.js';
+import { BotConnectionError, ClassifiedError, classifyBotError } from './errors.js';
 import {
   ActionRequest,
   ActionResult,
@@ -25,6 +26,7 @@ export class McBot extends EventEmitter {
   private chat: ChatLine[] = [];
   private _connected = false;
   private _error: string | null = null;
+  private _errorDetail: ClassifiedError | null = null;
 
   constructor(sessionId: string) {
     super();
@@ -36,6 +38,9 @@ export class McBot extends EventEmitter {
   }
   get error(): string | null {
     return this._error;
+  }
+  get errorDetail(): ClassifiedError | null {
+    return this._errorDetail;
   }
   get raw(): any {
     return this.bot;
@@ -58,13 +63,20 @@ export class McBot extends EventEmitter {
     const auth = await botAuthOptions();
     logger.info({ host: config.MC_HOST, port: config.MC_PORT, auth: auth.auth }, 'bot connecting');
 
-    this.bot = (mineflayer as any).createBot({
-      host: config.MC_HOST,
-      port: config.MC_PORT,
-      version: config.MC_VERSION,
-      hideErrors: false,
-      ...auth,
-    });
+    try {
+      this.bot = (mineflayer as any).createBot({
+        host: config.MC_HOST,
+        port: config.MC_PORT,
+        version: config.MC_VERSION,
+        hideErrors: true, // we classify + surface errors ourselves (no noisy stderr)
+        ...auth,
+      });
+    } catch (err) {
+      const classified = classifyBotError(err);
+      this._errorDetail = classified;
+      this._error = classified.message;
+      throw new BotConnectionError(classified);
+    }
 
     this.wireEvents();
 
@@ -76,7 +88,10 @@ export class McBot extends EventEmitter {
         } catch {
           /* ignore */
         }
-        reject(new Error('connection timeout (server unreachable or handshake stalled)'));
+        const classified = classifyBotError(new Error('connection timeout: handshake stalled'));
+        this._errorDetail = classified;
+        this._error = classified.message;
+        reject(new BotConnectionError(classified));
       }, 30_000);
       const onSpawn = () => {
         this._connected = true;
@@ -84,14 +99,19 @@ export class McBot extends EventEmitter {
         resolve();
       };
       const onError = (err: Error) => {
-        this._error = err.message;
+        const classified = classifyBotError(err);
+        this._errorDetail = classified;
+        this._error = classified.message;
         cleanup();
-        reject(err);
+        reject(new BotConnectionError(classified));
       };
       const onEnd = (reason: string) => {
         if (!this._connected) {
+          const classified = classifyBotError(new Error(`disconnected before spawn: ${reason}`));
+          this._errorDetail = classified;
+          this._error = classified.message;
           cleanup();
-          reject(new Error(`disconnected before spawn: ${reason}`));
+          reject(new BotConnectionError(classified));
         }
       };
       const cleanup = () => {
@@ -113,18 +133,27 @@ export class McBot extends EventEmitter {
       if (this.chat.length > CHAT_BUFFER) this.chat.shift();
       this.emit('chat', line);
     });
-    this.bot.on('kicked', (reason: string) => {
-      this._error = `kicked: ${typeof reason === 'string' ? reason : JSON.stringify(reason)}`;
+    this.bot.on('kicked', (reason: any) => {
+      const classified = classifyBotError(undefined, reason);
+      this._errorDetail = classified;
+      this._error = classified.message;
       this._connected = false;
-      this.emit('end', this._error);
+      this.emit('botError', classified);
+      this.emit('end', classified.message);
     });
     this.bot.on('end', (reason: string) => {
       this._connected = false;
       this.emit('end', reason);
     });
+    // IMPORTANT: emit 'botError', never the special 'error' event. An 'error'
+    // event with no listener makes Node throw and would crash the whole
+    // dashboard. 'botError' is safe even with no listeners.
     this.bot.on('error', (err: Error) => {
-      this._error = err.message;
-      this.emit('error', err);
+      const classified = classifyBotError(err);
+      this._errorDetail = classified;
+      this._error = classified.message;
+      logger.warn({ category: classified.category }, 'bot error (non-fatal)');
+      this.emit('botError', classified);
     });
     this.bot.on('health', () => this.emit('state'));
     this.bot.on('move', () => this.emit('state'));

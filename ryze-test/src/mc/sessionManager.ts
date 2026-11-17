@@ -5,6 +5,7 @@ import { logger } from '../logger.js';
 import { audit } from '../security/audit.js';
 import { startLogin, status as authStatus } from '../auth/microsoft.js';
 import { McBot } from './bot.js';
+import { ClassifiedError } from './errors.js';
 import { Observation } from './types.js';
 
 export interface PendingApproval {
@@ -32,6 +33,11 @@ interface Session {
 export class SessionManager extends EventEmitter {
   private sessions = new Map<string, Session>();
   private approvals = new Map<string, PendingApproval & { resolve: (ok: boolean) => void }>();
+  private _lastError: ClassifiedError | null = null;
+
+  get lastError(): ClassifiedError | null {
+    return this._lastError;
+  }
 
   list(): { id: string; startedAt: number; connected: boolean }[] {
     return [...this.sessions.values()].map((s) => ({
@@ -71,13 +77,32 @@ export class SessionManager extends EventEmitter {
     const bot = new McBot(id);
 
     bot.on('chat', () => this.touch(id));
+    // Consume 'botError' so an absent listener can never crash the process.
+    bot.on('botError', (e: ClassifiedError) => {
+      this._lastError = e;
+      logger.warn({ id, category: e.category, retryable: e.retryable }, 'bot error');
+      audit('system', id, 'session.bot_error', 'error', id, `${e.category}: ${e.message}`);
+    });
     bot.on('end', (reason: string) => {
-      logger.warn({ id, reason }, 'session bot ended');
+      logger.warn({ id }, 'session bot ended');
       audit('system', id, 'session.bot_end', 'ok', id, String(reason));
       this.stop(id, 'bot disconnected').catch(() => {});
     });
 
-    await bot.connect();
+    try {
+      await bot.connect();
+    } catch (err) {
+      const classified = (bot.errorDetail ?? null) as ClassifiedError | null;
+      if (classified) this._lastError = classified;
+      audit('system', requestedBy, 'session.start', 'error', id, classified?.message ?? String(err));
+      try {
+        bot.disconnect('connect failed');
+      } catch {
+        /* ignore */
+      }
+      throw err; // propagated to REST/MCP; dashboard shows the classified message
+    }
+    this._lastError = null; // connected successfully
 
     const session: Session = {
       id,

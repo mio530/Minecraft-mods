@@ -163,14 +163,34 @@ function renderStatus(o) {
 
 // ---------- session ----------
 $('btnStart').addEventListener('click', async () => {
+  const btn = $('btnStart');
+  btn.disabled = true; btn.textContent = 'Verbinde…';
   try {
-    await api('/api/session/start', { method: 'POST', body: '{}' });
+    await api('/api/session/start', { method: 'POST', body: {} });
     $('viewer').querySelector('.placeholder')?.remove();
+    showConnError(null);
   } catch (err) {
-    if (err.status === 428) { refreshMsAuth(); alert('Bitte zuerst mit Microsoft anmelden.'); }
-    else alert('Start fehlgeschlagen: ' + err.message);
+    if (err.status === 428) { refreshMsAuth(); toast('Bitte zuerst mit Microsoft anmelden.', true); }
+    else { showConnError(err.message); toast('Start fehlgeschlagen: ' + err.message, true); }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Session starten';
   }
 });
+function showConnError(msg) {
+  const el = $('connErr');
+  if (!el) return;
+  el.hidden = !msg;
+  el.textContent = msg || '';
+}
+// Surface the last classified connection error from the server, even if the
+// bot dropped after connecting.
+async function pollServerError() {
+  try {
+    const s = await api('/api/server');
+    if (!s.botConnected && s.lastError) showConnError(s.lastError.message);
+    else if (s.botConnected) showConnError(null);
+  } catch { /* ignore */ }
+}
 $('btnStop').addEventListener('click', async () => {
   await api('/api/session/stop', { method: 'POST', body: '{}' });
   $('viewer').innerHTML = '<div class="placeholder">Keine aktive Session</div>';
@@ -295,5 +315,7 @@ async function boot() {
   if (!authed) startMsPoll(4000);
   await loadTests(); await loadAudit(); await loadApprovals();
   setInterval(loadAudit, 5000);
+  pollServerError();
+  setInterval(pollServerError, 5000);
 }
 if (token) { boot().catch(() => logout()); } else { showApp(false); }

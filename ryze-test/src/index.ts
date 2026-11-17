@@ -83,6 +83,19 @@ export async function startServer(): Promise<RunningServer> {
 
   app.get('/healthz', async () => ({ ok: true, ts: Date.now() }));
 
+  // Safety net: a background bot/auth error (e.g. a Mojang sessionserver
+  // FetchError surfacing as an unhandled rejection) must never take down the
+  // HTTP/MCP dashboard. Log a sanitized line and keep serving.
+  const onBg = (kind: string) => (err: unknown) => {
+    const msg = (err instanceof Error ? err.message : String(err))
+      .replace(/eyJ[\w-]{6,}\.[\w-]+\.[\w-]+/g, '[redacted]')
+      .replace(/[A-Za-z0-9_-]{40,}/g, '[redacted]')
+      .slice(0, 300);
+    logger.error({ kind }, `background error (dashboard kept alive): ${msg}`);
+  };
+  process.on('unhandledRejection', onBg('unhandledRejection'));
+  process.on('uncaughtException', onBg('uncaughtException'));
+
   const address = await app.listen({ port: config.PORT, host: config.HOST });
   logger.info(
     { port: config.PORT, target: `${config.MC_HOST}:${config.MC_PORT}`, auth: config.MC_AUTH },
