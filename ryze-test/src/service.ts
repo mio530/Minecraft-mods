@@ -3,6 +3,7 @@ import { audit, recentTestResults } from './security/audit.js';
 import { allow, remaining } from './security/rateLimit.js';
 import { can, Principal, require as requireScope } from './security/rbac.js';
 import { sessions } from './mc/sessionManager.js';
+import { runDiagnostics } from './mc/diagnostics.js';
 import { ActionRequest } from './mc/types.js';
 import { renderScreenshot, schematicScreenshot, Screenshot } from './mc/viewer.js';
 import { isDestructiveTest, listTests, runAll, runTest } from './tests/scenarios.js';
@@ -35,6 +36,11 @@ export function getPlayerStatus(p: Principal, id?: string) {
   const bot = sessions.resolve(id);
   audit(p.kind === 'owner' ? 'owner' : 'ai', p.id, 'observe.player', 'ok', bot.sessionId);
   return bot.observe();
+}
+
+export async function getDiagnostics(p: Principal) {
+  requireScope(p, 'observe');
+  return runDiagnostics();
 }
 
 export function getServerStatus(p: Principal) {

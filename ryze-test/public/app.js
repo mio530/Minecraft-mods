@@ -307,6 +307,22 @@ async function loadAudit() {
 
 function escapeHtml(s) { return String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])); }
 
+
+$('btnDiag').addEventListener('click', async () => {
+  const btn = $('btnDiag'); btn.disabled = true; btn.textContent = 'Teste…';
+  const out = $('diagOut'); out.hidden = false; out.textContent = 'läuft…';
+  try {
+    const d = await api('/api/diagnostics');
+    out.textContent = d.summary + '\n\n' + d.probes.map(function (p) {
+      return (p.ok ? '✓' : '✗') + ' ' + p.name + ' (' + p.target + ') — ' + p.detail + ' [' + p.ms + 'ms]';
+    }).join('\n');
+  } catch (e) {
+    out.textContent = 'Diagnose fehlgeschlagen: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Netzwerk testen';
+  }
+});
+
 // ---------- boot ----------
 async function boot() {
   showApp(true);

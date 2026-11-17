@@ -52,6 +52,13 @@ export async function registerRest(app: FastifyInstance): Promise<void> {
   });
 
   // --- status / observation ---
+  app.get('/api/diagnostics', async (req, reply) => {
+    const p = requireOwner(req, reply);
+    if (!p) return;
+    return svc.getDiagnostics(p);
+  });
+
+
   app.get('/api/server', async (req, reply) => {
     const p = requireOwner(req, reply);
     if (!p) return;
