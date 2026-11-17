@@ -125,6 +125,7 @@ the dashboard.
 | ChatGPT can't reach `/mcp` | Needs public **HTTPS**; check the reverse proxy and that `MCP_TOKEN` matches. |
 | Screenshot is a schematic, not 3D | Expected default (GPU-free). Set `VIEWER_ENABLED=true` only if native canvas/gl is installed. |
 | `rate_limit_exceeded` | Raise `ACTION_RATE_PER_MIN` or slow the AI down. |
+| `Invalid configuration: { PORT: ['Number must be greater than 0'] }` | Fixed: leave the `HTTP Port` variable **empty** so it uses the allocation's `SERVER_PORT`. Reinstall to pull the latest branch. The app binds `0.0.0.0:<SERVER_PORT>`. |
 | Dashboard works but WS view frozen | Reverse proxy not forwarding WebSocket upgrades. |
 
 ## 9. Keeping the suggestions bot safe

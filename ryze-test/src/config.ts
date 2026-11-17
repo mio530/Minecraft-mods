@@ -5,12 +5,42 @@ import { z } from 'zod';
  * Central configuration. Every secret comes from an environment variable so
  * nothing sensitive is ever hard-coded, shipped to the browser, or logged.
  */
+/**
+ * Resolve the HTTP port. Pterodactyl injects the empty string PORT="" plus
+ * SERVER_PORT=<allocation>, so an empty/whitespace/undefined PORT must fall
+ * back to SERVER_PORT, and only then to the dev default. Any explicitly set
+ * but invalid value (0, negative, non-numeric, out of range) is a hard error —
+ * we never silently bind to port 0.
+ */
+export function resolvePort(portRaw?: string | null, serverPortRaw?: string | null): number {
+  const parse = (val: string | null | undefined, source: string): number | null => {
+    if (val === undefined || val === null) return null;
+    const s = String(val).trim();
+    if (s === '') return null;
+    const n = Number(s);
+    if (!Number.isInteger(n) || n <= 0 || n > 65535) {
+      throw new Error(`Invalid ${source} "${s}" (must be an integer 1-65535)`);
+    }
+    return n;
+  };
+  const explicit = parse(portRaw, 'PORT');
+  if (explicit !== null) return explicit;
+  const fromServer = parse(serverPortRaw, 'SERVER_PORT');
+  if (fromServer !== null) return fromServer;
+  return 25571; // dev default when nothing is configured anywhere
+}
+
+/** Resolve the bind host. Always a real interface; empty → all interfaces. */
+export function resolveHost(hostRaw?: string | null): string {
+  const s = (hostRaw ?? '').trim();
+  return s === '' ? '0.0.0.0' : s;
+}
+
 const Env = z.object({
   // --- HTTP / dashboard ---
-  // Falls PORT nicht gesetzt ist, nutze Pterodactyls primären Allocation-Port
-  // (SERVER_PORT) — verhindert den häufigsten Deployment-Fehler.
-  PORT: z.coerce.number().int().positive().default(Number(process.env.SERVER_PORT) || 25571),
-  HOST: z.string().default('0.0.0.0'),
+  // NOTE: PORT and HOST are resolved separately (see resolvePort/resolveHost)
+  // because Pterodactyl passes PORT as an empty string, which zod .default()
+  // does not treat as "unset".
   PUBLIC_URL: z.string().default(''), // e.g. https://test.ryzesmp.org (used in docs/links)
 
   // --- Target Minecraft server (RyzeSMP) ---
@@ -52,7 +82,7 @@ const Env = z.object({
   DB_PATH: z.string().default('./data/ryze-test.db'),
 });
 
-export type AppConfig = z.infer<typeof Env>;
+export type AppConfig = z.infer<typeof Env> & { PORT: number; HOST: string };
 
 function load(): AppConfig {
   const parsed = Env.safeParse(process.env);
@@ -61,7 +91,17 @@ function load(): AppConfig {
     console.error('Invalid configuration:', parsed.error.flatten().fieldErrors);
     process.exit(1);
   }
-  return parsed.data;
+  let PORT: number;
+  let HOST: string;
+  try {
+    PORT = resolvePort(process.env.PORT, process.env.SERVER_PORT);
+    HOST = resolveHost(process.env.HOST ?? process.env.SERVER_IP);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Invalid configuration:', err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+  return { ...parsed.data, PORT, HOST };
 }
 
 export const config = load();
