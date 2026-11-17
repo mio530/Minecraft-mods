@@ -1,29 +1,51 @@
-import { connectMcp } from './client.js';
+import { configFromEnv, connectMcp, redact, safeEndpoint } from './client.js';
 
 /**
  * Command-line MCP client for driving the ryze-test server directly.
+ * Endpoint + token come from the ENVIRONMENT (never the command line, so they
+ * can't leak into shell history or the process list):
  *
- *   node dist/mcp/cli.js <baseUrl> <token> list
- *   node dist/mcp/cli.js <baseUrl> <token> call get_player_status '{}'
- *   node dist/mcp/cli.js <baseUrl> <token> screenshot out.svg
+ *   export RYZE_MCP_URL="https://<host>/mcp"
+ *   export RYZE_MCP_TOKEN="<token>"
  *
- * Or set MCP_URL and MCP_TOKEN env vars and omit the first two args.
+ *   node dist/mcp/cli.js diagnose
+ *   node dist/mcp/cli.js list
+ *   node dist/mcp/cli.js status
+ *   node dist/mcp/cli.js call get_player_status '{}'
+ *   node dist/mcp/cli.js screenshot out.svg
  */
 async function main() {
   const argv = process.argv.slice(2);
-  let baseUrl = process.env.MCP_URL ?? '';
-  let token = process.env.MCP_TOKEN ?? '';
-  // allow positional url/token if they look like one
-  if (argv[0]?.startsWith('http')) baseUrl = argv.shift()!;
-  if (argv[0] && !['list', 'call', 'screenshot', 'status'].includes(argv[0])) token = argv.shift()!;
-  const cmd = argv.shift() ?? 'list';
+  const cmd = argv.shift() ?? 'diagnose';
+  const cfg = configFromEnv();
 
-  if (!baseUrl || !token) {
-    console.error('Usage: cli <baseUrl> <token> <list|call|screenshot|status> [...]');
+  // diagnose never needs a live connection first; it reports config safely.
+  if (cmd === 'diagnose') {
+    console.log('MCP endpoint :', cfg.url ? safeEndpoint(cfg.url) : '(RYZE_MCP_URL unset)');
+    console.log('MCP token    :', redact(cfg.token));
+    if (!cfg.url || !cfg.token) {
+      console.log('status       : NOT CONFIGURED — set RYZE_MCP_URL and RYZE_MCP_TOKEN');
+      process.exit(2);
+    }
+    try {
+      const mcp = await connectMcp(cfg);
+      const tools = await mcp.listTools();
+      console.log('status       : CONNECTED');
+      console.log('tools        :', tools.join(', '));
+      await mcp.close();
+    } catch (err) {
+      console.log('status       : UNREACHABLE —', err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
+    return;
+  }
+
+  if (!cfg.url || !cfg.token) {
+    console.error('Not configured. Set RYZE_MCP_URL and RYZE_MCP_TOKEN. Run "diagnose" for details.');
     process.exit(2);
   }
 
-  const mcp = await connectMcp(baseUrl, token);
+  const mcp = await connectMcp(cfg);
   try {
     if (cmd === 'list') {
       console.log((await mcp.listTools()).join('\n'));
@@ -38,7 +60,7 @@ async function main() {
       const res = await mcp.callRaw('get_game_screenshot');
       const img = (res.content ?? []).find((c: any) => c.type === 'image');
       if (!img) {
-        console.error('no image returned:', JSON.stringify(res));
+        console.error('no image returned');
         process.exit(1);
       }
       const { writeFileSync } = await import('node:fs');

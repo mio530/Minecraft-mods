@@ -1,0 +1,12 @@
+{
+  "$comment": "Claude Code MCP config. 'ryze-test' is the deployed RyzeSMP testing MCP server (HTTP). Set RYZE_MCP_URL and RYZE_MCP_TOKEN in your environment; no secrets are stored in this file. See ryze-test/CONNECT-CLAUDE.md for the local stdio alternative.",
+  "mcpServers": {
+    "ryze-test": {
+      "type": "http",
+      "url": "${RYZE_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${RYZE_MCP_TOKEN}"
+      }
+    }
+  }
+}

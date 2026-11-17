@@ -25,6 +25,18 @@ export interface RunningServer {
  * bottom calls it when this file is the process entrypoint.
  */
 export async function startServer(): Promise<RunningServer> {
+  // Fail fast rather than exposing a control plane with default secrets.
+  const insecure =
+    config.JWT_SECRET.startsWith('CHANGE_ME') ||
+    config.MCP_TOKEN.startsWith('CHANGE_ME') ||
+    config.DASHBOARD_PASSWORD === 'changeme';
+  if (insecure && process.env.ALLOW_INSECURE !== '1') {
+    throw new Error(
+      'Refusing to start with default secrets. Set JWT_SECRET, MCP_TOKEN and DASHBOARD_PASSWORD ' +
+        '(or ALLOW_INSECURE=1 for local dev only).',
+    );
+  }
+
   initAudit();
 
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });

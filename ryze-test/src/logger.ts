@@ -22,8 +22,6 @@ export const logger = pino({
     ],
     censor: '[redacted]',
   },
-  transport:
-    process.env.NODE_ENV === 'production'
-      ? undefined
-      : { target: 'pino/file', options: { destination: 1 } },
-});
+  // Always log to stderr (fd 2): stdout is reserved for the MCP stdio protocol,
+  // and this keeps logs clean in every run mode.
+}, pino.destination({ dest: 2, sync: false }));
