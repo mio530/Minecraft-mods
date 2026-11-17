@@ -8,7 +8,7 @@
   "features": null,
   "docker_images": { "Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22" },
   "file_denylist": [],
-  "startup": "cd /home/container; if [ ! -d node_modules ] || [ ! -f dist/index.js ]; then echo '[ryze-test] installing dependencies + building...'; { /usr/local/bin/npm ci --include=dev --no-audit --no-fund || /usr/local/bin/npm install --no-audit --no-fund; } && /usr/local/bin/npm run build; fi; exec /usr/local/bin/node dist/index.js",
+  "startup": "cd /home/container; if [ ! -f dist/index.js ] || ! /usr/local/bin/node -e \"require.resolve('fastify')\" 2>/dev/null; then echo '[ryze-test] dependencies/build missing or incomplete - installing...'; { /usr/local/bin/npm ci --include=dev --no-audit --no-fund || /usr/local/bin/npm install --no-audit --no-fund; } && /usr/local/bin/npm run build && { /usr/local/bin/npm ci --omit=dev --no-audit --no-fund || /usr/local/bin/npm install --omit=dev --no-audit --no-fund; }; fi; exec /usr/local/bin/node dist/index.js",
   "config": {
     "files": "{}",
     "startup": "{\"done\": \"ryze-test listening\"}",
