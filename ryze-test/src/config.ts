@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import { resolveMcVersion } from './mc/version.js';
 
 /**
  * Central configuration. Every secret comes from an environment variable so
@@ -115,7 +116,11 @@ function load(): AppConfig {
     console.error('Invalid configuration:', err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
-  return { ...parsed.data, PORT, HOST };
+  const MC_VERSION = resolveMcVersion(process.env.MC_VERSION, (m) => {
+    // eslint-disable-next-line no-console
+    console.warn('Config:', m);
+  });
+  return { ...parsed.data, PORT, HOST, MC_VERSION };
 }
 
 export const config = load();

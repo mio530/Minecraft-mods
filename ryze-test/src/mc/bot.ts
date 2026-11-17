@@ -67,10 +67,10 @@ export class McBot extends EventEmitter {
       this.bot = (mineflayer as any).createBot({
         host: config.MC_HOST,
         port: config.MC_PORT,
-        // MC_VERSION="auto" lets mineflayer negotiate the version from the
-        // server's status ping instead of forcing one (avoids a stalled
-        // handshake on a version mismatch).
-        version: config.MC_VERSION === 'auto' ? false : config.MC_VERSION,
+        // config.MC_VERSION is already validated/normalised to a supported
+        // version (see resolveMcVersion), so mineflayer never receives an
+        // unsupported string like "auto".
+        version: config.MC_VERSION,
         hideErrors: true, // we classify + surface errors ourselves (no noisy stderr)
         ...auth,
       });
@@ -108,7 +108,7 @@ export class McBot extends EventEmitter {
               retryable: true,
               message:
                 `TCP zu ${config.MC_HOST}:${config.MC_PORT} verbunden, aber der Minecraft-Handshake wurde nicht abgeschlossen (Zeitüberschreitung). ` +
-                'Mögliche Ursachen: Port ist nicht der Java-Entrypoint von Velocity, Versions-/Protokoll-Inkompatibilität (ggf. MC_VERSION="auto" setzen), oder Velocity online-mode/forwarding. Kein Auth-Problem.',
+                'Mögliche Ursachen: Port ist nicht der Java-Entrypoint von Velocity, Versions-/Protokoll-Inkompatibilität (MC_VERSION muss die Server-Version sein, z. B. 1.21.11), oder Velocity online-mode/forwarding. Kein Auth-Problem.',
             }
           : classifyBotError(new Error(`connection timeout: ${config.MC_HOST}:${config.MC_PORT} antwortet nicht`));
         this._errorDetail = classified;
