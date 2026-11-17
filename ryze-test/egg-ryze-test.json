@@ -1,0 +1,41 @@
+{
+  "_comment": "Pterodactyl egg for the RyzeSMP Test Client + AI remote-control service. Import under a Nest, then create a server from it. Clones the ryze-test/ subdir of the Minecraft-mods repo.",
+  "meta": { "version": "PTDL_v2", "update_url": null },
+  "exported_at": "2026-11-17T00:00:00+00:00",
+  "name": "RyzeSMP Test Client",
+  "author": "noreply@anthropic.com",
+  "description": "Browser remote Minecraft test client + MCP interface for AI-assisted RyzeSMP testing. Separate from the suggestions bot.",
+  "features": null,
+  "docker_images": { "Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22" },
+  "file_denylist": [],
+  "startup": "cd /home/container; if [ ! -d node_modules ]; then /usr/local/bin/npm install --no-audit --no-fund || true; fi; if [ ! -f dist/index.js ]; then /usr/local/bin/npm run build; fi; /usr/local/bin/node dist/index.js",
+  "config": {
+    "files": "{}",
+    "startup": "{\"done\": \"ryze-test listening\"}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\nset -e\napt-get update -qq && apt-get install -y git curl >/dev/null 2>&1 || true\nmkdir -p /mnt/server\ncd /tmp\nrm -rf repo\ngit clone --depth 1 --branch \"${BRANCH}\" \"${GIT_ADDRESS}\" repo\nif [ ! -d repo/ryze-test ]; then echo 'ryze-test/ not found on branch ${BRANCH}'; exit 1; fi\ncp -r repo/ryze-test/. /mnt/server/\ncd /mnt/server\nrm -rf node_modules dist .env data .auth-cache\necho 'Install complete. Set env vars (JWT_SECRET, DASHBOARD_PASSWORD, MCP_TOKEN) before starting.'\n",
+      "container": "node:22-bookworm-slim",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    { "name": "Git Repo", "description": "Public repo to clone.", "env_variable": "GIT_ADDRESS", "default_value": "https://github.com/mio530/Minecraft-mods", "user_viewable": true, "user_editable": true, "rules": "required|string" },
+    { "name": "Branch", "description": "Branch that contains ryze-test/.", "env_variable": "BRANCH", "default_value": "claude/ryzesmp-web-minecraft-testing-9wsbkh", "user_viewable": true, "user_editable": true, "rules": "required|string" },
+    { "name": "Dashboard Password", "description": "Owner login password for the web dashboard.", "env_variable": "DASHBOARD_PASSWORD", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "required|string|min:6" },
+    { "name": "JWT Secret", "description": "Long random string used to sign dashboard sessions.", "env_variable": "JWT_SECRET", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "required|string|min:16" },
+    { "name": "MCP Token", "description": "Bearer token ChatGPT/MCP must present. Keep secret.", "env_variable": "MCP_TOKEN", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "required|string|min:8" },
+    { "name": "Minecraft Host", "description": "Target server host.", "env_variable": "MC_HOST", "default_value": "203.0.113.10", "user_viewable": true, "user_editable": true, "rules": "required|string" },
+    { "name": "Minecraft Port", "description": "Target server port (Velocity entrypoint).", "env_variable": "MC_PORT", "default_value": "25565", "user_viewable": true, "user_editable": true, "rules": "required|integer" },
+    { "name": "Minecraft Version", "description": "Protocol version to use.", "env_variable": "MC_VERSION", "default_value": "1.21.11", "user_viewable": true, "user_editable": true, "rules": "required|string" },
+    { "name": "Auth Mode", "description": "microsoft (online account) or offline (test backend).", "env_variable": "MC_AUTH", "default_value": "microsoft", "user_viewable": true, "user_editable": true, "rules": "required|string|in:microsoft,offline" },
+    { "name": "Safety Mode", "description": "safe = dangerous commands need owner approval. open = no gate.", "env_variable": "SAFETY_MODE", "default_value": "safe", "user_viewable": true, "user_editable": true, "rules": "required|string|in:safe,open" },
+    { "name": "Max Sessions", "description": "Concurrent test sessions.", "env_variable": "MAX_SESSIONS", "default_value": "1", "user_viewable": true, "user_editable": true, "rules": "required|integer|min:1|max:5" },
+    { "name": "Action Rate / min", "description": "Max actions per minute per client.", "env_variable": "ACTION_RATE_PER_MIN", "default_value": "60", "user_viewable": true, "user_editable": true, "rules": "required|integer|min:10" },
+    { "name": "HTTP Port", "description": "Set this to the server's primary allocation port.", "env_variable": "PORT", "default_value": "25571", "user_viewable": true, "user_editable": true, "rules": "required|integer" },
+    { "name": "Viewer Enabled", "description": "true enables optional 3D render (needs native deps; heavier).", "env_variable": "VIEWER_ENABLED", "default_value": "false", "user_viewable": true, "user_editable": true, "rules": "required|string|in:true,false" }
+  ]
+}

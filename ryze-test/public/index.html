@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>RyzeSMP Test Client</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Login -->
+  <section id="login" class="center">
+    <form id="loginForm" class="card">
+      <h1>RyzeSMP Test</h1>
+      <p class="muted">Dashboard-Login</p>
+      <input id="password" type="password" placeholder="Passwort" autocomplete="current-password" />
+      <button type="submit">Anmelden</button>
+      <p id="loginErr" class="err"></p>
+    </form>
+  </section>
+
+  <!-- App -->
+  <main id="app" hidden>
+    <header>
+      <strong>RyzeSMP Test Client</strong>
+      <span id="connBadge" class="badge off">offline</span>
+      <span class="grow"></span>
+      <button id="btnLogout" class="ghost">Logout</button>
+    </header>
+
+    <!-- Microsoft auth banner -->
+    <div id="msAuth" class="banner" hidden>
+      <div>
+        <strong>Microsoft-Login nötig</strong>
+        <p class="muted" id="msHint">Melde dich mit deinem eigenen Microsoft-Account an. Passwort wird nie gespeichert.</p>
+      </div>
+      <div id="msCodeBox" hidden>
+        <p>Öffne <a id="msLink" target="_blank" rel="noopener">microsoft.com/link</a> und gib ein:</p>
+        <div class="code" id="msCode">— — — — —</div>
+      </div>
+      <button id="btnMsLogin">Login starten</button>
+    </div>
+
+    <div class="grid">
+      <!-- Live view -->
+      <div class="card">
+        <div class="row">
+          <h2>Live-Ansicht</h2>
+          <span class="grow"></span>
+          <button id="btnStart">Session starten</button>
+          <button id="btnStop" class="ghost" hidden>Stop</button>
+        </div>
+        <div id="viewer" class="viewer">
+          <div class="placeholder">Keine aktive Session</div>
+        </div>
+
+        <!-- Touch / keyboard control pad -->
+        <div class="controls">
+          <div class="dpad">
+            <button data-key="forward" class="ctl up">▲</button>
+            <button data-key="left" class="ctl left">◀</button>
+            <button data-key="back" class="ctl down">▼</button>
+            <button data-key="right" class="ctl right">▶</button>
+          </div>
+          <div class="actions">
+            <button data-key="jump" class="ctl">Jump</button>
+            <button data-key="sprint" class="ctl">Sprint</button>
+            <button data-key="sneak" class="ctl">Sneak</button>
+            <button id="btnUse" class="ctl">Use</button>
+          </div>
+        </div>
+        <p class="muted small">Desktop: WASD bewegen, Leertaste springen, Maus im Feld = umsehen. Mobil: Buttons gedrückt halten.</p>
+      </div>
+
+      <!-- Status + chat -->
+      <div class="card">
+        <h2>Status</h2>
+        <pre id="status" class="status">—</pre>
+        <h2>Chat / Befehl</h2>
+        <form id="chatForm" class="row">
+          <input id="chatInput" placeholder="Nachricht oder /befehl" maxlength="256" />
+          <button type="submit">Senden</button>
+        </form>
+        <div id="approvals"></div>
+      </div>
+
+      <!-- Tests -->
+      <div class="card">
+        <div class="row"><h2>Tests</h2><span class="grow"></span><button id="btnRunAll">Alle ausführen</button></div>
+        <div id="testList" class="tests"></div>
+        <h3>Ergebnisse</h3>
+        <div id="testResults" class="results"></div>
+      </div>
+
+      <!-- Audit -->
+      <div class="card">
+        <h2>Audit-Log (AI-Aktionen)</h2>
+        <div id="audit" class="audit"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
