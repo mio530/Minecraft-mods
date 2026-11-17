@@ -77,6 +77,7 @@ const Env = z.object({
 
   // --- Behaviour / safety ---
   SESSION_TIMEOUT_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
+  CONNECT_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
   MAX_SESSIONS: z.coerce.number().int().positive().default(1),
   // Commands/actions per minute per session (rate limiting).
   ACTION_RATE_PER_MIN: z.coerce.number().int().positive().default(60),

@@ -67,7 +67,10 @@ export class McBot extends EventEmitter {
       this.bot = (mineflayer as any).createBot({
         host: config.MC_HOST,
         port: config.MC_PORT,
-        version: config.MC_VERSION,
+        // MC_VERSION="auto" lets mineflayer negotiate the version from the
+        // server's status ping instead of forcing one (avoids a stalled
+        // handshake on a version mismatch).
+        version: config.MC_VERSION === 'auto' ? false : config.MC_VERSION,
         hideErrors: true, // we classify + surface errors ourselves (no noisy stderr)
         ...auth,
       });
@@ -80,6 +83,17 @@ export class McBot extends EventEmitter {
 
     this.wireEvents();
 
+    // Track whether the raw TCP socket connected, so a timeout can distinguish
+    // "server unreachable" from "TCP ok but Minecraft handshake never completed".
+    let tcpConnected = false;
+    try {
+      this.bot._client?.on?.('connect', () => {
+        tcpConnected = true;
+      });
+    } catch {
+      /* ignore */
+    }
+
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         cleanup();
@@ -88,11 +102,19 @@ export class McBot extends EventEmitter {
         } catch {
           /* ignore */
         }
-        const classified = classifyBotError(new Error('connection timeout: handshake stalled'));
+        const classified = tcpConnected
+          ? {
+              category: 'handshake' as const,
+              retryable: true,
+              message:
+                `TCP zu ${config.MC_HOST}:${config.MC_PORT} verbunden, aber der Minecraft-Handshake wurde nicht abgeschlossen (Zeitüberschreitung). ` +
+                'Mögliche Ursachen: Port ist nicht der Java-Entrypoint von Velocity, Versions-/Protokoll-Inkompatibilität (ggf. MC_VERSION="auto" setzen), oder Velocity online-mode/forwarding. Kein Auth-Problem.',
+            }
+          : classifyBotError(new Error(`connection timeout: ${config.MC_HOST}:${config.MC_PORT} antwortet nicht`));
         this._errorDetail = classified;
         this._error = classified.message;
         reject(new BotConnectionError(classified));
-      }, 30_000);
+      }, config.CONNECT_TIMEOUT_MS);
       const onSpawn = () => {
         this._connected = true;
         cleanup();

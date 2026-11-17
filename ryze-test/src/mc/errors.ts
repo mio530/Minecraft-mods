@@ -7,6 +7,7 @@ import { config } from '../config.js';
  */
 export type BotErrorCategory =
   | 'network_server' // can't reach the Minecraft server/Velocity proxy
+  | 'handshake' // TCP connected but the Minecraft protocol handshake never completed
   | 'mojang_session' // can't reach/complete sessionserver.mojang.com join
   | 'invalid_auth' // Microsoft/Minecraft token invalid, expired, or no game ownership
   | 'kicked' // server actively kicked (whitelist / online-mode / plugin)
