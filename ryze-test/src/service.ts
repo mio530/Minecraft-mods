@@ -56,7 +56,8 @@ export function getServerStatus(p: Principal) {
     maxSessions: config.MAX_SESSIONS,
     safetyMode: config.SAFETY_MODE,
     botConnected: current?.bot.connected ?? false,
-    lastError: sessions.lastError, // classified {category,message,retryable} or null
+    lastError: sessions.lastError, // classified {category,message,retryable,phase} or null
+    lastPackets: current?.bot.lastPackets ?? { in: null, out: null }, // config-phase packet names
     rateRemaining: remaining(p.id),
   };
 }

@@ -29,6 +29,7 @@ vi.mock('mineflayer', () => {
     bot.quit = () => {};
     bot.end = () => {};
     bot.setControlState = () => {};
+    bot._client.write = () => {};
     g.__bot = bot;
     if (g.__resolveBot) g.__resolveBot(bot);
     return bot;
@@ -117,6 +118,29 @@ describe('protocol phase + disconnect classification', () => {
     expect(bot.errorDetail?.phase).toBe('login');
     expect(['timeout', 'handshake']).toContain(bot.errorDetail?.category);
   }, 5000);
+
+  it('records the last login/configuration packet names and shows them in the error', async () => {
+    const { McBot } = await import('../mc/bot.js');
+    const bot = new McBot('d6');
+    const ready = armBot();
+    const p = bot.connect().catch(() => {});
+    const fake = await ready;
+    fake._client.emit('connect');
+    toState(fake, 'login');
+    toState(fake, 'configuration');
+    // incoming server packet, then the client's reply
+    fake._client.emit('packet', {}, { state: 'configuration', name: 'registry_data' });
+    fake._client.write('select_known_packs', { packs: [] });
+    fake._client.emit('packet', {}, { state: 'configuration', name: 'add_resource_pack' });
+    fake.emit('end', 'socketClosed');
+    await p;
+    expect(bot.lastPackets.in).toBe('configuration/add_resource_pack');
+    expect(bot.lastPackets.out).toBe('configuration/select_known_packs');
+    expect(bot.errorDetail?.category).toBe('disconnect');
+    expect(bot.errorDetail?.phase).toBe('configuration');
+    expect(bot.errorDetail?.message).toMatch(/Zuletzt empfangen: configuration\/add_resource_pack/);
+    expect(bot.errorDetail?.message).toMatch(/zuletzt gesendet: configuration\/select_known_packs/);
+  });
 
   it('does not emit duplicate botError for the same error followed by end', async () => {
     const { McBot } = await import('../mc/bot.js');

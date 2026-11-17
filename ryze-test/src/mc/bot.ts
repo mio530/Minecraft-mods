@@ -29,6 +29,8 @@ export class McBot extends EventEmitter {
   private _errorDetail: ClassifiedError | null = null;
   private _phase: ProtocolPhase = 'handshaking';
   private _terminalReported = false;
+  private _lastPacketIn: string | null = null;
+  private _lastPacketOut: string | null = null;
 
   constructor(sessionId: string) {
     super();
@@ -47,6 +49,14 @@ export class McBot extends EventEmitter {
   get phase(): ProtocolPhase {
     return this._phase;
   }
+  /** Last login/configuration packet NAMES seen (no payloads) — for diagnosing
+   *  where the configuration handshake stalls. */
+  get lastPackets(): { in: string | null; out: string | null } {
+    return { in: this._lastPacketIn, out: this._lastPacketOut };
+  }
+  private packetTrace(): string {
+    return ` Zuletzt empfangen: ${this._lastPacketIn ?? '—'}; zuletzt gesendet: ${this._lastPacketOut ?? '—'}.`;
+  }
 
   /**
    * Record a classified error once. Dedups identical messages and, for a
@@ -54,6 +64,15 @@ export class McBot extends EventEmitter {
    * failure never produces duplicate dashboard messages or re-entrant crashes.
    */
   private captureError(c: ClassifiedError, terminal: boolean): ClassifiedError {
+    // For login/configuration-phase failures, append the last packet names so
+    // the stall point is visible in the dashboard and logs.
+    if (
+      (c.phase === 'configuration' || c.phase === 'login') &&
+      (this._lastPacketIn || this._lastPacketOut) &&
+      !c.message.includes('Zuletzt empfangen')
+    ) {
+      c = { ...c, message: c.message + this.packetTrace() };
+    }
     const duplicate = this._error === c.message;
     if (terminal) this._terminalReported = true;
     this._errorDetail = c;
@@ -115,6 +134,28 @@ export class McBot extends EventEmitter {
       this.bot._client?.on?.('state', (newState: string) => {
         this._phase = normalizePhase(newState);
       });
+      // Track login/configuration packet NAMES (never payloads) to pinpoint
+      // where the configuration handshake stalls. Verbose per-packet logging is
+      // gated behind MC_DEBUG_PACKETS; the last-packet names are always kept.
+      this.bot._client?.on?.('packet', (_data: unknown, meta: any) => {
+        const st = meta?.state;
+        if (st === 'configuration' || st === 'login') {
+          this._lastPacketIn = `${st}/${meta?.name}`;
+          if (config.MC_DEBUG_PACKETS) logger.info({ dir: 'in', state: st, name: meta?.name }, 'mc config packet');
+        }
+      });
+      const client = this.bot._client;
+      if (client && typeof client.write === 'function') {
+        const origWrite = client.write.bind(client);
+        client.write = (name: string, params: unknown) => {
+          const st = client.state;
+          if (st === 'configuration' || st === 'login') {
+            this._lastPacketOut = `${st}/${name}`;
+            if (config.MC_DEBUG_PACKETS) logger.info({ dir: 'out', state: st, name }, 'mc config packet');
+          }
+          return origWrite(name, params);
+        };
+      }
     } catch {
       /* ignore */
     }
@@ -135,8 +176,9 @@ export class McBot extends EventEmitter {
               message:
                 `TCP verbunden, aber der Beitritt wurde nicht abgeschlossen (Zeitüberschreitung, Phase: ${this._phase}). ` +
                 (this._phase === 'configuration'
-                  ? 'Login war erfolgreich, aber die Configuration-Phase hängt (häufig ViaVersion/Registry oder eine Client-Protokoll-Lücke).'
-                  : 'Mögliche Ursachen: falscher Java-Entrypoint, Protokoll-/Versionsproblem oder Velocity-Forwarding. Kein Auth-Problem.'),
+                  ? 'Login war erfolgreich, aber die Configuration-Phase hängt (häufig ein unbeantwortetes add_resource_pack, ViaVersion/Registry oder eine Client-Protokoll-Lücke).'
+                  : 'Mögliche Ursachen: falscher Java-Entrypoint, Protokoll-/Versionsproblem oder Velocity-Forwarding. Kein Auth-Problem.') +
+                this.packetTrace(),
             }
           : classifyBotError(new Error(`connection timeout: ${config.MC_HOST}:${config.MC_PORT} antwortet nicht`), { phase: this._phase });
         this.captureError(classified, true);

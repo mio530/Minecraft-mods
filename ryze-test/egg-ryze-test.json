@@ -37,6 +37,7 @@
     { "name": "Max Sessions", "description": "Concurrent test sessions.", "env_variable": "MAX_SESSIONS", "default_value": "1", "user_viewable": true, "user_editable": true, "rules": "required|integer|min:1|max:5" },
     { "name": "Action Rate / min", "description": "Max actions per minute per client.", "env_variable": "ACTION_RATE_PER_MIN", "default_value": "60", "user_viewable": true, "user_editable": true, "rules": "required|integer|min:10" },
     { "name": "HTTP Port", "description": "Dashboard/MCP HTTP port. Leave EMPTY to auto-use the server's primary allocation port (recommended). Only set a number if you proxy a different internal port.", "env_variable": "PORT", "default_value": "", "user_viewable": true, "user_editable": true, "rules": "nullable|integer" },
+    { "name": "Debug MC Packets", "description": "true logs login/configuration packet NAMES (never payloads) to diagnose a configuration-phase stall.", "env_variable": "MC_DEBUG_PACKETS", "default_value": "false", "user_viewable": true, "user_editable": true, "rules": "required|string|in:true,false" },
     { "name": "Viewer Enabled", "description": "true enables optional 3D render (needs native deps; heavier).", "env_variable": "VIEWER_ENABLED", "default_value": "false", "user_viewable": true, "user_editable": true, "rules": "required|string|in:true,false" }
   ]
 }
