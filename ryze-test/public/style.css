@@ -11,6 +11,7 @@
   --warn: #e0a94e;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, "Segoe UI", sans-serif; }
 h1, h2, h3 { margin: 0 0 8px; }
 h2 { font-size: 15px; }

@@ -1,0 +1,10 @@
+[
+  { "name": "economy-balance", "description": "Economy: /balance returns a currency amount.", "command": "/balance", "expect": "balance|guthaben|coins?|money|\\$|€|\\d+", "timeoutMs": 1500 },
+  { "name": "ranks-permission-enforced", "description": "Ranks/permissions: a restricted command is denied for the test account.", "command": "/gamemode creative", "expect": "permission|keine rechte|darfst|not allowed|erlaubt|unknown command", "timeoutMs": 1500 },
+  { "name": "ranks-info", "description": "Ranks: report the player rank.", "command": "/rank", "expect": "rank|rang|gruppe|group|member|default", "timeoutMs": 1500 },
+  { "name": "risecar-available", "description": "Rise Car Plugin: /car help responds with usage text.", "command": "/car help", "expect": "car|auto|vehicle|fahrzeug|usage|hilfe|rise", "timeoutMs": 1500 },
+  { "name": "cards-available", "description": "Custom cards/items: /cards responds.", "command": "/cards", "expect": "card|karte|collection|sammlung|rarity", "timeoutMs": 1500 },
+  { "name": "player-commands-help", "description": "Player commands: /help lists commands.", "command": "/help", "expect": "help|hilfe|command|befehl|---|===|/\\w+", "timeoutMs": 1500 },
+  { "name": "risecar-spawn", "description": "Rise Car Plugin: spawn a car (changes world state).", "command": "/car spawn", "expect": "spawn|gespawnt|car|auto|vehicle|placed", "timeoutMs": 2000, "destructive": true },
+  { "name": "cards-give-test", "description": "Custom items: grant a test card/item (changes inventory).", "command": "/cards give test", "expect": "give|erhalten|added|received|card|item", "timeoutMs": 2000, "destructive": true }
+]

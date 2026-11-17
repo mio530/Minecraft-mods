@@ -95,6 +95,28 @@ export class SessionManager extends EventEmitter {
     return { id, observation: bot.observe() };
   }
 
+  /**
+   * TEST ONLY: register a pre-built (e.g. fake-backed) bot as a live session,
+   * bypassing the real network connect(). Never used in production.
+   */
+  injectForTest(bot: McBot): string {
+    const id = bot.sessionId;
+    const session: Session = {
+      id,
+      bot,
+      startedAt: Date.now(),
+      lastActivity: Date.now(),
+      timeout: setInterval(() => this.checkTimeout(id), 30_000),
+      tick: setInterval(() => {
+        if (bot.connected) this.emit('observation', bot.observe());
+      }, 1000),
+    };
+    session.timeout.unref?.();
+    session.tick.unref?.();
+    this.sessions.set(id, session);
+    return id;
+  }
+
   async stop(id: string, reason = 'stopped by request'): Promise<void> {
     const s = this.sessions.get(id);
     if (!s) return;

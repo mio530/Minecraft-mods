@@ -5,7 +5,7 @@ import { can, Principal, require as requireScope } from './security/rbac.js';
 import { sessions } from './mc/sessionManager.js';
 import { ActionRequest } from './mc/types.js';
 import { renderScreenshot, schematicScreenshot, Screenshot } from './mc/viewer.js';
-import { listTests, runAll, runTest } from './tests/scenarios.js';
+import { isDestructiveTest, listTests, runAll, runTest } from './tests/scenarios.js';
 import { status as authStatus } from './auth/microsoft.js';
 
 /**
@@ -99,6 +99,11 @@ export function getTests(p: Principal) {
 export async function runTestByName(p: Principal, name: string, id?: string) {
   requireScope(p, 'control');
   rate(p);
+  // Destructive tests change server/world state → owner approval (admin) only.
+  if (name !== 'all' && name !== '*' && isDestructiveTest(name) && !can(p, 'admin')) {
+    audit('ai', p.id, 'test.run', 'denied', null, name);
+    return { results: [{ name, status: 'skipped' as const, expected: 'owner approval', actual: 'destructive test requires owner (run it from the dashboard)' }] };
+  }
   const bot = sessions.resolve(id);
   audit(p.kind === 'owner' ? 'owner' : 'ai', p.id, 'test.run', 'ok', bot.sessionId, name);
   if (name === 'all' || name === '*') return { results: await runAll(bot) };

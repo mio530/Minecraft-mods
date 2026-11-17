@@ -76,6 +76,29 @@ RyzeSMP  (Velocity :25565 → SMP/Lobby)
 `send_chat_message`, `execute_player_action`, `get_test_results`,
 `run_gameplay_test`.
 
+## RyzeSMP feature tests
+
+Besides the core engine tests (connectivity, movement, look, inventory, chat),
+the suite includes **RyzeSMP-specific** probes for Economy, Rise Car Plugin,
+Ranks/permissions, Custom cards/items, Combat and Player commands. These send a
+server command and match the response — exact command names/text depend on your
+plugins, so **tune them without touching code**: copy `ryzesmp-tests.example.json`
+to `ryzesmp-tests.json` and edit `command`/`expect`. A probe only passes on a
+real matching response (never a false pass). World/inventory-changing tests are
+marked `destructive` and require owner approval (the AI cannot run them alone).
+
+## Verification status
+
+- ✅ Typecheck, build, 13 integration tests (observe→act→observe loop, inventory,
+  chat, dangerous-command approval, scope separation, RyzeSMP tests, combat,
+  destructive gating).
+- ✅ MCP protocol verified end-to-end (`initialize`, `tools/list`, `tools/call`,
+  bearer-token rejection) — the exact flow ChatGPT's connector uses.
+- ✅ Dashboard verified on desktop/iPad/mobile viewports (login + responsive layout).
+- ⏳ **User-gated** (cannot be done without you): Microsoft login (you authenticate
+  on your own device), creating the Pterodactyl server in the panel, the live join
+  to online-mode RyzeSMP, and connecting from ChatGPT's own UI.
+
 ## Local run
 
 ```bash

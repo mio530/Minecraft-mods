@@ -1,6 +1,7 @@
 import { McBot } from '../mc/bot.js';
 import { recordTestResult } from '../security/audit.js';
 import { Observation } from '../mc/types.js';
+import { ryzeTests } from './ryzesmp.js';
 
 export interface TestCase {
   name: string;
@@ -15,10 +16,11 @@ function delay(ms: number) {
 }
 
 /**
- * Predefined, non-destructive gameplay tests. Each follows the
- * observe → act → observe → verify loop and records its result.
+ * Core engine/gameplay tests. Each follows the observe → act → observe →
+ * verify loop and records its result. RyzeSMP-specific tests are appended
+ * from ./ryzesmp (see bottom of file).
  */
-export const TESTS: TestCase[] = [
+const CORE_TESTS: TestCase[] = [
   {
     name: 'connectivity',
     description: 'Bot is connected to RyzeSMP and receiving player state.',
@@ -108,6 +110,13 @@ export const TESTS: TestCase[] = [
     },
   },
 ];
+
+// Combined registry: core engine tests + RyzeSMP feature tests.
+export const TESTS: TestCase[] = [...CORE_TESTS, ...ryzeTests()];
+
+export function isDestructiveTest(name: string): boolean {
+  return !!TESTS.find((t) => t.name === name)?.destructive;
+}
 
 export function listTests(): { name: string; description: string; destructive: boolean }[] {
   return TESTS.map((t) => ({ name: t.name, description: t.description, destructive: !!t.destructive }));

@@ -41,6 +41,18 @@ export class McBot extends EventEmitter {
     return this.bot;
   }
 
+  /**
+   * Attach an already-constructed bot object without opening a network
+   * connection. Used ONLY by the integration test harness to drive the full
+   * observe/act/service stack against a simulated protocol bot. Never called
+   * in production (connect() is the real path).
+   */
+  attachForTest(botLike: any): void {
+    this.bot = botLike;
+    this.wireEvents();
+    this._connected = true;
+  }
+
   async connect(): Promise<void> {
     const mineflayer = (await import('mineflayer')).default ?? (await import('mineflayer'));
     const auth = botAuthOptions();
