@@ -126,6 +126,8 @@ the dashboard.
 | Screenshot is a schematic, not 3D | Expected default (GPU-free). Set `VIEWER_ENABLED=true` only if native canvas/gl is installed. |
 | `rate_limit_exceeded` | Raise `ACTION_RATE_PER_MIN` or slow the AI down. |
 | `Invalid configuration: { PORT: ['Number must be greater than 0'] }` | Fixed: leave the `HTTP Port` variable **empty** so it uses the allocation's `SERVER_PORT`. Reinstall to pull the latest branch. The app binds `0.0.0.0:<SERVER_PORT>`. |
+| `EADDRNOTAVAIL ... 203.0.113.10:<port>` | Fixed: the listener now always binds `0.0.0.0` (never `SERVER_IP`). Reinstall to pull the latest branch. |
+| `ERR_MODULE_NOT_FOUND: Cannot find package 'fastify'` | Dependencies did not install completely. Fixed: the egg now installs without suppressing errors and verifies runtime deps. **Reinstall** the server (Settings → Reinstall) — that runs a clean `npm ci` + build + production install. Do not just restart. |
 | Dashboard works but WS view frozen | Reverse proxy not forwarding WebSocket upgrades. |
 
 ## 9. Keeping the suggestions bot safe

@@ -8,7 +8,7 @@
   "features": null,
   "docker_images": { "Node 22": "ghcr.io/ptero-eggs/yolks:nodejs_22" },
   "file_denylist": [],
-  "startup": "cd /home/container; if [ ! -d node_modules ]; then /usr/local/bin/npm install --no-audit --no-fund || true; fi; if [ ! -f dist/index.js ]; then /usr/local/bin/npm run build; fi; /usr/local/bin/node dist/index.js",
+  "startup": "cd /home/container; if [ ! -d node_modules ] || [ ! -f dist/index.js ]; then echo '[ryze-test] installing dependencies + building...'; { /usr/local/bin/npm ci --include=dev --no-audit --no-fund || /usr/local/bin/npm install --no-audit --no-fund; } && /usr/local/bin/npm run build; fi; exec /usr/local/bin/node dist/index.js",
   "config": {
     "files": "{}",
     "startup": "{\"done\": \"ryze-test listening\"}",
@@ -17,7 +17,7 @@
   },
   "scripts": {
     "installation": {
-      "script": "#!/bin/bash\nset -e\napt-get update -qq && apt-get install -y git curl >/dev/null 2>&1 || true\nmkdir -p /mnt/server\ncd /tmp\nrm -rf repo\ngit clone --depth 1 --branch \"${BRANCH}\" \"${GIT_ADDRESS}\" repo\nif [ ! -d repo/ryze-test ]; then echo 'ryze-test/ not found on branch ${BRANCH}'; exit 1; fi\ncp -r repo/ryze-test/. /mnt/server/\ncd /mnt/server\nrm -rf node_modules dist .env data .auth-cache\necho 'Install complete. Set env vars (JWT_SECRET, DASHBOARD_PASSWORD, MCP_TOKEN) before starting.'\n",
+      "script": "#!/bin/bash\nset -euo pipefail\napt-get update -qq\napt-get install -y --no-install-recommends git ca-certificates\napt-get install -y --no-install-recommends python3 make g++ || echo '[ryze-test] build toolchain unavailable; relying on prebuilt binaries'\nmkdir -p /mnt/server\ncd /tmp\nrm -rf repo\ngit clone --depth 1 --branch \"${BRANCH}\" \"${GIT_ADDRESS}\" repo\n[ -d repo/ryze-test ] || { echo \"ryze-test/ not found on ${BRANCH}\"; exit 1; }\ncp -r repo/ryze-test/. /mnt/server/\ncd /mnt/server\nrm -rf node_modules dist .env data .auth-cache\n# Install ALL deps (incl dev) so the TypeScript build can run, then build,\n# then prune to production-only deps. No '|| true' — a failed install aborts.\nnpm ci --include=dev --no-audit --no-fund || npm install --no-audit --no-fund\nnpm run build\n[ -f dist/index.js ] || { echo 'build failed: dist/index.js missing'; exit 1; }\n# Re-install production-only deps deterministically (keeps dist, drops dev).\nnpm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit --no-fund\n# Verify the critical runtime deps are actually present before first start.\nnode -e \"require.resolve('fastify'); require.resolve('better-sqlite3'); require.resolve('@modelcontextprotocol/sdk/server/mcp.js')\"\necho '[ryze-test] install + build OK; runtime dependencies verified.'\n",
       "container": "node:22-bookworm-slim",
       "entrypoint": "bash"
     }

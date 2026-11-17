@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "comment": "Production build: excludes test files and the test-only FakeBot so dist/ ships only runtime code (no vitest/vec3 test references).",
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/tests/fakeBot.ts"]
+}
