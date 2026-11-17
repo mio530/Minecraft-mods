@@ -54,8 +54,15 @@ describe('resolveHost', () => {
     expect(resolveHost('')).toBe('0.0.0.0');
     expect(resolveHost('   ')).toBe('0.0.0.0');
   });
-  it('keeps an explicit host', () => {
+  it('keeps recognised loopback/wildcard bind hosts for local dev', () => {
     expect(resolveHost('127.0.0.1')).toBe('127.0.0.1');
     expect(resolveHost('0.0.0.0')).toBe('0.0.0.0');
+    expect(resolveHost('localhost')).toBe('localhost');
+    expect(resolveHost('::')).toBe('::');
+  });
+  it('NEVER binds to the public allocation IP — a public IP falls back to 0.0.0.0', () => {
+    // This is the SERVER_IP=203.0.113.10 case that caused EADDRNOTAVAIL.
+    expect(resolveHost('203.0.113.10')).toBe('0.0.0.0');
+    expect(resolveHost('10.0.0.5')).toBe('0.0.0.0');
   });
 });

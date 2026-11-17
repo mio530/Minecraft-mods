@@ -30,10 +30,22 @@ export function resolvePort(portRaw?: string | null, serverPortRaw?: string | nu
   return 25571; // dev default when nothing is configured anywhere
 }
 
-/** Resolve the bind host. Always a real interface; empty → all interfaces. */
+/**
+ * Resolve the HTTP/MCP *bind* host. Inside a Pterodactyl container the public
+ * allocation IP (SERVER_IP, e.g. 203.0.113.10) is NOT a local interface, so
+ * binding to it fails with EADDRNOTAVAIL. We therefore:
+ *   - never read SERVER_IP (that is the public address, not a bind target),
+ *   - default to 0.0.0.0 (all interfaces),
+ *   - honour an explicit HOST only when it is a recognised loopback/wildcard
+ *     value for local dev; anything else (including a public IP accidentally
+ *     put in HOST) falls back to 0.0.0.0.
+ * This is independent of MC_HOST (the Minecraft target to connect OUT to).
+ */
 export function resolveHost(hostRaw?: string | null): string {
-  const s = (hostRaw ?? '').trim();
-  return s === '' ? '0.0.0.0' : s;
+  const s = (hostRaw ?? '').trim().toLowerCase();
+  if (s === '') return '0.0.0.0';
+  const safeLocal = new Set(['0.0.0.0', '::', '127.0.0.1', '::1', 'localhost']);
+  return safeLocal.has(s) ? s : '0.0.0.0';
 }
 
 const Env = z.object({
@@ -95,7 +107,8 @@ function load(): AppConfig {
   let HOST: string;
   try {
     PORT = resolvePort(process.env.PORT, process.env.SERVER_PORT);
-    HOST = resolveHost(process.env.HOST ?? process.env.SERVER_IP);
+    // Bind host: deliberately ignores SERVER_IP (the public allocation IP).
+    HOST = resolveHost(process.env.HOST);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Invalid configuration:', err instanceof Error ? err.message : String(err));
