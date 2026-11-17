@@ -2,17 +2,21 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ai } from '../security/rbac.js';
+import { ai, Scope } from '../security/rbac.js';
 import * as svc from '../service.js';
+import { config } from '../config.js';
 import { logger } from '../logger.js';
 
 /**
- * MCP server exposing the RyzeSMP test tools to ChatGPT (via a custom
- * connector). Every call runs as the 'chatgpt-mcp' AI principal, which has
- * observe+control but NOT admin — dangerous commands still need owner approval.
+ * MCP server exposing the RyzeSMP test tools to any MCP client (Claude Code as
+ * the primary controller, and ChatGPT as an optional second client). Every
+ * call runs as the AI principal: observe + control, plus session start/stop
+ * when MCP_ALLOW_SESSIONS is set. It NEVER gets admin — dangerous commands
+ * still require owner approval in the dashboard.
  */
 
-const P = ai('chatgpt-mcp');
+const AI_SCOPES: Scope[] = config.MCP_ALLOW_SESSIONS ? ['observe', 'control', 'session'] : ['observe', 'control'];
+const P = ai('mcp-controller', AI_SCOPES);
 
 function text(obj: unknown) {
   return { content: [{ type: 'text' as const, text: typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2) }] };

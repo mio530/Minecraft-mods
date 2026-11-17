@@ -18,9 +18,10 @@ inside a browser. Instead this uses the proven, legitimate approach:
   **your own Microsoft account** via the official OAuth **device-code flow**
   (you log in on your own device at `microsoft.com/link`; your password is
   never seen or stored — only the resulting tokens are cached).
-- Both a **human** (browser, PC/iPad/phone, touch + keyboard) and **ChatGPT**
-  (via MCP) observe and control the *same* client — a unified
-  observe/act loop.
+- A **human** (browser, PC/iPad/phone, touch + keyboard) and an **AI via MCP**
+  observe and control the *same* client — a unified observe/act loop.
+  **Claude Code is the primary MCP controller** (see `CONNECT-CLAUDE.md`);
+  ChatGPT is supported as an optional second MCP client.
 - The shared "screen" is a **live schematic** (radar + HUD + chat) rendered
   from real game state, GPU-free, works on every device. An optional real 3D
   frame (`prismarine-viewer`) can be enabled where native rendering deps are

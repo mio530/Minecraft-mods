@@ -71,6 +71,15 @@ export class McBot extends EventEmitter {
     this.wireEvents();
 
     await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        cleanup();
+        try {
+          this.bot.end('connect timeout');
+        } catch {
+          /* ignore */
+        }
+        reject(new Error('connection timeout (server unreachable or handshake stalled)'));
+      }, 30_000);
       const onSpawn = () => {
         this._connected = true;
         cleanup();
@@ -88,6 +97,7 @@ export class McBot extends EventEmitter {
         }
       };
       const cleanup = () => {
+        clearTimeout(timer);
         this.bot.removeListener('spawn', onSpawn);
         this.bot.removeListener('error', onError);
         this.bot.removeListener('end', onEnd);

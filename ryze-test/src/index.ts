@@ -14,7 +14,17 @@ import { sessions } from './mc/sessionManager.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-async function main() {
+export interface RunningServer {
+  url: string;
+  close: () => Promise<void>;
+}
+
+/**
+ * Build and start the HTTP server. Returns the bound URL + a close handle.
+ * Exported so tests / tooling can run it in-process; the CLI entry at the
+ * bottom calls it when this file is the process entrypoint.
+ */
+export async function startServer(): Promise<RunningServer> {
   initAudit();
 
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
@@ -46,7 +56,7 @@ async function main() {
 
   app.get('/healthz', async () => ({ ok: true, ts: Date.now() }));
 
-  await app.listen({ port: config.PORT, host: config.HOST });
+  const address = await app.listen({ port: config.PORT, host: config.HOST });
   logger.info(
     { port: config.PORT, target: `${config.MC_HOST}:${config.MC_PORT}`, auth: config.MC_AUTH },
     'ryze-test listening',
@@ -54,18 +64,29 @@ async function main() {
   if (config.JWT_SECRET.startsWith('CHANGE_ME') || config.MCP_TOKEN.startsWith('CHANGE_ME')) {
     logger.warn('Using default secrets — set JWT_SECRET, MCP_TOKEN and DASHBOARD_PASSWORD before production use.');
   }
-
-  const shutdown = async (sig: string) => {
-    logger.info({ sig }, 'shutting down');
-    await sessions.stopAll();
-    await app.close();
-    process.exit(0);
+  return {
+    url: address.replace('0.0.0.0', '127.0.0.1'),
+    close: async () => {
+      await sessions.stopAll();
+      await app.close();
+    },
   };
-  process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
-main().catch((err) => {
-  logger.error({ err }, 'fatal startup error');
-  process.exit(1);
-});
+// Run as a standalone process only when invoked directly.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  startServer()
+    .then((srv) => {
+      const shutdown = async (sig: string) => {
+        logger.info({ sig }, 'shutting down');
+        await srv.close();
+        process.exit(0);
+      };
+      process.on('SIGINT', () => shutdown('SIGINT'));
+      process.on('SIGTERM', () => shutdown('SIGTERM'));
+    })
+    .catch((err) => {
+      logger.error({ err }, 'fatal startup error');
+      process.exit(1);
+    });
+}

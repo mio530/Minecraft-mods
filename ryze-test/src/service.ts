@@ -18,12 +18,12 @@ function rate(p: Principal): void {
 }
 
 export async function startSession(p: Principal) {
-  requireScope(p, 'admin'); // starting/stopping is an admin/control-plane op
+  requireScope(p, 'session'); // session lifecycle (owner, or AI with MCP_ALLOW_SESSIONS)
   return sessions.start(p.id);
 }
 
 export async function stopSession(p: Principal, id?: string) {
-  requireScope(p, 'admin');
+  requireScope(p, 'session');
   const target = id ?? sessions.current()?.id;
   if (!target) return { stopped: false, reason: 'no active session' };
   await sessions.stop(target, 'stopped via api');

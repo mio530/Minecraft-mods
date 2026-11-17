@@ -25,6 +25,9 @@ const Env = z.object({
   DASHBOARD_PASSWORD: z.string().min(1).default('changeme'),
   // Static bearer token ChatGPT/MCP must present. MUST be set in production.
   MCP_TOKEN: z.string().min(8).default('CHANGE_ME_mcp_token'),
+  // Allow the MCP client (primary AI controller, e.g. Claude Code) to start/stop
+  // sessions. Dangerous server commands always remain owner-approved.
+  MCP_ALLOW_SESSIONS: z.coerce.boolean().default(true),
   // Folder where MS auth tokens (NOT passwords) are cached, encrypted at rest by prismarine-auth.
   AUTH_CACHE_DIR: z.string().default('./.auth-cache'),
 
