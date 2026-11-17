@@ -55,17 +55,15 @@ export class McBot extends EventEmitter {
 
   async connect(): Promise<void> {
     const mineflayer = (await import('mineflayer')).default ?? (await import('mineflayer'));
-    const auth = botAuthOptions();
+    const auth = await botAuthOptions();
     logger.info({ host: config.MC_HOST, port: config.MC_PORT, auth: auth.auth }, 'bot connecting');
 
     this.bot = (mineflayer as any).createBot({
       host: config.MC_HOST,
       port: config.MC_PORT,
       version: config.MC_VERSION,
-      auth: auth.auth,
-      username: auth.username,
-      profilesFolder: auth.profilesFolder,
       hideErrors: false,
+      ...auth,
     });
 
     this.wireEvents();

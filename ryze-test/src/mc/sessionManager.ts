@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { config, isDangerous } from '../config.js';
 import { logger } from '../logger.js';
 import { audit } from '../security/audit.js';
-import { hasCachedAuth, login, status as authStatus } from '../auth/microsoft.js';
+import { startLogin, status as authStatus } from '../auth/microsoft.js';
 import { McBot } from './bot.js';
 import { Observation } from './types.js';
 
@@ -61,9 +61,9 @@ export class SessionManager extends EventEmitter {
     if (this.sessions.size >= config.MAX_SESSIONS) {
       throw new Error(`max sessions reached (${config.MAX_SESSIONS}); stop one first`);
     }
-    if (config.MC_AUTH === 'microsoft' && !hasCachedAuth() && !authStatus().authenticated) {
+    if (config.MC_AUTH === 'microsoft' && !authStatus().authenticated) {
       // Kick off device-code login; caller should poll /api/auth/status.
-      login().catch((e) => logger.error({ e }, 'auth login failed'));
+      startLogin();
       throw new Error('microsoft_login_required');
     }
 

@@ -41,6 +41,21 @@ export async function startServer(): Promise<RunningServer> {
 
   const app = Fastify({ logger: false, bodyLimit: 1_000_000 });
 
+  // Accept empty JSON bodies (e.g. POST with content-type but no payload)
+  // instead of failing with FST_ERR_CTP_EMPTY_JSON_BODY.
+  app.removeContentTypeParser('application/json');
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    const text = String(body ?? '').trim();
+    if (text === '') return done(null, {});
+    try {
+      done(null, JSON.parse(text));
+    } catch {
+      const err: Error & { statusCode?: number } = new Error('Invalid JSON body');
+      err.statusCode = 400;
+      done(err, undefined);
+    }
+  });
+
   await app.register(fastifyWebsocket);
   await app.register(fastifyStatic, {
     root: join(__dirname, '..', 'public'),

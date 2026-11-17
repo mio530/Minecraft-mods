@@ -6,17 +6,34 @@ let token = localStorage.getItem('ryze_token') || '';
 let ws = null;
 let lastObs = null;
 
+const Lib = window.RyzeLib;
+
 const api = async (path, opts = {}) => {
-  const res = await fetch(path, {
-    ...opts,
-    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token, ...(opts.headers || {}) },
-  });
-  if (res.status === 401) { logout(); throw new Error('unauthorized'); }
+  let res;
+  try {
+    res = await fetch(path, Lib.buildFetchOptions(opts, token));
+  } catch (e) {
+    throw Object.assign(new Error('Netzwerkfehler – Server nicht erreichbar'), { status: 0 });
+  }
+  if (res.status === 401 && path !== '/api/login') { logout(); throw Object.assign(new Error('Sitzung abgelaufen – bitte neu anmelden'), { status: 401 }); }
   const ct = res.headers.get('content-type') || '';
-  const body = ct.includes('application/json') ? await res.json() : await res.text();
-  if (!res.ok) throw Object.assign(new Error(body.error || res.statusText), { status: res.status, body });
+  const body = ct.includes('application/json') ? await res.json().catch(() => null) : await res.text();
+  if (!res.ok) throw Object.assign(new Error(Lib.apiErrorMessage(res.status, body)), { status: res.status, body });
   return body;
 };
+
+// ---------- toast + global error surfacing (no console on iPad) ----------
+let toastTimer = null;
+function toast(msg, isError) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, isError ? 7000 : 3000);
+}
+window.addEventListener('error', (e) => toast('Fehler: ' + (e.message || 'unbekannt'), true));
+window.addEventListener('unhandledrejection', (e) => toast('Fehler: ' + ((e.reason && e.reason.message) || 'unbekannt'), true));
 
 // ---------- auth ----------
 function showApp(show) {
@@ -41,28 +58,71 @@ $('btnLogout').addEventListener('click', logout);
 
 // ---------- Microsoft device-code auth ----------
 let msPoll = null;
+let msBusy = false;
+function stopMsPoll() { if (msPoll) { clearInterval(msPoll); msPoll = null; } }
+function startMsPoll(ms) { stopMsPoll(); msPoll = setInterval(refreshMsAuth, ms); }
+
+function renderMs(s) {
+  const vm = Lib.msViewModel(s);
+  $('msAuth').hidden = !vm.visible;
+  if (!vm.visible) { stopMsPoll(); return; }
+  const btn = $('btnMsLogin');
+  btn.textContent = msBusy ? 'Starte…' : vm.button.label;
+  btn.disabled = msBusy || vm.button.disabled;
+  $('msError').hidden = !vm.error;
+  $('msError').textContent = vm.error || '';
+  $('msCodeBox').hidden = !vm.code;
+  if (vm.code) {
+    $('msCode').textContent = vm.code.userCode;
+    $('msLink').href = vm.code.verificationUri;
+    $('msLink').textContent = vm.code.verificationUri.replace(/^https?:\/\//, '');
+    $('msDirect').href = vm.code.directUri;
+    $('msExpiry').textContent = vm.code.expiresInText;
+  }
+}
+
 async function refreshMsAuth() {
   try {
     const s = await api('/api/auth/status');
-    if (s.authenticated) {
-      $('msAuth').hidden = true;
-      if (msPoll) { clearInterval(msPoll); msPoll = null; }
-      return true;
-    }
-    $('msAuth').hidden = false;
-    if (s.pending) {
-      $('msCodeBox').hidden = false;
-      $('msCode').textContent = s.pending.userCode;
-      $('msLink').href = s.pending.verificationUri;
-      $('msLink').textContent = s.pending.verificationUri;
-    }
+    renderMs(s);
+    if (s.authenticated) { toastOnce('Microsoft-Login erfolgreich' + (s.username ? ' (' + s.username + ')' : '')); }
+    else if (s.error && !s.inProgress) stopMsPoll();
+    return !!s.authenticated;
+  } catch (e) {
+    $('msError').hidden = false;
+    $('msError').textContent = 'Status konnte nicht geladen werden: ' + e.message;
     return false;
-  } catch { return false; }
+  }
 }
+let toastedOk = false;
+function toastOnce(m) { if (!toastedOk && msPoll) { toastedOk = true; toast(m); } }
+
 $('btnMsLogin').addEventListener('click', async () => {
-  await api('/api/auth/login', { method: 'POST' });
-  if (!msPoll) msPoll = setInterval(refreshMsAuth, 2500);
-  refreshMsAuth();
+  if (msBusy) return;
+  msBusy = true; toastedOk = false;
+  renderMs({ authenticated: false, inProgress: true });
+  try {
+    const r = await api('/api/auth/login', { method: 'POST' });
+    msBusy = false;
+    renderMs(r.status);
+    startMsPoll(2000);
+  } catch (e) {
+    msBusy = false;
+    renderMs({ authenticated: false, inProgress: false, error: e.message });
+    toast('Login konnte nicht gestartet werden: ' + e.message, true);
+  }
+});
+
+$('btnCopyCode').addEventListener('click', async () => {
+  const code = $('msCode').textContent.trim();
+  const ok = await Lib.copyText(code);
+  if (ok) toast('Code kopiert: ' + code);
+  else {
+    // Select the code so the user can copy it manually.
+    const r = document.createRange(); r.selectNodeContents($('msCode'));
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    toast('Bitte Code manuell kopieren (markiert).', true);
+  }
 });
 
 // ---------- websocket live view ----------
@@ -231,8 +291,8 @@ function escapeHtml(s) { return String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt
 async function boot() {
   showApp(true);
   connectWs();
-  await refreshMsAuth();
-  if (!msPoll) msPoll = setInterval(refreshMsAuth, 4000);
+  const authed = await refreshMsAuth();
+  if (!authed) startMsPoll(4000);
   await loadTests(); await loadAudit(); await loadApprovals();
   setInterval(loadAudit, 5000);
 }

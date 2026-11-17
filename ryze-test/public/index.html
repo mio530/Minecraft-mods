@@ -29,15 +29,23 @@
 
     <!-- Microsoft auth banner -->
     <div id="msAuth" class="banner" hidden>
-      <div>
+      <div class="grow">
         <strong>Microsoft-Login nötig</strong>
-        <p class="muted" id="msHint">Melde dich mit deinem eigenen Microsoft-Account an. Passwort wird nie gespeichert.</p>
+        <p class="muted" id="msHint">Melde dich mit dem Test-Account an. Dein Passwort wird nie gespeichert oder an dieses Dashboard gesendet.</p>
+        <p id="msError" class="err" role="alert" hidden></p>
+        <div id="msCodeBox" hidden>
+          <p><strong>1.</strong> Öffne <a id="msLink" target="_blank" rel="noopener noreferrer">microsoft.com/link</a> (dieses oder ein anderes Gerät).</p>
+          <p><strong>2.</strong> Gib diesen Code ein:</p>
+          <div class="code-row">
+            <span class="code" id="msCode" aria-live="polite"></span>
+            <button id="btnCopyCode" class="ghost" type="button">Kopieren</button>
+          </div>
+          <p><a id="msDirect" class="linkbtn" target="_blank" rel="noopener noreferrer">Direkt öffnen (Code vorausgefüllt) ↗</a></p>
+          <p class="muted small" id="msExpiry"></p>
+          <p class="muted small"><strong>3.</strong> Mit dem Test-Account anmelden. Diese Seite erkennt den Abschluss automatisch.</p>
+        </div>
       </div>
-      <div id="msCodeBox" hidden>
-        <p>Öffne <a id="msLink" target="_blank" rel="noopener">microsoft.com/link</a> und gib ein:</p>
-        <div class="code" id="msCode">— — — — —</div>
-      </div>
-      <button id="btnMsLogin">Login starten</button>
+      <button id="btnMsLogin" type="button">Login starten</button>
     </div>
 
     <div class="grid">
@@ -99,6 +107,8 @@
     </div>
   </main>
 
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/lib.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

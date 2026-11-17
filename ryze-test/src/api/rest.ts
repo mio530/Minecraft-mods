@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { checkDashboardPassword, issueOwnerToken, verifyOwnerToken } from '../auth/sessions.js';
-import { login as msLogin, logout as msLogout, status as msStatus } from '../auth/microsoft.js';
+import { startLogin, logout as msLogout, status as msStatus } from '../auth/microsoft.js';
 import { Principal } from '../security/rbac.js';
 import { recentAudit } from '../security/audit.js';
 import { sessions } from '../mc/sessionManager.js';
@@ -40,9 +40,10 @@ export async function registerRest(app: FastifyInstance): Promise<void> {
   });
   app.post('/api/auth/login', async (req, reply) => {
     if (!requireOwner(req, reply)) return;
-    msLogin().catch(() => {});
-    // return immediately; dashboard polls /api/auth/status for the device code
-    return { started: true };
+    // Starts the device-code flow in the background; the dashboard polls
+    // /api/auth/status for the code and completion. Never returns tokens.
+    const r = startLogin();
+    return { ...r, status: msStatus() };
   });
   app.post('/api/auth/logout', async (req, reply) => {
     if (!requireOwner(req, reply)) return;
