@@ -1,0 +1,21 @@
+name: RyzeTeams
+version: '${version}'
+main: de.mio.ryzeteams.RyzeTeamsPlugin
+api-version: '1.21'
+author: mio
+description: Advanced team system for RyzeSMP (teams, roles, 81-slot team enderchest, alliances, friendly fire).
+load: POSTWORLD
+libraries:
+  - org.xerial:sqlite-jdbc:3.47.1.0
+commands:
+  team:
+    description: Open the team menu / run team subcommands.
+    aliases: [t]
+    usage: /team help
+permissions:
+  ryzeteams.use:
+    description: Allows use of the /team command and GUIs.
+    default: true
+  ryzeteams.admin:
+    description: Staff override (bypass friendly fire checks, admin maintenance).
+    default: op

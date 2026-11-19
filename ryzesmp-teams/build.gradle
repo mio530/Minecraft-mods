@@ -1,0 +1,66 @@
+plugins {
+    id 'java'
+}
+
+group = 'de.mio'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'papermc'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+}
+
+ext {
+    paperApiVersion = '1.21.11-R0.1-SNAPSHOT'
+    sqliteVersion   = '3.47.1.0'
+    junitVersion    = '5.11.3'
+}
+
+dependencies {
+    // Paper API is provided by the server at runtime.
+    compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
+
+    // Unit/integration tests.
+    testImplementation "io.papermc.paper:paper-api:${paperApiVersion}"
+    testImplementation "org.xerial:sqlite-jdbc:${sqliteVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+
+    // Integration tests against real Bukkit events (no live client needed).
+    testImplementation "org.mockbukkit.mockbukkit:mockbukkit-v1.21:4.116.3"
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events = ["passed", "skipped", "failed"]
+        exceptionFormat = "full"
+    }
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties(props)
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand(props)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+jar {
+    archiveBaseName = 'RyzeTeams'
+}

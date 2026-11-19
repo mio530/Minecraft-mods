@@ -1,0 +1,29 @@
+# RyzeTeams configuration
+
+team:
+  # Allowed team name length and characters (regex). Names are unique, case-insensitive.
+  min-name-length: 3
+  max-name-length: 16
+  name-pattern: "^[A-Za-z0-9_]+$"
+  # Role new members receive when they join (owner/admin/moderator/member/recruit).
+  default-join-role: member
+  # Maximum members per team (0 = unlimited).
+  max-members: 0
+
+invites:
+  # How long an invite stays valid, in seconds (0 = never expires).
+  expiry-seconds: 120
+
+enderchest:
+  # Total slots (spec: ~3x a vanilla enderchest). Page 1 = 45, page 2 = 36.
+  total-slots: 81
+
+friendly-fire:
+  # Block damage between members of the same team.
+  same-team: true
+  # Block damage between members of allied teams.
+  allies: true
+
+persistence:
+  # Periodic autosave of all dirty data and open enderchests, in seconds.
+  autosave-seconds: 300
