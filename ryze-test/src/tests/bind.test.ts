@@ -16,7 +16,7 @@ import { join } from 'node:path';
 process.env.SERVER_IP = '203.0.113.10'; // public allocation IP (must be ignored for binding)
 process.env.SERVER_PORT = '25572'; // allocation port
 process.env.PORT = ''; // Pterodactyl passes it empty
-process.env.MC_HOST = '203.0.113.10'; // Minecraft target — must stay separate
+process.env.MC_HOST = '127.0.0.1'; // Minecraft target — must stay separate
 process.env.MC_PORT = '25565';
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'ryze-bind-')), 'audit.db');
 process.env.JWT_SECRET = 'bind_test_secret_key_1234567890';
@@ -48,7 +48,7 @@ describe('listener binding under Pterodactyl SERVER_IP', () => {
   });
 
   it('keeps the Minecraft target separate (MC_HOST unchanged)', () => {
-    expect(config.MC_HOST).toBe('203.0.113.10');
+    expect(config.MC_HOST).toBe('127.0.0.1');
     expect(config.MC_PORT).toBe(25565);
   });
 

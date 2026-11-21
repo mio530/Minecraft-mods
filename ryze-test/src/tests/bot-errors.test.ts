@@ -14,7 +14,7 @@ import { join } from 'node:path';
 
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'ryze-boterr-')), 'a.db');
 process.env.MC_AUTH = 'offline';
-process.env.MC_HOST = '203.0.113.10';
+process.env.MC_HOST = '127.0.0.1';
 process.env.MC_PORT = '25565';
 process.env.JWT_SECRET = 'boterr_test_secret_123456';
 process.env.MCP_TOKEN = 'boterr-mcp-token';
@@ -134,7 +134,7 @@ describe('McBot crash-safety', () => {
   it('connect() rejects with a classified, token-free error (does not throw out of band)', async () => {
     const { McBot } = await import('../mc/bot.js');
     const { BotConnectionError } = await import('../mc/errors.js');
-    g.__mcError = Object.assign(new Error('connect ECONNREFUSED 203.0.113.10:25565'), { code: 'ECONNREFUSED' });
+    g.__mcError = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:25565'), { code: 'ECONNREFUSED' });
     const bot = new McBot('conn01');
     await expect(bot.connect()).rejects.toBeInstanceOf(BotConnectionError);
     expect(bot.errorDetail?.category).toBe('network_server');

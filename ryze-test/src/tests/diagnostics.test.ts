@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 process.env.DB_PATH = '/tmp/ryze-diag-test.db';
-process.env.MC_HOST = '203.0.113.10';
+process.env.MC_HOST = '127.0.0.1';
 process.env.MC_PORT = '25565';
 process.env.JWT_SECRET = 'diag_test_secret_123456';
 process.env.MCP_TOKEN = 'diag-mcp-token';
@@ -18,7 +18,7 @@ describe('runDiagnostics', () => {
     const { runDiagnostics } = await import('../mc/diagnostics.js');
     const r = await runDiagnostics({ tcp: okTcp as any, https: okHttps as any, mcPing: okPing as any });
     const targets = r.probes.map((p) => p.target);
-    expect(targets).toContain('203.0.113.10:25565');
+    expect(targets).toContain('127.0.0.1:25565');
     expect(targets.some((t) => t.includes('sessionserver.mojang.com'))).toBe(true);
     expect(targets.some((t) => t.includes('api.minecraftservices.com'))).toBe(true);
     expect(r.probes.every((p) => p.ok)).toBe(true);

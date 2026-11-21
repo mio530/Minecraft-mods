@@ -33,7 +33,7 @@ export function resolvePort(portRaw?: string | null, serverPortRaw?: string | nu
 
 /**
  * Resolve the HTTP/MCP *bind* host. Inside a Pterodactyl container the public
- * allocation IP (SERVER_IP, e.g. 203.0.113.10) is NOT a local interface, so
+ * allocation IP (SERVER_IP, a public address) is NOT a local interface, so
  * binding to it fails with EADDRNOTAVAIL. We therefore:
  *   - never read SERVER_IP (that is the public address, not a bind target),
  *   - default to 0.0.0.0 (all interfaces),
@@ -57,7 +57,10 @@ const Env = z.object({
   PUBLIC_URL: z.string().default(''), // e.g. https://test.ryzesmp.org (used in docs/links)
 
   // --- Target Minecraft server (RyzeSMP) ---
-  MC_HOST: z.string().default('203.0.113.10'),
+  // Target Minecraft host to connect OUT to. Provide MC_HOST via the environment
+  // (Pterodactyl egg / .env) for real use. The default below is a SAFE local-dev
+  // placeholder ONLY (loopback) — never hard-code a public server address here.
+  MC_HOST: z.string().min(1).default('127.0.0.1'),
   MC_PORT: z.coerce.number().int().positive().default(25565),
   MC_VERSION: z.string().default('1.21.11'),
   // 'microsoft' = real online-mode account (default). 'offline' = cracked/test backend only.

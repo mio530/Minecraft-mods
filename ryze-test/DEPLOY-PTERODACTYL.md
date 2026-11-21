@@ -41,7 +41,7 @@ Nothing here changes the suggestions bot.
 | `JWT_SECRET` | `openssl rand -hex 32` |
 | `MCP_TOKEN` | `openssl rand -hex 24` |
 | `MCP_ALLOW_SESSIONS` | `true` (lets Claude Code start sessions) |
-| `MC_HOST` / `MC_PORT` | `203.0.113.10` / `25565` (Velocity) |
+| `MC_HOST` / `MC_PORT` | `127.0.0.1` / `25565` (Velocity) |
 | `MC_VERSION` | `1.21.11` |
 | `MC_AUTH` | `microsoft` |
 | `SAFETY_MODE` | `safe` |
