@@ -15,8 +15,8 @@ invites:
   expiry-seconds: 120
 
 enderchest:
-  # Total slots (spec: ~3x a vanilla enderchest). Page 1 = 45, page 2 = 36.
-  total-slots: 81
+  # Shared team enderchest: one double chest (54 slots), shown all at once.
+  total-slots: 54
 
 friendly-fire:
   # Block damage between members of the same team.

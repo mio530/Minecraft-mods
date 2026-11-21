@@ -32,7 +32,7 @@ class FriendlyFireIT {
         MockBukkit.unmock();
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     private boolean melee(PlayerMock attacker, PlayerMock victim) {
         EntityDamageByEntityEvent e = new EntityDamageByEntityEvent(
                 attacker, victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 5.0);

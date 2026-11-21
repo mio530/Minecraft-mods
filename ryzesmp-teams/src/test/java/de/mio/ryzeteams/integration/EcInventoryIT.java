@@ -71,7 +71,7 @@ class EcInventoryIT {
     }
 
     private InventoryView openEc(Player p) {
-        ec.openNowForTest(p, team, 0);
+        ec.openNowForTest(p, team);
         return p.getOpenInventory();
     }
 
@@ -123,10 +123,9 @@ class EcInventoryIT {
     }
 
     @Test
-    void navSlotClickIsCancelled() {
+    void ecIsSingleDoubleChest() {
         InventoryView view = openEc(owner);
-        InventoryClickEvent e = click(view, EnderchestManager.CLOSE_SLOT, ClickType.LEFT, InventoryAction.PICKUP_ALL);
-        assertTrue(e.isCancelled(), "navigation row must be locked");
+        assertEquals(54, view.getTopInventory().getSize(), "EC is one 54-slot double chest, shown at once");
     }
 
     @Test

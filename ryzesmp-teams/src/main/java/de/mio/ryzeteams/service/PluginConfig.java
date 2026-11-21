@@ -41,7 +41,7 @@ public final class PluginConfig {
                 c.getString("team.default-join-role", "member"),
                 c.getInt("team.max-members", 0),
                 c.getLong("invites.expiry-seconds", 120L) * 1000L,
-                c.getInt("enderchest.total-slots", 81),
+                c.getInt("enderchest.total-slots", 54),
                 c.getBoolean("friendly-fire.same-team", true),
                 c.getBoolean("friendly-fire.allies", true),
                 c.getLong("persistence.autosave-seconds", 300L));
@@ -50,7 +50,7 @@ public final class PluginConfig {
     /** Hard-coded defaults, usable without a Bukkit server (tests). */
     public static PluginConfig defaults() {
         return new PluginConfig(3, 16, Pattern.compile("^[A-Za-z0-9_]+$"), "member",
-                0, 120_000L, 81, true, true, 300L);
+                0, 120_000L, 54, true, true, 300L);
     }
 
     public int minNameLength() {

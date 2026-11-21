@@ -285,7 +285,7 @@ public final class TeamCommand implements CommandExecutor, TabCompleter {
         if (!TeamPolicy.has(team, p.getUniqueId(), Permission.EC_OPEN)) {
             throw new TeamException("You are not allowed to open the team enderchest.");
         }
-        ec.open(p, team, 0);
+        ec.open(p, team);
     }
 
     private void ally(Player p, String[] args) {

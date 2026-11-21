@@ -5,26 +5,20 @@ import org.bukkit.inventory.InventoryHolder;
 
 /**
  * Marker holder that lets the listener recognise a team-enderchest inventory and
- * recover its {@link TeamEnderchest} and page index. The inventory reference is
- * set right after creation.
+ * recover its {@link TeamEnderchest}. The inventory reference is set right after
+ * creation.
  */
 public final class EnderchestHolder implements InventoryHolder {
 
     private final TeamEnderchest enderchest;
-    private final int page;
     private Inventory inventory;
 
-    public EnderchestHolder(TeamEnderchest enderchest, int page) {
+    public EnderchestHolder(TeamEnderchest enderchest) {
         this.enderchest = enderchest;
-        this.page = page;
     }
 
     public TeamEnderchest enderchest() {
         return enderchest;
-    }
-
-    public int page() {
-        return page;
     }
 
     void setInventory(Inventory inventory) {

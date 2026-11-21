@@ -9,7 +9,6 @@ import de.mio.ryzeteams.util.Items;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -24,21 +23,17 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Owns every team's {@link TeamEnderchest}, builds the paged GUI, loads/saves
- * contents and enforces live permissions together with {@link EnderchestListener}.
+ * Owns every team's {@link TeamEnderchest} (one shared 54-slot double-chest GUI),
+ * loads/saves contents and enforces live permissions together with
+ * {@link EnderchestListener}.
  *
  * <p>Crash safety: whenever the EC is persisted, the player data of everyone who
- * changed it since the last save is flushed on the main thread first, so the
- * item can never exist both in the EC and in a player's {@code .dat} (dupe) or
- * in neither (loss) after a crash. The only remaining window is the async write
+ * changed it since the last save is flushed on the main thread first, so an item
+ * can never exist both in the EC and in a player's {@code .dat} (dupe) or in
+ * neither (loss) after a crash. The only remaining window is the async write
  * latency of the final SQLite statement.
  */
 public final class EnderchestManager implements EnderchestHook {
-
-    public static final int PREV_SLOT = 45;
-    public static final int CLOSE_SLOT = 48;
-    public static final int INFO_SLOT = 49;
-    public static final int NEXT_SLOT = 53;
 
     private final Plugin plugin;
     private final TeamManager teams;
@@ -51,12 +46,11 @@ public final class EnderchestManager implements EnderchestHook {
 
     // ---- opening ------------------------------------------------------------
 
-    /** Opens page {@code page} of the given team's EC for a player (main thread). */
-    public void open(Player player, Team team, int page) {
-        final int fpage = (page < 0 || page >= TeamEnderchest.PAGES) ? 0 : page;
+    /** Opens the team's EC for a player (main thread). */
+    public void open(Player player, Team team) {
         TeamEnderchest cached = cache.get(team.id());
         if (cached != null) {
-            buildAndOpen(player, cached, fpage);
+            buildAndOpen(player, cached);
             return;
         }
         final UUID teamId = team.id();
@@ -70,7 +64,7 @@ public final class EnderchestManager implements EnderchestHook {
                     return fresh;
                 });
                 if (player.isOnline() && !ec.isDiscarded()) {
-                    buildAndOpen(player, ec, fpage);
+                    buildAndOpen(player, ec);
                 }
             });
         });
@@ -79,7 +73,7 @@ public final class EnderchestManager implements EnderchestHook {
     private void deserializeInto(TeamEnderchest ec, Map<Integer, byte[]> stored) {
         for (Map.Entry<Integer, byte[]> e : stored.entrySet()) {
             int slot = e.getKey();
-            if (slot >= 0 && slot < TeamEnderchest.TOTAL_SLOTS && e.getValue() != null) {
+            if (slot >= 0 && slot < TeamEnderchest.SIZE && e.getValue() != null) {
                 try {
                     ec.slots()[slot] = ItemStack.deserializeBytes(e.getValue());
                 } catch (Exception ex) {
@@ -94,77 +88,46 @@ public final class EnderchestManager implements EnderchestHook {
      * Synchronous open that loads from storage on the calling thread. Only for
      * integration tests, where deterministic (non-async) opening is required.
      */
-    public void openNowForTest(Player player, Team team, int page) {
+    public void openNowForTest(Player player, Team team) {
         TeamEnderchest ec = cache.computeIfAbsent(team.id(), id -> {
             TeamEnderchest fresh = new TeamEnderchest(id);
             deserializeInto(fresh, teams.repository().loadEnderchest(id));
             return fresh;
         });
-        buildAndOpen(player, ec, page);
+        buildAndOpen(player, ec);
     }
 
-    private void buildAndOpen(Player player, TeamEnderchest ec, int page) {
-        Inventory inv = ec.page(page);
+    private void buildAndOpen(Player player, TeamEnderchest ec) {
+        Inventory inv = ec.inventory();
         if (inv == null) {
-            inv = buildPage(ec, page);
-            ec.setPage(page, inv);
+            inv = buildInventory(ec);
+            ec.setInventory(inv);
         }
         player.openInventory(inv);
     }
 
-    private Inventory buildPage(TeamEnderchest ec, int page) {
-        EnderchestHolder holder = new EnderchestHolder(ec, page);
-        Component title = Items.text("Team Enderchest  (" + (page + 1) + "/" + TeamEnderchest.PAGES + ")")
-                .color(NamedTextColor.DARK_PURPLE);
-        Inventory inv = Bukkit.createInventory(holder, TeamEnderchest.PAGE_SIZE, title);
+    private Inventory buildInventory(TeamEnderchest ec) {
+        EnderchestHolder holder = new EnderchestHolder(ec);
+        Component title = Items.text("Team Enderchest").color(NamedTextColor.DARK_PURPLE);
+        Inventory inv = Bukkit.createInventory(holder, TeamEnderchest.SIZE, title);
         holder.setInventory(inv);
-
-        int storage = TeamEnderchest.storageCount(page);
-        int offset = TeamEnderchest.pageOffset(page);
-        for (int i = 0; i < storage; i++) {
-            inv.setItem(i, ec.slots()[offset + i]);
+        for (int i = 0; i < TeamEnderchest.SIZE; i++) {
+            inv.setItem(i, ec.slots()[i]);
         }
-        decorateNav(inv, page, storage);
         return inv;
-    }
-
-    private void decorateNav(Inventory inv, int page, int storageCount) {
-        ItemStack filler = Items.of(Material.GRAY_STAINED_GLASS_PANE, " ");
-        for (int i = storageCount; i < TeamEnderchest.PAGE_SIZE; i++) {
-            inv.setItem(i, filler);
-        }
-        inv.setItem(INFO_SLOT, Items.of(Material.PAPER,
-                "Page " + (page + 1) + " / " + TeamEnderchest.PAGES,
-                "Slots " + (TeamEnderchest.pageOffset(page) + 1) + "-"
-                        + (TeamEnderchest.pageOffset(page) + storageCount)));
-        inv.setItem(CLOSE_SLOT, Items.of(Material.BARRIER, "Close"));
-        if (page > 0) {
-            inv.setItem(PREV_SLOT, Items.of(Material.ARROW, "Previous Page"));
-        }
-        if (page < TeamEnderchest.PAGES - 1) {
-            inv.setItem(NEXT_SLOT, Items.of(Material.ARROW, "Next Page"));
-        }
     }
 
     // ---- syncing / saving ---------------------------------------------------
 
-    /** Copies a live page inventory's storage slots back into the canonical array. */
-    void syncPage(TeamEnderchest ec, int page) {
-        Inventory inv = ec.page(page);
+    /** Copies the live inventory back into the canonical array. */
+    void sync(TeamEnderchest ec) {
+        Inventory inv = ec.inventory();
         if (inv == null) {
             return;
         }
-        int storage = TeamEnderchest.storageCount(page);
-        int offset = TeamEnderchest.pageOffset(page);
-        for (int i = 0; i < storage; i++) {
+        for (int i = 0; i < TeamEnderchest.SIZE; i++) {
             ItemStack item = inv.getItem(i);
-            ec.slots()[offset + i] = (item == null || item.getType().isAir()) ? null : item.clone();
-        }
-    }
-
-    void syncAllPages(TeamEnderchest ec) {
-        for (int p = 0; p < TeamEnderchest.PAGES; p++) {
-            syncPage(ec, p);
+            ec.slots()[i] = (item == null || item.getType().isAir()) ? null : item.clone();
         }
     }
 
@@ -172,10 +135,10 @@ public final class EnderchestManager implements EnderchestHook {
      * Records the modifying player, marks dirty and schedules a debounced save.
      * Runs next tick so Paper has already applied an allowed vanilla action.
      */
-    void afterChange(TeamEnderchest ec, int page, UUID modifier) {
+    void afterChange(TeamEnderchest ec, UUID modifier) {
         ec.addModifier(modifier);
         Bukkit.getScheduler().runTask(plugin, () -> {
-            syncPage(ec, page);
+            sync(ec);
             markChanged(ec);
         });
     }
@@ -210,7 +173,7 @@ public final class EnderchestManager implements EnderchestHook {
             Bukkit.getScheduler().runTaskLater(plugin, () -> persist(ec, alsoFlush), 20L);
             return;
         }
-        syncAllPages(ec);
+        sync(ec);
         Set<UUID> modifiers = ec.drainModifiers();
         for (UUID uuid : modifiers) {
             Player pl = Bukkit.getPlayer(uuid);
@@ -244,11 +207,11 @@ public final class EnderchestManager implements EnderchestHook {
 
     // ---- lifecycle events ---------------------------------------------------
 
-    void onClose(TeamEnderchest ec, int page, UUID closingPlayer) {
+    void onClose(TeamEnderchest ec, UUID closingPlayer) {
         if (ec.isDiscarded()) {
             return;
         }
-        syncPage(ec, page);
+        sync(ec);
         if (plugin.isEnabled()) {
             // Defer one tick so the carried cursor item is returned to the player
             // (and captured by saveData) before we persist.
@@ -262,16 +225,14 @@ public final class EnderchestManager implements EnderchestHook {
     }
 
     private boolean hasViewerWithCursor(TeamEnderchest ec) {
-        for (int p = 0; p < TeamEnderchest.PAGES; p++) {
-            Inventory inv = ec.page(p);
-            if (inv == null) {
-                continue;
-            }
-            for (HumanEntity viewer : inv.getViewers()) {
-                ItemStack cursor = viewer.getItemOnCursor();
-                if (cursor != null && !cursor.getType().isAir()) {
-                    return true;
-                }
+        Inventory inv = ec.inventory();
+        if (inv == null) {
+            return false;
+        }
+        for (HumanEntity viewer : inv.getViewers()) {
+            ItemStack cursor = viewer.getItemOnCursor();
+            if (cursor != null && !cursor.getType().isAir()) {
+                return true;
             }
         }
         return false;
@@ -287,12 +248,10 @@ public final class EnderchestManager implements EnderchestHook {
     }
 
     private void closeViews(TeamEnderchest ec) {
-        for (int p = 0; p < TeamEnderchest.PAGES; p++) {
-            Inventory inv = ec.page(p);
-            if (inv != null) {
-                for (HumanEntity viewer : new ArrayList<>(inv.getViewers())) {
-                    viewer.closeInventory();
-                }
+        Inventory inv = ec.inventory();
+        if (inv != null) {
+            for (HumanEntity viewer : new ArrayList<>(inv.getViewers())) {
+                viewer.closeInventory();
             }
         }
     }
@@ -329,7 +288,7 @@ public final class EnderchestManager implements EnderchestHook {
             if (ec.isDiscarded()) {
                 continue;
             }
-            syncAllPages(ec);
+            sync(ec);
             Map<Integer, byte[]> snapshot = serialize(ec);
             UUID teamId = ec.teamId();
             teams.submitIo(() -> teams.repository().saveEnderchest(teamId, snapshot));
@@ -352,27 +311,9 @@ public final class EnderchestManager implements EnderchestHook {
         }
     }
 
-    // ---- deferred UI actions (never open/close inside an inventory event) ----
-
+    /** Deferred close (never open/close inside an inventory event). */
     void scheduleClose(Player player) {
         Bukkit.getScheduler().runTask(plugin, () -> player.closeInventory());
-    }
-
-    void scheduleSwitch(Player player, Team team, int page) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            returnCursor(player);
-            open(player, team, page);
-        });
-    }
-
-    private void returnCursor(Player player) {
-        ItemStack cursor = player.getItemOnCursor();
-        if (cursor != null && !cursor.getType().isAir()) {
-            player.setItemOnCursor(null);
-            for (ItemStack leftover : player.getInventory().addItem(cursor).values()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), leftover);
-            }
-        }
     }
 
     Plugin plugin() {

@@ -53,14 +53,14 @@ public final class MainMenu extends Menu {
         set(12, Items.of(Material.COMMAND_BLOCK, "Roles", "Create, edit and assign roles."),
                 e -> openLater(viewer, new RolesMenu(ctx, team.id())));
 
-        set(13, Items.of(Material.ENDER_CHEST, "Team Enderchest", "81 shared slots."),
+        set(13, Items.of(Material.ENDER_CHEST, "Team Enderchest", "54 shared slots (double chest)."),
                 e -> {
                     if (!TeamPolicy.has(team, viewer.getUniqueId(), Permission.EC_OPEN)) {
                         viewer.sendActionBar(Component.text("You cannot open the team enderchest.")
                                 .color(NamedTextColor.RED));
                         return;
                     }
-                    Bukkit.getScheduler().runTask(plugin, () -> ec.open(viewer, team, 0));
+                    Bukkit.getScheduler().runTask(plugin, () -> ec.open(viewer, team));
                 });
 
         set(14, Items.of(Material.ENDER_EYE, "Team-EC Access",

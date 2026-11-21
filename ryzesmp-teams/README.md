@@ -3,7 +3,7 @@
 An advanced, production-ready **team system** for **RyzeSMP** — a Paper plugin for
 **Minecraft 1.21.11** (Paper build 132, Java 21 compile target, runs on the server's Java 25).
 
-Teams with a hierarchical, fully configurable role/permission system, an 81-slot shared
+Teams with a hierarchical, fully configurable role/permission system, a 54-slot shared
 team enderchest with strict dupe protection, team alliances, server-side friendly-fire
 protection, GUIs for everything, and SQLite persistence with migrations.
 
@@ -51,7 +51,7 @@ Everything works under **`/team`** and the alias **`/t`**.
 | `/team list` | List all teams |
 | `/team members` | Open the member-management GUI |
 | `/team home` / `/team sethome` | Teleport to / set the team home |
-| `/team ec` / `/team ecs` | Open the 81-slot team enderchest |
+| `/team ec` / `/team ecs` | Open the shared team enderchest (54-slot double chest) |
 | `/team role list` | List roles |
 | `/team role create <name> [rank]` | Create a custom role |
 | `/team role delete <name>` | Delete a role (its members move to the default role) |
@@ -99,11 +99,10 @@ Enforced centrally in `TeamPolicy` and covered by exhaustive unit tests:
 
 ---
 
-## Team enderchest (81 slots) — EC permissions & dupe protection
+## Team enderchest (54 slots) — EC permissions & dupe protection
 
-Each team has one shared enderchest of **81 slots**, laid out over two pages
-(**page 1 = 45 slots, page 2 = 36 slots**) with a navigation row. `/team ec` and
-`/team ecs` open the same chest.
+Each team has one shared enderchest the size of a **double chest (54 slots)**, shown all at
+once in a single screen (no pages). `/team ec` and `/team ecs` open the same chest.
 
 ### Per-role EC permissions
 Configured per team via `/team permissions` (the `EC_MANAGE` permission lets a role edit
@@ -120,18 +119,18 @@ Example defaults: Owner/Admin full access · Moderator & Member open + deposit �
 Recruit no access. Every setting is editable in-game.
 
 ### How dupe protection works
-- **One shared inventory object per team per page.** Every viewer sees the *same* Bukkit
-  inventory, exactly like a vanilla chest with several viewers — there are no per-viewer
-  copies to desync, and Bukkit's own inventory engine keeps concurrent viewers consistent.
+- **One shared inventory object per team.** Every viewer sees the *same* Bukkit inventory,
+  exactly like a vanilla chest with several viewers — there are no per-viewer copies to
+  desync, and Bukkit's own inventory engine keeps concurrent viewers consistent.
 - **All inventory interaction is single-threaded** (the server main thread), so there is no
   concurrent mutation within a tick.
 - **Every click type is classified by a pure, exhaustively-tested policy**
   (`EcClickPolicy`): pickup, place, swap-with-cursor, number-key/hotbar swap, offhand swap,
   shift-click, double-click collect, creative clone, drop and drag. The safety invariant,
   proven over *every* `InventoryAction` by unit tests, is that **without the matching
-  permission no action can ever move an item**. Multi-slot actions that could touch the
-  navigation row (shift-click into the chest, double-click collect) are cancelled and
-  re-implemented so they can only ever touch real storage slots.
+  permission no action can ever move an item**. Shift-click from the player inventory is
+  re-implemented into the chest's own storage, and multi-slot / creative actions that could
+  duplicate items (double-click collect, creative clone) are cancelled.
 - **Crash consistency.** When the EC is saved, the player data of everyone who changed it
   since the last save is flushed on the main thread *first*. This guarantees an item can
   never end up both in the EC and in a player's `.dat` (dupe) or in neither (loss) after a
@@ -193,7 +192,7 @@ team:
 invites:
   expiry-seconds: 120    # 0 = never
 enderchest:
-  total-slots: 81
+  total-slots: 54
 friendly-fire:
   same-team: true
   allies: true
@@ -235,9 +234,7 @@ Production build (`.\gradlew build`) is clean with no compiler warnings.
   tested live. A short play-test on an isolated server is recommended before production.
 - **Hard-crash-during-write** was not simulated; durability rests on SQLite WAL, atomic
   replace statements, and flushing each modifier's player data before the EC is saved.
-- `/team ec` currently paginates (81 slots across two 54-slot pages); a vanilla client
-  cannot render a single 81-slot container, so paging is the correct approach for a
-  server-only plugin.
+- `/team ec` is a single 54-slot double-chest screen shown all at once (no pages).
 - Splash/area potion protection covers a curated set of harmful effect types; purely custom
   harmful effects added by other plugins may not be recognised.
 - The plugin replaces the unqualified `/team` for players; vanilla scoreboard team

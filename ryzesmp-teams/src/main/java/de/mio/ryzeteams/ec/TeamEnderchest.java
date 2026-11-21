@@ -8,25 +8,20 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * In-memory state for one team's 81-slot enderchest. The canonical contents are
- * the {@code slots} array; the two 54-slot page {@link Inventory} objects are
- * built lazily and shared by every viewer of that page (so Bukkit itself keeps
- * concurrent viewers in sync, exactly like a vanilla chest — no per-viewer
- * copies, hence no dupes).
+ * In-memory state for one team's shared enderchest — a single double-chest
+ * (54 slots) shown all at once. The canonical contents are the {@code slots}
+ * array; the one {@link Inventory} object is built lazily and shared by every
+ * viewer (so Bukkit itself keeps concurrent viewers in sync, exactly like a
+ * vanilla chest — no per-viewer copies, hence no dupes).
  */
 public final class TeamEnderchest {
 
-    public static final int PAGE_SIZE = 54;
-    public static final int TOTAL_SLOTS = 81;
-    public static final int PAGE1_STORAGE = 45;
-    public static final int PAGE2_STORAGE = 36;
-    public static final int PAGES = 2;
+    /** Double-chest size: 6 rows x 9 columns, all usable storage. */
+    public static final int SIZE = 54;
 
     private final UUID teamId;
-    private final ItemStack[] slots = new ItemStack[TOTAL_SLOTS];
-    private final Inventory[] pages = new Inventory[PAGES];
-    // Players who changed the contents since the last persist. Their player data
-    // is flushed together with the EC so a crash can never desync the two.
+    private final ItemStack[] slots = new ItemStack[SIZE];
+    private Inventory inventory;
     private final Set<UUID> modifiers = ConcurrentHashMap.newKeySet();
     private volatile boolean dirty;
     private volatile boolean saveScheduled;
@@ -44,20 +39,12 @@ public final class TeamEnderchest {
         return slots;
     }
 
-    public Inventory page(int index) {
-        return pages[index];
+    public Inventory inventory() {
+        return inventory;
     }
 
-    public void setPage(int index, Inventory inv) {
-        pages[index] = index == 0 || index == 1 ? inv : null;
-    }
-
-    public static int storageCount(int page) {
-        return page == 0 ? PAGE1_STORAGE : PAGE2_STORAGE;
-    }
-
-    public static int pageOffset(int page) {
-        return page == 0 ? 0 : PAGE1_STORAGE;
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
     }
 
     public boolean isDirty() {
